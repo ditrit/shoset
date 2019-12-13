@@ -43,9 +43,13 @@ func (s *GSClient) Add(address string) {
 // GSClientConn : client connection
 type GSClientConn struct {
 	socket    *tls.Conn
+	rw        *bufio.ReadWriter
+	m         sync.RWMutex
 	reconnect chan bool
-	sndEvt    chan string
-	sndCmd    chan string
+	sndEvt    chan msg.Event
+	sndCmd    chan msg.Command
+	sndRep    chan msg.Reply
+	sndCfg    chan string
 	address   string
 }
 
@@ -53,8 +57,11 @@ type GSClientConn struct {
 func NewGSClientConn(address string) (*GSClientConn, error) {
 	s := new(GSClientConn)
 	s.socket = new(tls.Conn)
-	s.sndEvt = make(chan string)
-	s.sndCmd = make(chan string)
+	s.rw = new(bufio.ReadWriter)
+	s.sndEvt = make(chan msg.Event)
+	s.sndCmd = make(chan msg.Command)
+	s.sndRep = make(chan msg.Reply)
+	s.sndCfg = make(chan string)
 	s.reconnect = make(chan bool)
 	s.address = address
 	go s.Run()
@@ -74,13 +81,15 @@ func (s *GSClientConn) Run() {
 			time.Sleep(time.Millisecond * time.Duration(100))
 		} else {
 			s.socket = conn
+			s.rw = bufio.NewReadWriter(bufio.NewReader(s.socket), bufio.NewWriter(s.socket))
 
 			// receive from Socket goroutine
 			go func() {
-				rw := bufio.NewReadWriter(bufio.NewReader(s.socket), bufio.NewWriter(s.socket))
 				for {
 					fmt.Print("Receive command ")
-					msgType, err := rw.ReadString('\n')
+					s.m.Lock()
+					msgType, err := s.rw.ReadString('\n')
+					s.m.Unlock()
 					switch {
 					case err == io.EOF:
 						fmt.Println("Reached EOF - close this connection.\n ---")
@@ -96,8 +105,10 @@ func (s *GSClientConn) Run() {
 					switch msgType {
 					case "evt":
 						var event msg.Event
-						dec := gob.NewDecoder(rw)
+						s.m.Lock()
+						dec := gob.NewDecoder(s.rw)
 						err := dec.Decode(&event)
+						s.m.Unlock()
 						if err != nil {
 							fmt.Println("Error decoding Event data ", err)
 							s.reconnect <- true
@@ -106,8 +117,10 @@ func (s *GSClientConn) Run() {
 						fmt.Printf("Event : \n%#v\n", event)
 					case "cmd":
 						var command msg.Command
-						dec := gob.NewDecoder(rw)
+						s.m.Lock()
+						dec := gob.NewDecoder(s.rw)
 						err := dec.Decode(&command)
+						s.m.Unlock()
 						if err != nil {
 							fmt.Println("Error decoding Command data ", err)
 							s.reconnect <- true
@@ -116,8 +129,10 @@ func (s *GSClientConn) Run() {
 						fmt.Printf("Event : \n%#v\n", command)
 					case "rep":
 						var reply msg.Reply
-						dec := gob.NewDecoder(rw)
+						s.m.Lock()
+						dec := gob.NewDecoder(s.rw)
 						err := dec.Decode(&reply)
+						s.m.Unlock()
 						if err != nil {
 							fmt.Println("Error decoding Reply data ", err)
 							s.reconnect <- true
@@ -125,7 +140,9 @@ func (s *GSClientConn) Run() {
 						}
 						fmt.Printf("Event : \n%#v\n", reply)
 					case "cfg":
-						config, err := rw.ReadString('\n')
+						s.m.Lock()
+						config, err := s.rw.ReadString('\n')
+						s.m.Unlock()
 						if err != nil {
 							fmt.Println("Error reading config string", err)
 							s.reconnect <- true
@@ -144,13 +161,81 @@ func (s *GSClientConn) Run() {
 			doSelect := true
 			for doSelect {
 				select {
-				case event := <-s.sndEvt:
-					_, err := s.socket.Write([]byte(event))
+				case evt := <-s.sndEvt:
+					fmt.Printf("event on chanel")
+					s.m.Lock()
+					s.rw.WriteString("evt\n")
+					enc := gob.NewEncoder(s.rw)
+					err := enc.Encode(evt)
 					if err != nil {
-						fmt.Println("Failed to write:", err.Error())
+						fmt.Println("Failed to write event:", err.Error())
 						fmt.Println("Trying reset the connection...")
 						break
 					}
+					err = s.rw.Flush()
+					if err != nil {
+						fmt.Printf("failed to flush")
+						break
+					}
+					s.m.Unlock()
+					fmt.Printf("sent")
+				case cmd := <-s.sndCmd:
+					fmt.Printf("command on chanel")
+					s.m.Lock()
+					s.rw.WriteString("cmd\n")
+					enc := gob.NewEncoder(s.rw)
+					err := enc.Encode(cmd)
+					if err != nil {
+						fmt.Println("Failed to write command:", err.Error())
+						fmt.Println("Trying reset the connection...")
+						break
+					}
+					err = s.rw.Flush()
+					if err != nil {
+						fmt.Printf("failed to flush")
+						break
+					}
+					s.m.Unlock()
+					fmt.Printf("sent")
+				case rep := <-s.sndRep:
+					fmt.Printf("reply on chanel")
+					s.m.Lock()
+					s.rw.WriteString("rep\n")
+					enc := gob.NewEncoder(s.rw)
+					err := enc.Encode(rep)
+					if err != nil {
+						fmt.Println("Failed to write reply:", err.Error())
+						fmt.Println("Trying reset the connection...")
+						break
+					}
+					err = s.rw.Flush()
+					if err != nil {
+						fmt.Printf("failed to flush")
+						break
+					}
+					s.m.Unlock()
+					fmt.Printf("sent")
+				case cfg := <-s.sndCfg:
+					fmt.Printf("config on chanel %s", cfg)
+					s.m.Lock()
+					_, err := s.rw.WriteString("cfg\n")
+					if err != nil {
+						fmt.Printf("failed to send message type 'cfg' message")
+						break
+					}
+					_, err = s.rw.WriteString(cfg + "\n")
+					if err != nil {
+						fmt.Printf("failed to send message type 'cfg' message")
+						break
+					}
+					err = s.rw.Flush()
+					if err != nil {
+						fmt.Printf("failed to flush")
+						break
+					}
+					s.m.Unlock()
+					fmt.Printf("sent")
+
 				case <-s.reconnect:
 					fmt.Print("reconnect received")
 					doSelect = false
@@ -161,19 +246,46 @@ func (s *GSClientConn) Run() {
 	}
 }
 
-// Send : Send a message
-func (s *GSClientConn) Send(cmd string) {
-	msgCmd := msg.NewCommand("token", "connType", cmd, "{payload string}")
-	fmt.Printf(msgCmd.Uuid)
+// SendEvent : send an event...
+// event is sent on each connection
+func (s *GSClient) SendEvent(evt *msg.Event) {
+	for _, conn := range s.conns {
+		conn.sndEvt <- *evt
+	}
+}
+
+// SendCommand : Send a message
+// todo : manage routing
+//    identify relevant targets (routing info matches identity)
+//    then try on each instance until success
+func (s *GSClient) SendCommand(cmd *msg.Command) {
+	for _, conn := range s.conns {
+		conn.sndCmd <- *cmd
+	}
+}
+
+// SendReply :
+func (s *GSClient) SendReply(rep *msg.Reply) {
+	for _, conn := range s.conns {
+		conn.sndRep <- *rep
+	}
+}
+
+// SendConfig :
+func (s *GSClient) SendConfig(cfg string) {
+	fmt.Printf("Sending a configuration : %s", cfg)
+	for _, conn := range s.conns {
+		conn.sndCfg <- cfg
+	}
 }
 
 func client(address string) {
 	c, _ := NewGSClient(address)
 	go func() {
-		msg := "un petit test"
-		for _, conn := range c.conns {
-			conn.Send(msg)
-		}
+		event := msg.NewEvent("token", "bus", "started", "ok")
+		c.SendEvent(event)
+		command := msg.NewCommand("token", "orchestrator", "deploy", "{\"appli\": \"toto\"}")
+		c.SendCommand(command)
 	}()
 	<-c.done
 }

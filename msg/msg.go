@@ -10,7 +10,7 @@ import (
 type Command struct {
 	RoutingStep string
 
-	Uuid      string
+	UUID      string
 	Tenant    string
 	Token     string
 	Timestamp int64
@@ -34,7 +34,7 @@ type Command struct {
 // todo : passer une map pour gerer les valeurs optionnelles ?
 func NewCommand(token string, connectorType string, command string, payload string) *Command {
 	c := new(Command)
-	c.Uuid = uuid.New()
+	c.UUID = uuid.New()
 	c.Token = token
 	c.Timestamp = time.Now().Unix()
 	c.Timeout = 1000
@@ -51,7 +51,7 @@ func NewCommand(token string, connectorType string, command string, payload stri
 type Reply struct {
 	routingStep string
 
-	Uuid      string
+	UUID      string
 	Tenant    string
 	Token     string
 	Timestamp int64
@@ -75,7 +75,7 @@ func (c Command) NewReply(state string, payload string) *Reply {
 	r.State = state
 	r.Payload = payload
 
-	r.Uuid = c.Uuid
+	r.UUID = c.UUID
 	r.Tenant = c.Tenant
 	r.Token = c.Token
 	r.Timestamp = c.Timestamp
@@ -93,7 +93,7 @@ func (c Command) NewReply(state string, payload string) *Reply {
 
 // Event : Gandalf events
 type Event struct {
-	Uuid      string
+	UUID      string
 	Tenant    string
 	Token     string
 	Timestamp int64
@@ -107,7 +107,7 @@ type Event struct {
 // NewEvent : Event constructor
 func NewEvent(token string, topic string, event string, payload string) *Event {
 	e := new(Event)
-	e.Uuid = uuid.New()
+	e.UUID = uuid.New()
 	e.Token = token
 	e.Timestamp = time.Now().Unix()
 	e.Timeout = 1000
@@ -117,50 +117,3 @@ func NewEvent(token string, topic string, event string, payload string) *Event {
 	e.Payload = payload
 	return e
 }
-
-// TODO : SendWith to be replaced by a 'Send' method for the types 'Tcp*'
-// func (c Command) SendWith() {
-//}
-
-// TODO : from to be replaced by a private method ot the types 'Tcp*'
-//func (c Command) from() {
-//}
-
-// todo : encode / decode
-/*
-func (c Command) encodeCommand() (bytesContent []byte, commandError error) {
-	bytesContent, err := msgpack.Encode(c)
-	if err != nil {
-		commandError = fmt.Errorf("Command %s", err)
-		return
-	}
-	return
-}
-
-func (c Command) decodeCommand(bytesContent []byte) (command Command, commandError error) {
-	err := msgpack.Decode(bytesContent, command)
-	if err != nil {
-		commandError = fmt.Errorf("Command %s", err)
-		return
-	}
-	return
-}
-
-func (cr CommandResponse) encodeCommandResponse() (bytesContent []byte, commandError error) {
-	bytesContent, err := msgpack.Encode(cr)
-	if err != nil {
-		commandError = fmt.Errorf("CommandResponse %s", err)
-		return
-	}
-	return
-}
-
-func (cr CommandResponse) decodeCommandResponse(bytesContent []byte) (commandResponse CommandResponse, commandError error) {
-	err := msgpack.Decode(bytesContent, commandResponse)
-	if err != nil {
-		commandError = fmt.Errorf("CommandResponse %s", err)
-		return
-	}
-	return
-}
-*/

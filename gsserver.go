@@ -21,8 +21,7 @@ type GSServer struct {
 	config  *tls.Config
 	address string
 	conns   map[string]*tls.Conn
-
-	m sync.RWMutex
+	m       sync.RWMutex
 }
 
 // NewGSServer : constructor
@@ -115,7 +114,7 @@ func (s *GSServer) handleConnection(conn *tls.Conn) {
 				s.m.Unlock()
 				return
 			}
-			fmt.Printf("Event : \n%#v\n", command)
+			fmt.Printf("Command : \n%#v\n", command)
 		case "rep":
 			var reply msg.Reply
 			dec := gob.NewDecoder(rw)
@@ -127,7 +126,7 @@ func (s *GSServer) handleConnection(conn *tls.Conn) {
 				s.m.Unlock()
 				return
 			}
-			fmt.Printf("Event : \n%#v\n", reply)
+			fmt.Printf("Reply : \n%#v\n", reply)
 		case "cfg":
 			config, err := rw.ReadString('\n')
 			if err != nil {
@@ -146,30 +145,6 @@ func (s *GSServer) handleConnection(conn *tls.Conn) {
 			return
 		}
 	}
-	/* old loop
-	for {
-		fmt.Print("Waiting data...")
-		msg, err := rw.ReadString('\n')
-		if err != nil {
-			fmt.Println("Failed to read:", err.Error())
-			s.m.Lock()
-			delete(s.conns, remAddr)
-			s.m.Unlock()
-			break
-		}
-
-		fmt.Printf("Received and echoing %s", msg)
-		_, err = rw.WriteString(msg)
-		if err != nil {
-			fmt.Println("Failed to write:", err.Error())
-			s.m.Lock()
-			delete(s.conns, remAddr)
-			s.m.Unlock()
-			break
-		}
-		fmt.Printf("successed in writing !")
-	}
-	*/
 }
 
 func server(address string) {
