@@ -117,3 +117,15 @@ func NewEvent(token string, topic string, event string, payload string) *Event {
 	e.Payload = payload
 	return e
 }
+
+// Config : Gandalf Socket config
+type Config struct {
+	Name string
+}
+
+// NewConfig : Config constructor
+func NewConfig(name string) *Config {
+	c := new(Config)
+	c.Name = name
+	return c
+}

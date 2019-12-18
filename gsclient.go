@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"crypto/tls"
 	"encoding/gob"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -20,52 +21,113 @@ var (
 //GSClient : client gandalf Socket
 type GSClient struct {
 	conns map[string]*GSClientConn
+	name  string
 	done  chan bool
 	m     sync.RWMutex
 }
 
 // NewGSClient : constructor
-func NewGSClient(address string) (*GSClient, error) {
+func NewGSClient(name string, address string) (*GSClient, error) {
 	s := new(GSClient)
+	s.name = name
 	s.conns = make(map[string]*GSClientConn)
-	s.Add(address)
-	return s, nil
-}
-
-//Add : Add a new connection to a server
-func (s *GSClient) Add(address string) {
-	conn, _ := NewGSClientConn(address)
-	s.m.Lock()
-	s.conns[address] = conn
-	s.m.Unlock()
+	_, e := s.Add(address)
+	return s, e
 }
 
 // GSClientConn : client connection
 type GSClientConn struct {
-	socket    *tls.Conn
-	rw        *bufio.ReadWriter
-	m         sync.RWMutex
-	reconnect chan bool
-	sndEvt    chan msg.Event
-	sndCmd    chan msg.Command
-	sndRep    chan msg.Reply
-	sndCfg    chan string
-	address   string
+	socket     *tls.Conn
+	localName  string
+	remoteName string
+	gsClient   *GSClient
+	rw         *bufio.ReadWriter
+	m          sync.RWMutex
+	reconnect  chan bool
+	sndEvt     chan msg.Event
+	sndCmd     chan msg.Command
+	sndRep     chan msg.Reply
+	sndCfg     chan msg.Config
+	address    string
 }
 
-// NewGSClientConn : constructor
-func NewGSClientConn(address string) (*GSClientConn, error) {
-	s := new(GSClientConn)
-	s.socket = new(tls.Conn)
-	s.rw = new(bufio.ReadWriter)
-	s.sndEvt = make(chan msg.Event)
-	s.sndCmd = make(chan msg.Command)
-	s.sndRep = make(chan msg.Reply)
-	s.sndCfg = make(chan string)
-	s.reconnect = make(chan bool)
-	s.address = address
-	go s.Run()
-	return s, nil
+//Add : Add a new connection to a server
+func (s *GSClient) Add(address string) (*GSClientConn, error) {
+	conn := new(GSClientConn)
+	conn.gsClient = s
+	s.m.Lock()
+	s.conns[address] = conn
+	s.m.Unlock()
+	conn.socket = new(tls.Conn)
+	conn.rw = new(bufio.ReadWriter)
+	conn.sndEvt = make(chan msg.Event)
+	conn.sndCmd = make(chan msg.Command)
+	conn.sndRep = make(chan msg.Reply)
+	conn.sndCfg = make(chan msg.Config)
+	conn.reconnect = make(chan bool)
+	conn.address = address
+	conn.localName = s.name
+	go conn.Run()
+	return conn, nil
+}
+
+func (s *GSClientConn) getMsg(data interface{}) error {
+	s.m.Lock()
+	dec := gob.NewDecoder(s.rw)
+	err := dec.Decode(&data)
+	s.m.Unlock()
+	if err != nil {
+		fmt.Println("Error decoding received message ", err)
+		s.reconnect <- true
+	}
+	return err
+}
+
+func (s *GSClientConn) receiveMsg(msgType string) (interface{}, error) {
+	var data interface{}
+	switch msgType {
+	case "evt":
+		data = new(msg.Event)
+	case "cmd":
+		data = new(msg.Command)
+	case "rep":
+		data = new(msg.Reply)
+	case "cfg":
+		data = new(msg.Config)
+	default:
+		return nil, errors.New("non implemented message " + msgType)
+	}
+	s.m.Lock()
+	dec := gob.NewDecoder(s.rw)
+	err := dec.Decode(&data)
+	s.m.Unlock()
+	if err != nil {
+		fmt.Println("Error decoding received message ", err)
+		s.reconnect <- true
+	}
+	fmt.Printf("Receive %s: \n%#v\n", msgType, data)
+	return &data, err
+}
+
+func (s *GSClientConn) sendMsg(typeMsg string, data interface{}) error {
+	fmt.Printf("send message")
+	s.m.Lock()
+	s.rw.WriteString(typeMsg + "\n")
+	enc := gob.NewEncoder(s.rw)
+	err := enc.Encode(&data)
+	if err != nil {
+		fmt.Println("Failed to write message:", err.Error())
+		fmt.Println("Trying reset the connection...")
+		return err
+	}
+	err = s.rw.Flush()
+	if err != nil {
+		fmt.Printf("failed to flush")
+		return err
+	}
+	s.m.Unlock()
+	fmt.Printf("sent")
+	return nil
 }
 
 // Run : handler for the socket
@@ -102,58 +164,8 @@ func (s *GSClientConn) Run() {
 					}
 					msgType = strings.Trim(msgType, "\n")
 					fmt.Println("'" + msgType + "'")
-					switch msgType {
-					case "evt":
-						var event msg.Event
-						s.m.Lock()
-						dec := gob.NewDecoder(s.rw)
-						err := dec.Decode(&event)
-						s.m.Unlock()
-						if err != nil {
-							fmt.Println("Error decoding Event data ", err)
-							s.reconnect <- true
-							return
-						}
-						fmt.Printf("Event : \n%#v\n", event)
-					case "cmd":
-						var command msg.Command
-						s.m.Lock()
-						dec := gob.NewDecoder(s.rw)
-						err := dec.Decode(&command)
-						s.m.Unlock()
-						if err != nil {
-							fmt.Println("Error decoding Command data ", err)
-							s.reconnect <- true
-							return
-						}
-						fmt.Printf("Event : \n%#v\n", command)
-					case "rep":
-						var reply msg.Reply
-						s.m.Lock()
-						dec := gob.NewDecoder(s.rw)
-						err := dec.Decode(&reply)
-						s.m.Unlock()
-						if err != nil {
-							fmt.Println("Error decoding Reply data ", err)
-							s.reconnect <- true
-							return
-						}
-						fmt.Printf("Event : \n%#v\n", reply)
-					case "cfg":
-						s.m.Lock()
-						config, err := s.rw.ReadString('\n')
-						s.m.Unlock()
-						if err != nil {
-							fmt.Println("Error reading config string", err)
-							s.reconnect <- true
-							return
-						}
-						fmt.Printf("Config: \n\t%s\n", config)
-					default:
-						fmt.Printf("%s msg type is not implemented\n", msgType)
-						s.reconnect <- true
-						return
-					}
+
+					s.receiveMsg(msgType)
 				}
 			}()
 
@@ -162,80 +174,21 @@ func (s *GSClientConn) Run() {
 			for doSelect {
 				select {
 				case evt := <-s.sndEvt:
-					fmt.Printf("event on chanel")
-					s.m.Lock()
-					s.rw.WriteString("evt\n")
-					enc := gob.NewEncoder(s.rw)
-					err := enc.Encode(evt)
-					if err != nil {
-						fmt.Println("Failed to write event:", err.Error())
-						fmt.Println("Trying reset the connection...")
+					if s.sendMsg("evt", evt) != nil {
 						break
 					}
-					err = s.rw.Flush()
-					if err != nil {
-						fmt.Printf("failed to flush")
-						break
-					}
-					s.m.Unlock()
-					fmt.Printf("sent")
 				case cmd := <-s.sndCmd:
-					fmt.Printf("command on chanel")
-					s.m.Lock()
-					s.rw.WriteString("cmd\n")
-					enc := gob.NewEncoder(s.rw)
-					err := enc.Encode(cmd)
-					if err != nil {
-						fmt.Println("Failed to write command:", err.Error())
-						fmt.Println("Trying reset the connection...")
+					if s.sendMsg("cmd", cmd) != nil {
 						break
 					}
-					err = s.rw.Flush()
-					if err != nil {
-						fmt.Printf("failed to flush")
-						break
-					}
-					s.m.Unlock()
-					fmt.Printf("sent")
 				case rep := <-s.sndRep:
-					fmt.Printf("reply on chanel")
-					s.m.Lock()
-					s.rw.WriteString("rep\n")
-					enc := gob.NewEncoder(s.rw)
-					err := enc.Encode(rep)
-					if err != nil {
-						fmt.Println("Failed to write reply:", err.Error())
-						fmt.Println("Trying reset the connection...")
+					if s.sendMsg("rep", rep) != nil {
 						break
 					}
-					err = s.rw.Flush()
-					if err != nil {
-						fmt.Printf("failed to flush")
-						break
-					}
-					s.m.Unlock()
-					fmt.Printf("sent")
 				case cfg := <-s.sndCfg:
-					fmt.Printf("config on chanel %s", cfg)
-					s.m.Lock()
-					_, err := s.rw.WriteString("cfg\n")
-					if err != nil {
-						fmt.Printf("failed to send message type 'cfg' message")
+					if s.sendMsg("cfg", cfg) != nil {
 						break
 					}
-					_, err = s.rw.WriteString(cfg + "\n")
-					if err != nil {
-						fmt.Printf("failed to send message type 'cfg' message")
-						break
-					}
-					err = s.rw.Flush()
-					if err != nil {
-						fmt.Printf("failed to flush")
-						break
-					}
-					s.m.Unlock()
-					fmt.Printf("sent")
-
 				case <-s.reconnect:
 					fmt.Print("reconnect received")
 					doSelect = false
@@ -272,15 +225,17 @@ func (s *GSClient) SendReply(rep *msg.Reply) {
 }
 
 // SendConfig :
-func (s *GSClient) SendConfig(cfg string) {
-	fmt.Printf("Sending a configuration : %s", cfg)
+func (s *GSClient) SendConfig() {
+	fmt.Print("Sending configuration.\n")
+
+	cfg := msg.NewConfig(s.name)
 	for _, conn := range s.conns {
-		conn.sndCfg <- cfg
+		conn.sndCfg <- *cfg
 	}
 }
 
-func client(address string) {
-	c, _ := NewGSClient(address)
+func client(name string, address string) {
+	c, _ := NewGSClient(name, address)
 	go func() {
 		event := msg.NewEvent("token", "bus", "started", "ok")
 		c.SendEvent(event)

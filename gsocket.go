@@ -1,18 +1,24 @@
 package main
 
 import (
+	"encoding/gob"
 	"flag"
 	"fmt"
 	"os"
+
+	"./msg"
 )
 
 func main() {
 
 	flag.Usage = func() {
 		fmt.Printf("Usage of %s:\n", os.Args[0])
-		fmt.Printf("	tcp [options] ipaddr:port\n options:\n")
+		fmt.Printf("	tcp [options] name ipaddr:port\n options:\n")
 		flag.PrintDefaults()
 		fmt.Printf("  server and client modes are exclusive\n")
+		fmt.Printf(" arguments:\n")
+		fmt.Printf("  name	       logical name used for routing\n")
+		fmt.Printf("  ipaddr:port  address to bind / connect the socket \n")
 	}
 
 	var isServer bool
@@ -26,17 +32,23 @@ func main() {
 
 	args := flag.Args()
 
-	if (isServer == isClient) || (len(args) != 1) {
+	if (isServer == isClient) || (len(args) != 2) {
 		flag.Usage()
 		os.Exit(1)
 	}
 
-	address := args[0]
+	gob.Register(new(msg.Event))
+	gob.Register(new(msg.Command))
+	gob.Register(new(msg.Reply))
+	gob.Register(new(msg.Config))
+
+	name := args[0]
+	address := args[1]
 
 	if isServer == true {
-		server(address)
+		server(name, address)
 	}
 	if isClient == true {
-		client(address)
+		client(name, address)
 	}
 }
