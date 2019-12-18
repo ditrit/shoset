@@ -71,20 +71,24 @@ func (s *GSClient) Add(address string) (*GSClientConn, error) {
 	return conn, nil
 }
 
-func (s *GSClientConn) getMsg(data interface{}) error {
-	s.m.Lock()
-	dec := gob.NewDecoder(s.rw)
-	err := dec.Decode(&data)
-	s.m.Unlock()
-	if err != nil {
-		fmt.Println("Error decoding received message ", err)
-		s.reconnect <- true
-	}
-	return err
-}
-
-func (s *GSClientConn) receiveMsg(msgType string) (interface{}, error) {
+func (s *GSClientConn) receiveMsg() (interface{}, error) {
 	var data interface{}
+
+	// read message type
+	s.m.Lock()
+	msgType, err := s.rw.ReadString('\n')
+	s.m.Unlock()
+	switch {
+	case err == io.EOF:
+		s.reconnect <- true
+		return nil, errors.New("receiveMsg : reached EOF - close this connection")
+	case err != nil:
+		s.reconnect <- true
+		return nil, errors.New("receiveMsg : failed to read - close this connection")
+	}
+	msgType = strings.Trim(msgType, "\n")
+
+	// read message data
 	switch msgType {
 	case "evt":
 		data = new(msg.Event)
@@ -95,104 +99,79 @@ func (s *GSClientConn) receiveMsg(msgType string) (interface{}, error) {
 	case "cfg":
 		data = new(msg.Config)
 	default:
-		return nil, errors.New("non implemented message " + msgType)
+		return nil, errors.New("receiveMsg : non implemented type of message " + msgType)
 	}
 	s.m.Lock()
 	dec := gob.NewDecoder(s.rw)
-	err := dec.Decode(&data)
+	err = dec.Decode(&data)
 	s.m.Unlock()
 	if err != nil {
 		fmt.Println("Error decoding received message ", err)
 		s.reconnect <- true
+		return nil, errors.New("receiveMsg : unable to decode a message of type  " + msgType)
 	}
 	fmt.Printf("Receive %s: \n%#v\n", msgType, data)
 	return &data, err
 }
 
-func (s *GSClientConn) sendMsg(typeMsg string, data interface{}) error {
-	fmt.Printf("send message")
+func (s *GSClientConn) sendMsg() error {
+	var data interface{}
+	var msgType string
+	select {
+	case evt := <-s.sndEvt:
+		data = &evt
+		msgType = "evt"
+	case cmd := <-s.sndCmd:
+		data = &cmd
+		msgType = "cmd"
+	case rep := <-s.sndRep:
+		data = &rep
+		msgType = "rep"
+	case cfg := <-s.sndCfg:
+		data = &cfg
+		msgType = "cfg"
+	case <-s.reconnect:
+		return errors.New("sendMsg : reconnect expected  ")
+	}
+
 	s.m.Lock()
-	s.rw.WriteString(typeMsg + "\n")
+	s.rw.WriteString(msgType + "\n")
 	enc := gob.NewEncoder(s.rw)
 	err := enc.Encode(&data)
 	if err != nil {
-		fmt.Println("Failed to write message:", err.Error())
-		fmt.Println("Trying reset the connection...")
-		return err
+		return errors.New("sendMsg : can not send the message  ")
 	}
 	err = s.rw.Flush()
 	if err != nil {
-		fmt.Printf("failed to flush")
-		return err
+		return errors.New("sendMsg : can not flush")
 	}
 	s.m.Unlock()
-	fmt.Printf("sent")
 	return nil
 }
 
 // Run : handler for the socket
 func (s *GSClientConn) Run() {
-	fmt.Print("Run launched\n")
-	n := 0
-
 	for {
 		conn, err := tls.Dial("tcp", s.address, &tlsConfigClient)
 		if err != nil {
-			fmt.Println("Failed to connect:", err.Error())
-			fmt.Printf("Trying reset the connection (%d)...\n", n)
 			time.Sleep(time.Millisecond * time.Duration(100))
 		} else {
 			s.socket = conn
 			s.rw = bufio.NewReadWriter(bufio.NewReader(s.socket), bufio.NewWriter(s.socket))
 
-			// receive from Socket goroutine
+			// receive messages
 			go func() {
 				for {
-					fmt.Print("Receive command ")
-					s.m.Lock()
-					msgType, err := s.rw.ReadString('\n')
-					s.m.Unlock()
-					switch {
-					case err == io.EOF:
-						fmt.Println("Reached EOF - close this connection.\n ---")
-						s.reconnect <- true
-						return
-					case err != nil:
-						fmt.Println("Failed to read:", err.Error())
-						s.reconnect <- true
-						return
-					}
-					msgType = strings.Trim(msgType, "\n")
-					fmt.Println("'" + msgType + "'")
-
-					s.receiveMsg(msgType)
+					s.receiveMsg()
 				}
 			}()
 
-			// manage events
+			// send messages
 			doSelect := true
 			for doSelect {
-				select {
-				case evt := <-s.sndEvt:
-					if s.sendMsg("evt", evt) != nil {
-						break
-					}
-				case cmd := <-s.sndCmd:
-					if s.sendMsg("cmd", cmd) != nil {
-						break
-					}
-				case rep := <-s.sndRep:
-					if s.sendMsg("rep", rep) != nil {
-						break
-					}
-				case cfg := <-s.sndCfg:
-					if s.sendMsg("cfg", cfg) != nil {
-						break
-					}
-				case <-s.reconnect:
-					fmt.Print("reconnect received")
+				err = s.sendMsg()
+				if err != nil {
 					doSelect = false
-					break
 				}
 			}
 		}
