@@ -1,15 +1,14 @@
 package main
 
 import (
-	"bufio"
 	"crypto/tls"
-	"encoding/gob"
 	"errors"
 	"fmt"
 	"io"
 	"net"
 	"strings"
 	"sync"
+	"time"
 
 	"./msg"
 )
@@ -52,23 +51,35 @@ type GSServerConn struct {
 	remoteName string
 	address    string
 	gsServer   *GSServer
-	rw         *bufio.ReadWriter
-	m          sync.RWMutex
+	rb         *SafeReader
+	wb         *SafeWriter
+	sndEvt     chan msg.Event
+	sndCmd     chan msg.Command
+	sndRep     chan msg.Reply
+	sndCfg     chan msg.Config
+	stop       chan bool
 }
 
 //add : Add a new connection from a client
-func (s *GSServer) add(conn *tls.Conn) (*GSServerConn, error) {
-	c := new(GSServerConn)
-	c.socket = conn
-	c.gsServer = s
-	c.address = conn.RemoteAddr().String()
-	c.localName = s.name
+func (s *GSServer) add(tlsConn *tls.Conn) (*GSServerConn, error) {
+	conn := new(GSServerConn)
+	conn.socket = tlsConn
+	conn.gsServer = s
+	conn.address = tlsConn.RemoteAddr().String()
+	conn.localName = s.name
 	s.m.Lock()
-	s.conns[c.address] = c
+	s.conns[conn.address] = conn
 	s.m.Unlock()
-	c.rw = new(bufio.ReadWriter)
+	conn.rb = new(SafeReader)
+	conn.wb = new(SafeWriter)
+	conn.sndEvt = make(chan msg.Event)
+	conn.sndCmd = make(chan msg.Command)
+	conn.sndRep = make(chan msg.Reply)
+	conn.sndCfg = make(chan msg.Config)
+	conn.stop = make(chan bool)
+
 	//go conn.Run()
-	return c, nil
+	return conn, nil
 }
 
 // Run : handler for the socket
@@ -91,29 +102,32 @@ func (s *GSServer) Run() error {
 		conn, _ := s.add(tlsConn)
 		fmt.Printf("GSServer : accepted from %s", conn.address)
 		go conn.Run()
-
 	}
 	return nil
 }
 
-func (s *GSServerConn) getMsg(data interface{}) error {
-	s.m.Lock()
-	fmt.Printf("NewDecoder")
-	dec := gob.NewDecoder(s.rw)
-	fmt.Printf("Decode")
-	err := dec.Decode(&data)
-	s.m.Unlock()
-	if err != nil {
-		fmt.Println("Error decoding received message ", err)
+func (s *GSServerConn) receiveMsg() (interface{}, error) {
+	var data interface{}
+
+	// read message type
+	msgType, err := s.rb.ReadString()
+	switch {
+	case err == io.EOF:
 		s.gsServer.m.Lock()
 		delete(s.gsServer.conns, s.address)
 		s.gsServer.m.Unlock()
+		s.stop <- true
+		return nil, errors.New("receiveMsg : reached EOF - close this connection")
+	case err != nil:
+		s.gsServer.m.Lock()
+		delete(s.gsServer.conns, s.address)
+		s.gsServer.m.Unlock()
+		s.stop <- true
+		return nil, errors.New("receiveMsg : failed to read - close this connection")
 	}
-	return err
-}
+	msgType = strings.Trim(msgType, "\n")
 
-func (s *GSServerConn) receiveMsg(msgType string) (interface{}, error) {
-	var data interface{}
+	// read message data
 	switch msgType {
 	case "evt":
 		data = new(msg.Event)
@@ -130,48 +144,113 @@ func (s *GSServerConn) receiveMsg(msgType string) (interface{}, error) {
 		s.gsServer.m.Unlock()
 		return nil, errors.New("non implemented message " + msgType)
 	}
-	s.m.Lock()
-	dec := gob.NewDecoder(s.rw)
-	err := dec.Decode(&data)
+	err = s.rb.ReadMessage(&data)
 	if err != nil {
-		fmt.Println("Error decoding received message ", err)
 		s.gsServer.m.Lock()
 		delete(s.gsServer.conns, s.address)
 		s.gsServer.m.Unlock()
+		s.stop <- true
+		return nil, errors.New("receiveMsg : unable to decode a message of type  " + msgType)
 	}
-	s.m.Unlock()
 	fmt.Printf("Receive %s: \n%#v\n", msgType, data)
 	return &data, err
 }
 
+func (s *GSServerConn) sendMsg() error {
+	var data interface{}
+	var msgType string
+	select {
+	case evt := <-s.sndEvt:
+		data = &evt
+		msgType = "evt"
+	case cmd := <-s.sndCmd:
+		data = &cmd
+		msgType = "cmd"
+	case rep := <-s.sndRep:
+		data = &rep
+		msgType = "rep"
+	case cfg := <-s.sndCfg:
+		data = &cfg
+		msgType = "cfg"
+	case <-s.stop:
+		return errors.New("sendMsg : close connection  ")
+	}
+
+	_, err := s.wb.WriteString(msgType)
+	if err != nil {
+		fmt.Printf("sendMsg : can not send the message type  \n")
+		return errors.New("sendMsg : can not send the message type ")
+	}
+
+	err = s.wb.WriteMessage(&data)
+	if err != nil {
+		fmt.Printf("sendMsg : can not send the message  \n")
+		return errors.New("sendMsg : can not send data part of the message")
+	}
+	err = s.wb.Flush()
+	if err != nil {
+		fmt.Printf("sendMsg : can not flush  \n")
+		return errors.New("sendMsg : can not flush")
+	}
+	return nil
+}
+
 // Run : handler for the connection
 func (s *GSServerConn) Run() {
-	s.rw = bufio.NewReadWriter(bufio.NewReader(s.socket), bufio.NewWriter(s.socket))
+	s.rb = NewSafeReader(s.socket)
+	s.wb = NewSafeWriter(s.socket)
 
-	for {
-		fmt.Print("Receive command ")
-		msgType, err := s.rw.ReadString('\n')
-		switch {
-		case err == io.EOF:
-			fmt.Println("Reached EOF - close this connection.\n ---")
-			s.gsServer.m.Lock()
-			delete(s.gsServer.conns, s.address)
-			s.gsServer.m.Unlock()
-			return
-		case err != nil:
-			fmt.Println("Failed to read:", err.Error())
-			s.gsServer.m.Lock()
-			delete(s.gsServer.conns, s.address)
-			s.gsServer.m.Unlock()
-			return
+	// receive messages
+	go func() {
+		for {
+			_, err := s.receiveMsg()
+			if err != nil {
+				return
+			}
 		}
-		msgType = strings.Trim(msgType, "\n")
-		fmt.Println("'" + msgType + "'")
-		fmt.Println("Receiving data part of message")
-		_, err = s.receiveMsg(msgType)
+	}()
+
+	// send messages
+	doSelect := true
+	for doSelect {
+		err := s.sendMsg()
 		if err != nil {
-			return
+			fmt.Printf("error sending message : %s", err)
+			doSelect = false
 		}
+	}
+}
+
+// SendEvent : send an event...
+// event is sent on each connection
+func (s *GSServer) SendEvent(evt *msg.Event) {
+	for _, conn := range s.conns {
+		conn.sndEvt <- *evt
+	}
+}
+
+// SendCommand : Send a message
+// todo : manage routing
+//    identify relevant targets (routing info matches identity)
+//    then try on each instance until success
+func (s *GSServer) SendCommand(cmd *msg.Command) {
+	for _, conn := range s.conns {
+		conn.sndCmd <- *cmd
+	}
+}
+
+// SendReply :
+func (s *GSServer) SendReply(rep *msg.Reply) {
+	for _, conn := range s.conns {
+		conn.sndRep <- *rep
+	}
+}
+
+// SendConfig :
+func (s *GSServer) SendConfig() {
+	cfg := msg.NewConfig(s.name)
+	for _, conn := range s.conns {
+		conn.sndCfg <- *cfg
 	}
 }
 
@@ -180,6 +259,14 @@ func server(name string, address string) {
 	if err != nil {
 		fmt.Println("Gandalf server socket can not be created")
 	}
+	go func() {
+		time.Sleep(time.Second * time.Duration(5))
+		event := msg.NewEvent("token", "bus", "started", "ok")
+		s.SendEvent(event)
+		command := msg.NewCommand("token", "bus", "register", "{\"topic\": \"toto\"}")
+		s.SendCommand(command)
+		reply := command.NewReply("success", "OK")
+		s.SendReply(reply)
+	}()
 	<-s.done
-
 }

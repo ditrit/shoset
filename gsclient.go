@@ -1,9 +1,7 @@
 package main
 
 import (
-	"bufio"
 	"crypto/tls"
-	"encoding/gob"
 	"errors"
 	"fmt"
 	"io"
@@ -40,15 +38,15 @@ type GSClientConn struct {
 	socket     *tls.Conn
 	localName  string
 	remoteName string
+	address    string
 	gsClient   *GSClient
-	rw         *bufio.ReadWriter
-	m          sync.RWMutex
-	reconnect  chan bool
+	rb         *SafeReader
+	wb         *SafeWriter
 	sndEvt     chan msg.Event
 	sndCmd     chan msg.Command
 	sndRep     chan msg.Reply
 	sndCfg     chan msg.Config
-	address    string
+	stop       chan bool
 }
 
 //Add : Add a new connection to a server
@@ -59,12 +57,13 @@ func (s *GSClient) Add(address string) (*GSClientConn, error) {
 	s.conns[address] = conn
 	s.m.Unlock()
 	conn.socket = new(tls.Conn)
-	conn.rw = new(bufio.ReadWriter)
+	conn.rb = new(SafeReader)
+	conn.wb = new(SafeWriter)
 	conn.sndEvt = make(chan msg.Event)
 	conn.sndCmd = make(chan msg.Command)
 	conn.sndRep = make(chan msg.Reply)
 	conn.sndCfg = make(chan msg.Config)
-	conn.reconnect = make(chan bool)
+	conn.stop = make(chan bool)
 	conn.address = address
 	conn.localName = s.name
 	go conn.Run()
@@ -75,15 +74,13 @@ func (s *GSClientConn) receiveMsg() (interface{}, error) {
 	var data interface{}
 
 	// read message type
-	s.m.Lock()
-	msgType, err := s.rw.ReadString('\n')
-	s.m.Unlock()
+	msgType, err := s.rb.ReadString()
 	switch {
 	case err == io.EOF:
-		s.reconnect <- true
+		s.stop <- true
 		return nil, errors.New("receiveMsg : reached EOF - close this connection")
 	case err != nil:
-		s.reconnect <- true
+		s.stop <- true
 		return nil, errors.New("receiveMsg : failed to read - close this connection")
 	}
 	msgType = strings.Trim(msgType, "\n")
@@ -101,13 +98,9 @@ func (s *GSClientConn) receiveMsg() (interface{}, error) {
 	default:
 		return nil, errors.New("receiveMsg : non implemented type of message " + msgType)
 	}
-	s.m.Lock()
-	dec := gob.NewDecoder(s.rw)
-	err = dec.Decode(&data)
-	s.m.Unlock()
+	err = s.rb.ReadMessage(&data)
 	if err != nil {
-		fmt.Println("Error decoding received message ", err)
-		s.reconnect <- true
+		s.stop <- true
 		return nil, errors.New("receiveMsg : unable to decode a message of type  " + msgType)
 	}
 	fmt.Printf("Receive %s: \n%#v\n", msgType, data)
@@ -130,22 +123,23 @@ func (s *GSClientConn) sendMsg() error {
 	case cfg := <-s.sndCfg:
 		data = &cfg
 		msgType = "cfg"
-	case <-s.reconnect:
+	case <-s.stop:
 		return errors.New("sendMsg : reconnect expected  ")
 	}
 
-	s.m.Lock()
-	s.rw.WriteString(msgType + "\n")
-	enc := gob.NewEncoder(s.rw)
-	err := enc.Encode(&data)
+	_, err := s.wb.WriteString(msgType)
+	if err != nil {
+		fmt.Printf("sendMsg : can not send the message type  \n")
+		return errors.New("sendMsg : can not send the message type ")
+	}
+	err = s.wb.WriteMessage(&data)
 	if err != nil {
 		return errors.New("sendMsg : can not send the message  ")
 	}
-	err = s.rw.Flush()
+	err = s.wb.Flush()
 	if err != nil {
 		return errors.New("sendMsg : can not flush")
 	}
-	s.m.Unlock()
 	return nil
 }
 
@@ -157,7 +151,8 @@ func (s *GSClientConn) Run() {
 			time.Sleep(time.Millisecond * time.Duration(100))
 		} else {
 			s.socket = conn
-			s.rw = bufio.NewReadWriter(bufio.NewReader(s.socket), bufio.NewWriter(s.socket))
+			s.rb = NewSafeReader(s.socket)
+			s.wb = NewSafeWriter(s.socket)
 
 			// receive messages
 			go func() {
