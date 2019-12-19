@@ -1,6 +1,7 @@
 package main
 
 import (
+	"container/list"
 	"crypto/tls"
 	"errors"
 	"fmt"
@@ -18,10 +19,18 @@ var (
 
 //GSClient : client gandalf Socket
 type GSClient struct {
-	conns map[string]*GSClientConn
-	name  string
-	done  chan bool
-	m     sync.RWMutex
+	conns   map[string]*GSClientConn
+	name    string
+	done    chan bool
+	m       sync.RWMutex
+	listEvt *list.List
+	listCmd *list.List
+	listRep *list.List
+	listCfg *list.List
+	evtOK   chan bool
+	cmdOK   chan bool
+	repOK   chan bool
+	cfgOK   chan bool
 }
 
 // NewGSClient : constructor
@@ -30,7 +39,38 @@ func NewGSClient(name string, address string) (*GSClient, error) {
 	s.name = name
 	s.conns = make(map[string]*GSClientConn)
 	_, e := s.Add(address)
+	s.listEvt = list.New()
+	s.listCmd = list.New()
+	s.listRep = list.New()
+	s.listCfg = list.New()
+	s.evtOK = make(chan bool)
+	s.cmdOK = make(chan bool)
+	s.repOK = make(chan bool)
+	s.cfgOK = make(chan bool)
+	go s.Run()
 	return s, e
+}
+
+// Run :
+func (s *GSClient) Run() error {
+	for {
+		ele := s.listEvt.Front()
+		if ele != nil {
+			s.evtOK <- true
+		}
+		ele = s.listCmd.Front()
+		if ele != nil {
+			s.cmdOK <- true
+		}
+		ele = s.listRep.Front()
+		if ele != nil {
+			s.repOK <- true
+		}
+		ele = s.listCfg.Front()
+		if ele != nil {
+			s.cfgOK <- true
+		}
+	}
 }
 
 // GSClientConn : client connection
@@ -46,7 +86,8 @@ type GSClientConn struct {
 	sndCmd     chan msg.Command
 	sndRep     chan msg.Reply
 	sndCfg     chan msg.Config
-	stop       chan bool
+
+	stop chan bool
 }
 
 //Add : Add a new connection to a server
@@ -103,6 +144,19 @@ func (s *GSClientConn) receiveMsg() (interface{}, error) {
 		s.stop <- true
 		return nil, errors.New("receiveMsg : unable to decode a message of type  " + msgType)
 	}
+	s.gsClient.m.Lock()
+	switch msgType {
+	case "evt":
+		s.gsClient.listEvt.PushBack(data)
+	case "cmd":
+		s.gsClient.listCmd.PushBack(data)
+	case "rep":
+		s.gsClient.listRep.PushBack(data)
+	case "cfg":
+		s.gsClient.listCfg.PushBack(data)
+	}
+	s.gsClient.m.Unlock()
+
 	fmt.Printf("Receive %s: \n%#v\n", msgType, data)
 	return &data, err
 }
@@ -217,4 +271,9 @@ func client(name string, address string) {
 		c.SendCommand(command)
 	}()
 	<-c.done
+}
+
+// WaitEvent :
+func (s *GSClient) WaitEvent() {
+
 }
