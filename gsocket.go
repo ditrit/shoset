@@ -1,12 +1,9 @@
 package main
 
 import (
-	"encoding/gob"
 	"flag"
 	"fmt"
 	"os"
-
-	"./msg"
 )
 
 func main() {
@@ -37,11 +34,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	gob.Register(new(msg.Event))
-	gob.Register(new(msg.Command))
-	gob.Register(new(msg.Reply))
-	gob.Register(new(msg.Config))
-
 	name := args[0]
 	address := args[1]
 
@@ -51,4 +43,5 @@ func main() {
 	if isClient == true {
 		client(name, address)
 	}
+
 }

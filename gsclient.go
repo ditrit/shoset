@@ -1,7 +1,6 @@
 package main
 
 import (
-	"container/list"
 	"crypto/tls"
 	"errors"
 	"fmt"
@@ -19,18 +18,11 @@ var (
 
 //GSClient : client gandalf Socket
 type GSClient struct {
-	conns   map[string]*GSClientConn
-	name    string
-	done    chan bool
-	m       sync.RWMutex
-	listEvt *list.List
-	listCmd *list.List
-	listRep *list.List
-	listCfg *list.List
-	evtOK   chan bool
-	cmdOK   chan bool
-	repOK   chan bool
-	cfgOK   chan bool
+	conns    map[string]*GSClientConn
+	name     string
+	done     chan bool
+	m        sync.RWMutex
+	msgQueue msg.MBuffer
 }
 
 // NewGSClient : constructor
@@ -39,38 +31,8 @@ func NewGSClient(name string, address string) (*GSClient, error) {
 	s.name = name
 	s.conns = make(map[string]*GSClientConn)
 	_, e := s.Add(address)
-	s.listEvt = list.New()
-	s.listCmd = list.New()
-	s.listRep = list.New()
-	s.listCfg = list.New()
-	s.evtOK = make(chan bool)
-	s.cmdOK = make(chan bool)
-	s.repOK = make(chan bool)
-	s.cfgOK = make(chan bool)
-	go s.Run()
+	s.msgQueue.Init()
 	return s, e
-}
-
-// Run :
-func (s *GSClient) Run() error {
-	for {
-		ele := s.listEvt.Front()
-		if ele != nil {
-			s.evtOK <- true
-		}
-		ele = s.listCmd.Front()
-		if ele != nil {
-			s.cmdOK <- true
-		}
-		ele = s.listRep.Front()
-		if ele != nil {
-			s.repOK <- true
-		}
-		ele = s.listCfg.Front()
-		if ele != nil {
-			s.cfgOK <- true
-		}
-	}
 }
 
 // GSClientConn : client connection
@@ -80,8 +42,8 @@ type GSClientConn struct {
 	remoteName string
 	address    string
 	gsClient   *GSClient
-	rb         *SafeReader
-	wb         *SafeWriter
+	rb         *msg.Reader
+	wb         *msg.Writer
 	sndEvt     chan msg.Event
 	sndCmd     chan msg.Command
 	sndRep     chan msg.Reply
@@ -98,8 +60,8 @@ func (s *GSClient) Add(address string) (*GSClientConn, error) {
 	s.conns[address] = conn
 	s.m.Unlock()
 	conn.socket = new(tls.Conn)
-	conn.rb = new(SafeReader)
-	conn.wb = new(SafeWriter)
+	conn.rb = new(msg.Reader)
+	conn.wb = new(msg.Writer)
 	conn.sndEvt = make(chan msg.Event)
 	conn.sndCmd = make(chan msg.Command)
 	conn.sndRep = make(chan msg.Reply)
@@ -111,89 +73,68 @@ func (s *GSClient) Add(address string) (*GSClientConn, error) {
 	return conn, nil
 }
 
-func (s *GSClientConn) receiveMsg() (interface{}, error) {
-	var data interface{}
-
+func (s *GSClientConn) receiveMsg() error {
 	// read message type
 	msgType, err := s.rb.ReadString()
 	switch {
 	case err == io.EOF:
 		s.stop <- true
-		return nil, errors.New("receiveMsg : reached EOF - close this connection")
+		return errors.New("receiveMsg : reached EOF - close this connection")
 	case err != nil:
 		s.stop <- true
-		return nil, errors.New("receiveMsg : failed to read - close this connection")
+		return errors.New("receiveMsg : failed to read - close this connection")
 	}
 	msgType = strings.Trim(msgType, "\n")
 
 	// read message data
+	fmt.Printf("Read message and push if into buffer")
 	switch msgType {
 	case "evt":
-		data = new(msg.Event)
+		var evt msg.Event
+		err = s.rb.ReadEvent(&evt)
+		s.gsClient.msgQueue.PushEvent(evt)
 	case "cmd":
-		data = new(msg.Command)
+		var cmd msg.Command
+		err = s.rb.ReadCommand(&cmd)
+		s.gsClient.msgQueue.PushCommand(cmd)
 	case "rep":
-		data = new(msg.Reply)
+		var rep msg.Reply
+		err = s.rb.ReadReply(&rep)
+		s.gsClient.msgQueue.PushReply(rep)
 	case "cfg":
-		data = new(msg.Config)
+		var cfg msg.Config
+		err = s.rb.ReadConfig(&cfg)
+		s.gsClient.msgQueue.PushConfig(cfg)
 	default:
-		return nil, errors.New("receiveMsg : non implemented type of message " + msgType)
+		return errors.New("receiveMsg : non implemented type of message " + msgType)
 	}
-	err = s.rb.ReadMessage(&data)
 	if err != nil {
 		s.stop <- true
-		return nil, errors.New("receiveMsg : unable to decode a message of type  " + msgType)
+		return errors.New("receiveMsg : unable to decode a message of type  " + msgType)
 	}
-	s.gsClient.m.Lock()
-	switch msgType {
-	case "evt":
-		s.gsClient.listEvt.PushBack(data)
-	case "cmd":
-		s.gsClient.listCmd.PushBack(data)
-	case "rep":
-		s.gsClient.listRep.PushBack(data)
-	case "cfg":
-		s.gsClient.listCfg.PushBack(data)
-	}
-	s.gsClient.m.Unlock()
 
-	fmt.Printf("Receive %s: \n%#v\n", msgType, data)
-	return &data, err
+	//fmt.Printf("Receive %s: \n%#v\n", msgType, data)
+	return err
 }
 
 func (s *GSClientConn) sendMsg() error {
-	var data interface{}
-	var msgType string
 	select {
 	case evt := <-s.sndEvt:
-		data = &evt
-		msgType = "evt"
+		s.wb.WriteString("evt")
+		s.wb.WriteEvent(evt)
 	case cmd := <-s.sndCmd:
-		data = &cmd
-		msgType = "cmd"
+		s.wb.WriteString("cmd")
+		s.wb.WriteCommand(cmd)
 	case rep := <-s.sndRep:
-		data = &rep
-		msgType = "rep"
+		s.wb.WriteString("rep")
+		s.wb.WriteReply(rep)
 	case cfg := <-s.sndCfg:
-		data = &cfg
-		msgType = "cfg"
+		s.wb.WriteString("cfg")
+		s.wb.WriteConfig(cfg)
 	case <-s.stop:
 		return errors.New("sendMsg : reconnect expected  ")
 	}
-
-	_, err := s.wb.WriteString(msgType)
-	if err != nil {
-		fmt.Printf("sendMsg : can not send the message type  \n")
-		return errors.New("sendMsg : can not send the message type ")
-	}
-	err = s.wb.WriteMessage(&data)
-	if err != nil {
-		return errors.New("sendMsg : can not send the message  ")
-	}
-	err = s.wb.Flush()
-	if err != nil {
-		return errors.New("sendMsg : can not flush")
-	}
+	s.wb.Flush()
 	return nil
 }
 
@@ -205,12 +146,13 @@ func (s *GSClientConn) Run() {
 			time.Sleep(time.Millisecond * time.Duration(100))
 		} else {
 			s.socket = conn
-			s.rb = NewSafeReader(s.socket)
-			s.wb = NewSafeWriter(s.socket)
+			s.rb = msg.NewReader(s.socket)
+			s.wb = msg.NewWriter(s.socket)
 
 			// receive messages
 			go func() {
 				for {
+					fmt.Printf("Receive Msg\n")
 					s.receiveMsg()
 				}
 			}()
@@ -218,8 +160,10 @@ func (s *GSClientConn) Run() {
 			// send messages
 			doSelect := true
 			for doSelect {
+				fmt.Printf("Sending Message\n")
 				err = s.sendMsg()
 				if err != nil {
+					fmt.Printf("error sending message : %s", err)
 					doSelect = false
 				}
 			}
@@ -230,6 +174,7 @@ func (s *GSClientConn) Run() {
 // SendEvent : send an event...
 // event is sent on each connection
 func (s *GSClient) SendEvent(evt *msg.Event) {
+	fmt.Print("Sending event.\n")
 	for _, conn := range s.conns {
 		conn.sndEvt <- *evt
 	}
@@ -240,6 +185,8 @@ func (s *GSClient) SendEvent(evt *msg.Event) {
 //    identify relevant targets (routing info matches identity)
 //    then try on each instance until success
 func (s *GSClient) SendCommand(cmd *msg.Command) {
+	fmt.Print("Sending command.\n")
+
 	for _, conn := range s.conns {
 		conn.sndCmd <- *cmd
 	}
@@ -247,6 +194,8 @@ func (s *GSClient) SendCommand(cmd *msg.Command) {
 
 // SendReply :
 func (s *GSClient) SendReply(rep *msg.Reply) {
+	fmt.Print("Sending reply.\n")
+
 	for _, conn := range s.conns {
 		conn.sndRep <- *rep
 	}
@@ -264,11 +213,12 @@ func (s *GSClient) SendConfig() {
 
 func client(name string, address string) {
 	c, _ := NewGSClient(name, address)
+	time.Sleep(time.Second * time.Duration(1))
 	go func() {
-		event := msg.NewEvent("token", "bus", "started", "ok")
-		c.SendEvent(event)
-		command := msg.NewCommand("token", "orchestrator", "deploy", "{\"appli\": \"toto\"}")
+		command := msg.NewCommand("orchestrator", "deploy", "{\"appli\": \"toto\"}")
 		c.SendCommand(command)
+		event := msg.NewEvent("bus", "started", "ok")
+		c.SendEvent(event)
 	}()
 	<-c.done
 }

@@ -1,0 +1,89 @@
+package msg
+
+import (
+	"bufio"
+	"encoding/gob"
+	"fmt"
+	"io"
+	"sync"
+)
+
+// Writer : simple bufio.Writer safe for goroutines...
+type Writer struct {
+	b *bufio.Writer
+	m sync.Mutex
+}
+
+// NewWriter : constructor
+func NewWriter(wd io.Writer) *Writer {
+	s := new(Writer)
+	s.b = bufio.NewWriter(wd)
+	return s
+}
+
+// WriteString : safe version for goroutines
+func (r *Writer) WriteString(data string) (int, error) {
+	r.m.Lock()
+	defer r.m.Unlock()
+	return r.b.WriteString(data + "\n")
+}
+
+// Flush : safe version for goroutines
+func (r *Writer) Flush() error {
+	r.m.Lock()
+	defer r.m.Unlock()
+	return r.b.Flush()
+}
+
+// WriteEvent : encode a message in a safe way for goroutines
+func (r *Writer) WriteEvent(data Event) error {
+	r.m.Lock()
+	defer r.m.Unlock()
+	defer fmt.Printf(">WriteEvent: \n%#v\n", data)
+	enc := gob.NewEncoder(r.b)
+	err := enc.Encode(data)
+	r.b.Flush()
+	if err != nil {
+		fmt.Printf("error in Writing Event : %s\n", err)
+	}
+	return err
+}
+
+// WriteCommand : encode a message in a safe way for goroutines
+func (r *Writer) WriteCommand(data Command) error {
+	r.m.Lock()
+	defer r.m.Unlock()
+	enc := gob.NewEncoder(r.b)
+	err := enc.Encode(data)
+	r.b.Flush()
+	if err != nil {
+		fmt.Printf("error in Writing Command : %s\n", err)
+	}
+	return err
+}
+
+// WriteReply : encode a message in a safe way for goroutines
+func (r *Writer) WriteReply(data Reply) error {
+	r.m.Lock()
+	defer r.m.Unlock()
+	enc := gob.NewEncoder(r.b)
+	err := enc.Encode(data)
+	r.b.Flush()
+	if err != nil {
+		fmt.Printf("error in Writing Reply : %s\n", err)
+	}
+	return err
+}
+
+// WriteConfig : encode a message in a safe way for goroutines
+func (r *Writer) WriteConfig(data Config) error {
+	r.m.Lock()
+	defer r.m.Unlock()
+	enc := gob.NewEncoder(r.b)
+	err := enc.Encode(data)
+	r.b.Flush()
+	if err != nil {
+		fmt.Printf("error writing Config : %s\n", err)
+	}
+	return err
+}
