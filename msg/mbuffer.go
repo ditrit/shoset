@@ -1,6 +1,9 @@
 package msg
 
-import "container/list"
+import (
+	"container/list"
+	"fmt"
+)
 
 // MBuffer :
 type MBuffer struct {
@@ -83,4 +86,18 @@ func (b *MBuffer) RemoveReply(evt Reply) {
 // RemoveConfig :
 func (b *MBuffer) RemoveConfig(evt Config) {
 	b.configs.Remove(evt)
+}
+
+// Print :
+func (b *MBuffer) Print() {
+	fmt.Printf(" MBuffer{\n")
+	fmt.Printf("  events : \n")
+	b.events.Print()
+	fmt.Printf("  commands : \n")
+	b.commands.Print()
+	fmt.Printf("  replies : \n")
+	b.replies.Print()
+	fmt.Printf("  configs : \n")
+	b.configs.Print()
+	fmt.Printf(" }\n")
 }

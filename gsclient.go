@@ -112,7 +112,7 @@ func (s *GSClientConn) receiveMsg() error {
 		s.stop <- true
 		return errors.New("receiveMsg : unable to decode a message of type  " + msgType)
 	}
-
+	s.gsClient.msgQueue.Print()
 	//fmt.Printf("Receive %s: \n%#v\n", msgType, data)
 	return err
 }
@@ -220,6 +220,10 @@ func client(name string, address string) {
 		event := msg.NewEvent("bus", "started", "ok")
 		c.SendEvent(event)
 	}()
+
+	time.Sleep(time.Second * time.Duration(10))
+	c.msgQueue.Print()
+
 	<-c.done
 }
 
