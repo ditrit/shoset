@@ -18,11 +18,15 @@ var (
 
 //GSClient : client gandalf Socket
 type GSClient struct {
-	conns    map[string]*GSClientConn
-	name     string
-	done     chan bool
-	m        sync.RWMutex
-	msgQueue msg.MBuffer
+	conns map[string]*GSClientConn
+	name  string
+	done  chan bool
+	m     sync.RWMutex
+	//msgQueue msg.MBuffer
+	qEvents   msg.Queue
+	qCommands msg.Queue
+	qReplies  msg.Queue
+	qConfigs  msg.Queue
 }
 
 // NewGSClient : constructor
@@ -30,8 +34,13 @@ func NewGSClient(name string, address string) (*GSClient, error) {
 	s := new(GSClient)
 	s.name = name
 	s.conns = make(map[string]*GSClientConn)
+	s.qEvents.Init()
+	s.qCommands.Init()
+	s.qReplies.Init()
+	s.qConfigs.Init()
 	_, e := s.Add(address)
-	s.msgQueue.Init()
+	//s.msgQueue.Init()
+
 	return s, e
 }
 
@@ -92,19 +101,19 @@ func (s *GSClientConn) receiveMsg() error {
 	case "evt":
 		var evt msg.Event
 		err = s.rb.ReadEvent(&evt)
-		s.gsClient.msgQueue.PushEvent(evt)
+		s.gsClient.qEvents.Push(evt)
 	case "cmd":
 		var cmd msg.Command
 		err = s.rb.ReadCommand(&cmd)
-		s.gsClient.msgQueue.PushCommand(cmd)
+		s.gsClient.qCommands.Push(cmd)
 	case "rep":
 		var rep msg.Reply
 		err = s.rb.ReadReply(&rep)
-		s.gsClient.msgQueue.PushReply(rep)
+		s.gsClient.qReplies.Push(rep)
 	case "cfg":
 		var cfg msg.Config
 		err = s.rb.ReadConfig(&cfg)
-		s.gsClient.msgQueue.PushConfig(cfg)
+		s.gsClient.qConfigs.Push(cfg)
 	default:
 		return errors.New("receiveMsg : non implemented type of message " + msgType)
 	}
@@ -112,7 +121,6 @@ func (s *GSClientConn) receiveMsg() error {
 		s.stop <- true
 		return errors.New("receiveMsg : unable to decode a message of type  " + msgType)
 	}
-	s.gsClient.msgQueue.Print()
 	//fmt.Printf("Receive %s: \n%#v\n", msgType, data)
 	return err
 }
@@ -221,8 +229,7 @@ func client(name string, address string) {
 		c.SendEvent(event)
 	}()
 
-	time.Sleep(time.Second * time.Duration(10))
-	c.msgQueue.Print()
+	//time.Sleep(time.Second * time.Duration(10))
 
 	<-c.done
 }
