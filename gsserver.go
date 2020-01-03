@@ -53,10 +53,6 @@ type GSServerConn struct {
 	gsServer   *GSServer
 	rb         *msg.Reader
 	wb         *msg.Writer
-	sndEvt     chan msg.Event
-	sndCmd     chan msg.Command
-	sndRep     chan msg.Reply
-	sndCfg     chan msg.Config
 	stop       chan bool
 }
 
@@ -72,10 +68,6 @@ func (s *GSServer) add(tlsConn *tls.Conn) (*GSServerConn, error) {
 	s.m.Unlock()
 	conn.rb = new(msg.Reader)
 	conn.wb = new(msg.Writer)
-	conn.sndEvt = make(chan msg.Event)
-	conn.sndCmd = make(chan msg.Command)
-	conn.sndRep = make(chan msg.Reply)
-	conn.sndCfg = make(chan msg.Config)
 	conn.stop = make(chan bool)
 
 	//go conn.Run()
@@ -169,58 +161,28 @@ func (s *GSServerConn) receiveMsg() error {
 	return err
 }
 
-func (s *GSServerConn) sendMsg() error {
-	select {
-	case evt := <-s.sndEvt:
-		s.wb.WriteString("evt")
-		s.wb.WriteEvent(evt)
-	case cmd := <-s.sndCmd:
-		s.wb.WriteString("cmd")
-		s.wb.WriteCommand(cmd)
-	case rep := <-s.sndRep:
-		s.wb.WriteString("rep")
-		s.wb.WriteReply(rep)
-	case cfg := <-s.sndCfg:
-		s.wb.WriteString("cfg")
-		s.wb.WriteConfig(cfg)
-	case <-s.stop:
-		return errors.New("sendMsg : reconnect expected  ")
-	}
-	s.wb.Flush()
-	return nil
-}
-
 // Run : handler for the connection
 func (s *GSServerConn) Run() {
 	s.rb = msg.NewReader(s.socket)
 	s.wb = msg.NewWriter(s.socket)
 
 	// receive messages
-	go func() {
-		for {
-			err := s.receiveMsg()
-			if err != nil {
-				return
-			}
-		}
-	}()
-
-	// send messages
-	doSelect := true
-	for doSelect {
-		err := s.sendMsg()
+	for {
+		err := s.receiveMsg()
 		if err != nil {
-			fmt.Printf("error sending message : %s", err)
-			doSelect = false
+			return
 		}
 	}
+
 }
 
 // SendEvent : send an event...
 // event is sent on each connection
 func (s *GSServer) SendEvent(evt *msg.Event) {
+	fmt.Print("Sending event.\n")
 	for _, conn := range s.conns {
-		conn.sndEvt <- *evt
+		conn.wb.WriteString("evt")
+		conn.wb.WriteEvent(*evt)
 	}
 }
 
@@ -229,23 +191,32 @@ func (s *GSServer) SendEvent(evt *msg.Event) {
 //    identify relevant targets (routing info matches identity)
 //    then try on each instance until success
 func (s *GSServer) SendCommand(cmd *msg.Command) {
+	fmt.Print("Sending command.\n")
+
 	for _, conn := range s.conns {
-		conn.sndCmd <- *cmd
+		conn.wb.WriteString("cmd")
+		conn.wb.WriteCommand(*cmd)
 	}
 }
 
 // SendReply :
 func (s *GSServer) SendReply(rep *msg.Reply) {
+	fmt.Print("Sending reply.\n")
+
 	for _, conn := range s.conns {
-		conn.sndRep <- *rep
+		conn.wb.WriteString("rep")
+		conn.wb.WriteReply(*rep)
 	}
 }
 
 // SendConfig :
 func (s *GSServer) SendConfig() {
+	fmt.Print("Sending configuration.\n")
+
 	cfg := msg.NewConfig(s.name)
 	for _, conn := range s.conns {
-		conn.sndCfg <- *cfg
+		conn.wb.WriteString("evt")
+		conn.wb.WriteConfig(*cfg)
 	}
 }
 

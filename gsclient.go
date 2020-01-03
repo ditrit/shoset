@@ -18,11 +18,10 @@ var (
 
 //GSClient : client gandalf Socket
 type GSClient struct {
-	conns map[string]*GSClientConn
-	name  string
-	done  chan bool
-	m     sync.RWMutex
-	//msgQueue msg.MBuffer
+	conns     map[string]*GSClientConn
+	name      string
+	done      chan bool
+	m         sync.RWMutex
 	qEvents   msg.Queue
 	qCommands msg.Queue
 	qReplies  msg.Queue
@@ -39,7 +38,6 @@ func NewGSClient(name string, address string) (*GSClient, error) {
 	s.qReplies.Init()
 	s.qConfigs.Init()
 	_, e := s.Add(address)
-	//s.msgQueue.Init()
 
 	return s, e
 }
@@ -53,10 +51,6 @@ type GSClientConn struct {
 	gsClient   *GSClient
 	rb         *msg.Reader
 	wb         *msg.Writer
-	sndEvt     chan msg.Event
-	sndCmd     chan msg.Command
-	sndRep     chan msg.Reply
-	sndCfg     chan msg.Config
 
 	stop chan bool
 }
@@ -71,10 +65,6 @@ func (s *GSClient) Add(address string) (*GSClientConn, error) {
 	conn.socket = new(tls.Conn)
 	conn.rb = new(msg.Reader)
 	conn.wb = new(msg.Writer)
-	conn.sndEvt = make(chan msg.Event)
-	conn.sndCmd = make(chan msg.Command)
-	conn.sndRep = make(chan msg.Reply)
-	conn.sndCfg = make(chan msg.Config)
 	conn.stop = make(chan bool)
 	conn.address = address
 	conn.localName = s.name
@@ -121,29 +111,7 @@ func (s *GSClientConn) receiveMsg() error {
 		s.stop <- true
 		return errors.New("receiveMsg : unable to decode a message of type  " + msgType)
 	}
-	//fmt.Printf("Receive %s: \n%#v\n", msgType, data)
 	return err
-}
-
-func (s *GSClientConn) sendMsg() error {
-	select {
-	case evt := <-s.sndEvt:
-		s.wb.WriteString("evt")
-		s.wb.WriteEvent(evt)
-	case cmd := <-s.sndCmd:
-		s.wb.WriteString("cmd")
-		s.wb.WriteCommand(cmd)
-	case rep := <-s.sndRep:
-		s.wb.WriteString("rep")
-		s.wb.WriteReply(rep)
-	case cfg := <-s.sndCfg:
-		s.wb.WriteString("cfg")
-		s.wb.WriteConfig(cfg)
-	case <-s.stop:
-		return errors.New("sendMsg : reconnect expected  ")
-	}
-	s.wb.Flush()
-	return nil
 }
 
 // Run : handler for the socket
@@ -158,22 +126,9 @@ func (s *GSClientConn) Run() {
 			s.wb = msg.NewWriter(s.socket)
 
 			// receive messages
-			go func() {
-				for {
-					fmt.Printf("Receive Msg\n")
-					s.receiveMsg()
-				}
-			}()
-
-			// send messages
-			doSelect := true
-			for doSelect {
-				fmt.Printf("Sending Message\n")
-				err = s.sendMsg()
-				if err != nil {
-					fmt.Printf("error sending message : %s", err)
-					doSelect = false
-				}
+			for {
+				fmt.Printf("Receive Msg\n")
+				s.receiveMsg()
 			}
 		}
 	}
@@ -184,7 +139,8 @@ func (s *GSClientConn) Run() {
 func (s *GSClient) SendEvent(evt *msg.Event) {
 	fmt.Print("Sending event.\n")
 	for _, conn := range s.conns {
-		conn.sndEvt <- *evt
+		conn.wb.WriteString("evt")
+		conn.wb.WriteEvent(*evt)
 	}
 }
 
@@ -196,7 +152,8 @@ func (s *GSClient) SendCommand(cmd *msg.Command) {
 	fmt.Print("Sending command.\n")
 
 	for _, conn := range s.conns {
-		conn.sndCmd <- *cmd
+		conn.wb.WriteString("cmd")
+		conn.wb.WriteCommand(*cmd)
 	}
 }
 
@@ -205,7 +162,8 @@ func (s *GSClient) SendReply(rep *msg.Reply) {
 	fmt.Print("Sending reply.\n")
 
 	for _, conn := range s.conns {
-		conn.sndRep <- *rep
+		conn.wb.WriteString("rep")
+		conn.wb.WriteReply(*rep)
 	}
 }
 
@@ -215,7 +173,8 @@ func (s *GSClient) SendConfig() {
 
 	cfg := msg.NewConfig(s.name)
 	for _, conn := range s.conns {
-		conn.sndCfg <- *cfg
+		conn.wb.WriteString("evt")
+		conn.wb.WriteConfig(*cfg)
 	}
 }
 
@@ -228,8 +187,6 @@ func client(name string, address string) {
 		event := msg.NewEvent("bus", "started", "ok")
 		c.SendEvent(event)
 	}()
-
-	//time.Sleep(time.Second * time.Duration(10))
 
 	<-c.done
 }
