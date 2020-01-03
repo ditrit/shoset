@@ -227,7 +227,10 @@ func server(name string, address string) {
 	}
 	go func() {
 		time.Sleep(time.Second * time.Duration(5))
-		event := msg.NewEvent("bus", "started", "ok")
+		event := msg.NewEvent("bus", "starting", "ok")
+		s.SendEvent(event)
+		time.Sleep(time.Millisecond * time.Duration(200))
+		event = msg.NewEvent("bus", "started", "ok")
 		s.SendEvent(event)
 		command := msg.NewCommand("bus", "register", "{\"topic\": \"toto\"}")
 		s.SendCommand(command)

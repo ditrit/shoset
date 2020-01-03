@@ -22,10 +22,10 @@ type GSClient struct {
 	name      string
 	done      chan bool
 	m         sync.RWMutex
-	qEvents   msg.Queue
-	qCommands msg.Queue
-	qReplies  msg.Queue
-	qConfigs  msg.Queue
+	qEvents   *msg.Queue
+	qCommands *msg.Queue
+	qReplies  *msg.Queue
+	qConfigs  *msg.Queue
 }
 
 // NewGSClient : constructor
@@ -33,10 +33,10 @@ func NewGSClient(name string, address string) (*GSClient, error) {
 	s := new(GSClient)
 	s.name = name
 	s.conns = make(map[string]*GSClientConn)
-	s.qEvents.Init()
-	s.qCommands.Init()
-	s.qReplies.Init()
-	s.qConfigs.Init()
+	s.qEvents = msg.NewQueue()
+	s.qCommands = msg.NewQueue()
+	s.qReplies = msg.NewQueue()
+	s.qConfigs = msg.NewQueue()
 	_, e := s.Add(address)
 
 	return s, e
@@ -150,7 +150,6 @@ func (s *GSClient) SendEvent(evt *msg.Event) {
 //    then try on each instance until success
 func (s *GSClient) SendCommand(cmd *msg.Command) {
 	fmt.Print("Sending command.\n")
-
 	for _, conn := range s.conns {
 		conn.wb.WriteString("cmd")
 		conn.wb.WriteCommand(*cmd)
@@ -160,7 +159,6 @@ func (s *GSClient) SendCommand(cmd *msg.Command) {
 // SendReply :
 func (s *GSClient) SendReply(rep *msg.Reply) {
 	fmt.Print("Sending reply.\n")
-
 	for _, conn := range s.conns {
 		conn.wb.WriteString("rep")
 		conn.wb.WriteReply(*rep)
@@ -178,20 +176,134 @@ func (s *GSClient) SendConfig() {
 	}
 }
 
+// WaitEvent :
+func (s *GSClient) WaitEvent(events *msg.Iterator, topicName string, eventName string, timeout int) *msg.Event {
+	term := make(chan *msg.Event, 1)
+	cont := true
+	go func() {
+		for cont {
+			message := events.Get()
+			if message != nil {
+				event := (*message).(msg.Event)
+				if topicName == event.GetTopic() && eventName == event.GetEvent() {
+					term <- &event
+				}
+			} else {
+				time.Sleep(time.Duration(10) * time.Millisecond)
+			}
+		}
+	}()
+	select {
+	case res := <-term:
+		cont = false
+		return res
+	case <-time.After(time.Duration(timeout) * time.Second):
+		return nil
+	}
+}
+
+// WaitCommand : uniquement au sein d'un connecteur a priori
+func (s *GSClient) WaitCommand(commands *msg.Iterator, commandName string, timeout int) *msg.Command {
+	term := make(chan *msg.Command, 1)
+	cont := true
+	go func() {
+		for cont {
+			message := commands.Get()
+			if message != nil {
+				command := (*message).(msg.Command)
+				if commandName == command.GetCommand() {
+					term <- &command
+				}
+			} else {
+				time.Sleep(time.Duration(10) * time.Millisecond)
+			}
+		}
+	}()
+	select {
+	case res := <-term:
+		cont = false
+		return res
+	case <-time.After(time.Duration(timeout) * time.Second):
+		return nil
+	}
+}
+
+// WaitReply :
+func (s *GSClient) WaitReply(replies *msg.Iterator, commandUUID string, timeout int) *msg.Reply {
+	term := make(chan *msg.Reply, 1)
+	cont := true
+	go func() {
+		for cont {
+			message := replies.Get()
+			if message != nil {
+				reply := (*message).(msg.Reply)
+				if commandUUID == reply.GetCmdUUID() {
+					term <- &reply
+				}
+			} else {
+				time.Sleep(time.Duration(10) * time.Millisecond)
+			}
+		}
+	}()
+	select {
+	case res := <-term:
+		cont = false
+		return res
+	case <-time.After(time.Duration(timeout) * time.Second):
+		return nil
+	}
+}
+
+// WaitConfig :
+func (s *GSClient) WaitConfig(replies *msg.Iterator, commandUUID string, timeout int) *msg.Config {
+	term := make(chan *msg.Config, 1)
+	cont := true
+	go func() {
+		for cont {
+			message := replies.Get()
+			if message != nil {
+				config := (*message).(msg.Config)
+				term <- &config
+			} else {
+				time.Sleep(time.Duration(10) * time.Millisecond)
+			}
+		}
+	}()
+	select {
+	case res := <-term:
+		cont = false
+		return res
+	case <-time.After(time.Duration(timeout) * time.Second):
+		return nil
+	}
+}
+
 func client(name string, address string) {
 	c, _ := NewGSClient(name, address)
 	time.Sleep(time.Second * time.Duration(1))
 	go func() {
 		command := msg.NewCommand("orchestrator", "deploy", "{\"appli\": \"toto\"}")
 		c.SendCommand(command)
-		event := msg.NewEvent("bus", "started", "ok")
+		event := msg.NewEvent("bus", "coucou", "ok")
 		c.SendEvent(event)
+
+		events := msg.NewIterator(c.qEvents)
+		defer events.Close()
+		rec := c.WaitEvent(events, "bus", "started", 20)
+		if rec != nil {
+			fmt.Printf(">Received Event: \n%#v\n", *rec)
+		} else {
+			fmt.Print("Timeout expired !")
+		}
+		events2 := msg.NewIterator(c.qEvents)
+		defer events.Close()
+		rec2 := c.WaitEvent(events2, "bus", "starting", 20)
+		if rec2 != nil {
+			fmt.Printf(">Received Event 2: \n%#v\n", *rec2)
+		} else {
+			fmt.Print("Timeout expired  2 !")
+		}
 	}()
 
 	<-c.done
-}
-
-// WaitEvent :
-func (s *GSClient) WaitEvent() {
-
 }
