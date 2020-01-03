@@ -38,10 +38,10 @@ func main() {
 	address := args[1]
 
 	if isServer == true {
-		server(name, address)
+		chaussetteServer(name, address)
 	}
 	if isClient == true {
-		client(name, address)
+		chaussetteClient(name, address)
 	}
 
 }
