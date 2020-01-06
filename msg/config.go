@@ -4,20 +4,20 @@ package msg
 type Config struct {
 	MessageBase
 
-	Info string
+	LogicalName string
 }
 
 // NewConfig : Config constructor
-func NewConfig(info string) *Config {
+func NewConfig(logicalName string) *Config {
 	c := new(Config)
 	c.InitMessageBase()
 
-	c.Info = info
+	c.LogicalName = logicalName
 	return c
 }
 
 // GetMsgType accessor
 func (c Config) GetMsgType() string { return "cfg" }
 
-// GetInfo :
-func (c Config) GetInfo() string { return c.Info }
+// GetLogicalName :
+func (c Config) GetLogicalName() string { return c.LogicalName }

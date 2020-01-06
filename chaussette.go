@@ -32,9 +32,9 @@ var certPath = "./cert.pem"
 var keyPath = "./key.pem"
 
 // NewChaussette : constructor
-func NewChaussette(name string) *Chaussette {
+func NewChaussette(logicalName string) *Chaussette {
 	c := new(Chaussette)
-	c.name = name
+	c.name = logicalName
 	c.conns = make(map[string]*ChaussetteConn)
 	c.qEvents = msg.NewQueue()
 	c.qCommands = msg.NewQueue()
@@ -61,6 +61,7 @@ type ChaussetteConn struct {
 	socket     *tls.Conn
 	localName  string
 	remoteName string
+	direction  string
 	address    string
 	chaussette *Chaussette
 	rb         *msg.Reader
@@ -82,6 +83,7 @@ func (c *Chaussette) Connect(address string) (*ChaussetteConn, error) {
 
 // RunOutConn : handler for the socket
 func (c *ChaussetteConn) runOutConn(address string) {
+	myConfig := msg.NewConfig(c.chaussette.name)
 	for {
 		c.chaussette.setConn(address, c)
 		conn, err := tls.Dial("tcp", c.address, c.chaussette.tlsConfig)
@@ -91,9 +93,13 @@ func (c *ChaussetteConn) runOutConn(address string) {
 			c.socket = conn
 			c.rb = msg.NewReader(c.socket)
 			c.wb = msg.NewWriter(c.socket)
+			c.direction = "out"
 
 			// receive messages
 			for {
+				if c.remoteName == "" {
+					c.SendConfig(myConfig)
+				}
 				c.receiveMsg()
 			}
 		}
@@ -168,9 +174,14 @@ func (c *Chaussette) inboudConn(tlsConn *tls.Conn) (*ChaussetteConn, error) {
 func (c *ChaussetteConn) runInConn() {
 	c.rb = msg.NewReader(c.socket)
 	c.wb = msg.NewWriter(c.socket)
+	c.direction = "in"
+	myConfig := msg.NewConfig(c.chaussette.name)
 
 	// receive messages
 	for {
+		if c.remoteName == "" {
+			c.SendConfig(myConfig)
+		}
 		err := c.receiveMsg()
 		if err != nil {
 			return
@@ -193,7 +204,7 @@ func (c *ChaussetteConn) receiveMsg() error {
 	msgType = strings.Trim(msgType, "\n")
 
 	// read message data
-	fmt.Printf("Read message and push if into buffer")
+	//fmt.Printf("Read message and push if into buffer")
 	switch msgType {
 	case "evt":
 		var evt msg.Event
@@ -210,7 +221,10 @@ func (c *ChaussetteConn) receiveMsg() error {
 	case "cfg":
 		var cfg msg.Config
 		err = c.rb.ReadConfig(&cfg)
-		c.chaussette.qConfigs.Push(cfg)
+		if c.remoteName == "" {
+			c.remoteName = cfg.GetLogicalName()
+		}
+		//c.chaussette.qConfigs.Push(cfg)
 	default:
 		c.chaussette.deleteConn(c.address)
 		return errors.New("receiveMsg : non implemented type of message " + msgType)
@@ -222,14 +236,25 @@ func (c *ChaussetteConn) receiveMsg() error {
 	return err
 }
 
+// SendEvent : send an event
+func (c *ChaussetteConn) SendEvent(evt *msg.Event) {
+	c.wb.WriteString("evt")
+	c.wb.WriteEvent(*evt)
+}
+
 // SendEvent : send an event...
 // event is sent on each connection
 func (c *Chaussette) SendEvent(evt *msg.Event) {
 	fmt.Print("Sending event.\n")
 	for _, conn := range c.conns {
-		conn.wb.WriteString("evt")
-		conn.wb.WriteEvent(*evt)
+		conn.SendEvent(evt)
 	}
+}
+
+// SendCommand : Send a message
+func (c *ChaussetteConn) SendCommand(cmd *msg.Command) {
+	c.wb.WriteString("cmd")
+	c.wb.WriteCommand(*cmd)
 }
 
 // SendCommand : Send a message
@@ -239,28 +264,36 @@ func (c *Chaussette) SendEvent(evt *msg.Event) {
 func (c *Chaussette) SendCommand(cmd *msg.Command) {
 	fmt.Print("Sending command.\n")
 	for _, conn := range c.conns {
-		conn.wb.WriteString("cmd")
-		conn.wb.WriteCommand(*cmd)
+		conn.SendCommand(cmd)
 	}
+}
+
+// SendReply :
+func (c *ChaussetteConn) SendReply(rep *msg.Reply) {
+	c.wb.WriteString("rep")
+	c.wb.WriteReply(*rep)
 }
 
 // SendReply :
 func (c *Chaussette) SendReply(rep *msg.Reply) {
 	fmt.Print("Sending reply.\n")
 	for _, conn := range c.conns {
-		conn.wb.WriteString("rep")
-		conn.wb.WriteReply(*rep)
+		conn.SendReply(rep)
 	}
 }
 
 // SendConfig :
-func (c *Chaussette) SendConfig() {
-	fmt.Print("Sending configuration.\n")
+func (c *ChaussetteConn) SendConfig(cfg *msg.Config) {
+	fmt.Print("Sending config.\n")
+	c.wb.WriteString("cfg")
+	c.wb.WriteConfig(*cfg)
+}
 
-	cfg := msg.NewConfig(c.name)
+// SendConfig :
+func (c *Chaussette) SendConfig(cfg *msg.Config) {
+	fmt.Print("Sending configuration.\n")
 	for _, conn := range c.conns {
-		conn.wb.WriteString("evt")
-		conn.wb.WriteConfig(*cfg)
+		conn.SendConfig(cfg)
 	}
 }
 
@@ -366,8 +399,8 @@ func (c *Chaussette) WaitConfig(replies *msg.Iterator, commandUUID string, timeo
 	}
 }
 
-func chaussetteClient(name string, address string) {
-	c := NewChaussette(name)
+func chaussetteClient(logicalName string, address string) {
+	c := NewChaussette(logicalName)
 	c.Connect(address)
 	time.Sleep(time.Second * time.Duration(1))
 	go func() {
@@ -397,8 +430,8 @@ func chaussetteClient(name string, address string) {
 	<-c.done
 }
 
-func chaussetteServer(name string, address string) {
-	s := NewChaussette(name)
+func chaussetteServer(logicalName string, address string) {
+	s := NewChaussette(logicalName)
 	err := s.Bind(address)
 	if err != nil {
 		fmt.Println("Gandalf server socket can not be created")
