@@ -10,13 +10,17 @@ import (
 	"sync"
 	"time"
 
+	//	uuid "github.com/kjk/betterguid"
+
 	"./msg"
 )
 
 //Chaussette : client gandalf Socket
 type Chaussette struct {
-	conns       map[string]*ChaussetteConn
-	name        string
+	//	id          string
+	connsByAddr map[string]*ChaussetteConn
+	connsByName map[string]map[string]*ChaussetteConn
+	logicalName string
 	done        chan bool
 	bindAddress string
 	m           sync.RWMutex
@@ -34,8 +38,10 @@ var keyPath = "./key.pem"
 // NewChaussette : constructor
 func NewChaussette(logicalName string) *Chaussette {
 	c := new(Chaussette)
-	c.name = logicalName
-	c.conns = make(map[string]*ChaussetteConn)
+	//	c.id = uuid.New()
+	c.logicalName = logicalName
+	c.connsByAddr = make(map[string]*ChaussetteConn)
+	c.connsByName = make(map[string]map[string]*ChaussetteConn)
 	c.qEvents = msg.NewQueue()
 	c.qCommands = msg.NewQueue()
 	c.qReplies = msg.NewQueue()
@@ -58,14 +64,13 @@ func NewChaussette(logicalName string) *Chaussette {
 
 // ChaussetteConn : client connection
 type ChaussetteConn struct {
-	socket     *tls.Conn
-	localName  string
-	remoteName string
-	direction  string
-	address    string
-	chaussette *Chaussette
-	rb         *msg.Reader
-	wb         *msg.Writer
+	socket            *tls.Conn
+	remoteLogicalName string
+	direction         string
+	address           string
+	chaussette        *Chaussette
+	rb                *msg.Reader
+	wb                *msg.Writer
 }
 
 //Connect : Connect to another Chaussette
@@ -76,14 +81,13 @@ func (c *Chaussette) Connect(address string) (*ChaussetteConn, error) {
 	conn.rb = new(msg.Reader)
 	conn.wb = new(msg.Writer)
 	conn.address = address
-	conn.localName = c.name
 	go conn.runOutConn(address)
 	return conn, nil
 }
 
 // RunOutConn : handler for the socket
 func (c *ChaussetteConn) runOutConn(address string) {
-	myConfig := msg.NewConfig(c.chaussette.name)
+	myConfig := msg.NewConfig(c.chaussette.logicalName)
 	for {
 		c.chaussette.setConn(address, c)
 		conn, err := tls.Dial("tcp", c.address, c.chaussette.tlsConfig)
@@ -97,7 +101,7 @@ func (c *ChaussetteConn) runOutConn(address string) {
 
 			// receive messages
 			for {
-				if c.remoteName == "" {
+				if c.remoteLogicalName == "" {
 					c.SendConfig(myConfig)
 				}
 				c.receiveMsg()
@@ -108,14 +112,40 @@ func (c *ChaussetteConn) runOutConn(address string) {
 
 func (c *Chaussette) deleteConn(connAddr string) {
 	c.m.Lock()
-	delete(c.conns, connAddr)
+	conn := c.connsByAddr[connAddr]
+	if conn != nil {
+		logicalName := conn.remoteLogicalName
+		if c.connsByName[logicalName] != nil {
+			delete(c.connsByName[logicalName], connAddr)
+		}
+	}
+	delete(c.connsByAddr, connAddr)
 	c.m.Unlock()
 }
 
 func (c *Chaussette) setConn(connAddr string, conn *ChaussetteConn) {
-	c.m.Lock()
-	c.conns[connAddr] = conn
-	c.m.Unlock()
+	if conn != nil {
+		c.m.Lock()
+		c.connsByAddr[connAddr] = conn
+		logicalName := conn.remoteLogicalName
+		if logicalName != "" {
+			if c.connsByName[logicalName] == nil {
+				c.connsByName[logicalName] = make(map[string]*ChaussetteConn)
+			}
+			c.connsByName[logicalName][connAddr] = conn
+		}
+		c.m.Unlock()
+	}
+}
+
+func (c *ChaussetteConn) setRemoteLogicalName(logicalName string) {
+	if logicalName != "" {
+		c.remoteLogicalName = logicalName
+		if c.chaussette.connsByName[logicalName] == nil {
+			c.chaussette.connsByName[logicalName] = make(map[string]*ChaussetteConn)
+		}
+		c.chaussette.connsByName[logicalName][c.address] = c
+	}
 }
 
 //Bind : Connect to another Chaussette
@@ -163,7 +193,6 @@ func (c *Chaussette) inboudConn(tlsConn *tls.Conn) (*ChaussetteConn, error) {
 	conn.socket = tlsConn
 	conn.chaussette = c
 	conn.address = tlsConn.RemoteAddr().String()
-	conn.localName = c.name
 	c.setConn(conn.address, conn)
 	conn.rb = new(msg.Reader)
 	conn.wb = new(msg.Writer)
@@ -175,11 +204,11 @@ func (c *ChaussetteConn) runInConn() {
 	c.rb = msg.NewReader(c.socket)
 	c.wb = msg.NewWriter(c.socket)
 	c.direction = "in"
-	myConfig := msg.NewConfig(c.chaussette.name)
+	myConfig := msg.NewConfig(c.chaussette.logicalName)
 
 	// receive messages
 	for {
-		if c.remoteName == "" {
+		if c.remoteLogicalName == "" {
 			c.SendConfig(myConfig)
 		}
 		err := c.receiveMsg()
@@ -221,8 +250,8 @@ func (c *ChaussetteConn) receiveMsg() error {
 	case "cfg":
 		var cfg msg.Config
 		err = c.rb.ReadConfig(&cfg)
-		if c.remoteName == "" {
-			c.remoteName = cfg.GetLogicalName()
+		if c.remoteLogicalName == "" {
+			c.setRemoteLogicalName(cfg.GetLogicalName())
 		}
 		//c.chaussette.qConfigs.Push(cfg)
 	default:
@@ -246,7 +275,7 @@ func (c *ChaussetteConn) SendEvent(evt *msg.Event) {
 // event is sent on each connection
 func (c *Chaussette) SendEvent(evt *msg.Event) {
 	fmt.Print("Sending event.\n")
-	for _, conn := range c.conns {
+	for _, conn := range c.connsByAddr {
 		conn.SendEvent(evt)
 	}
 }
@@ -263,7 +292,7 @@ func (c *ChaussetteConn) SendCommand(cmd *msg.Command) {
 //    then try on each instance until success
 func (c *Chaussette) SendCommand(cmd *msg.Command) {
 	fmt.Print("Sending command.\n")
-	for _, conn := range c.conns {
+	for _, conn := range c.connsByAddr {
 		conn.SendCommand(cmd)
 	}
 }
@@ -277,7 +306,7 @@ func (c *ChaussetteConn) SendReply(rep *msg.Reply) {
 // SendReply :
 func (c *Chaussette) SendReply(rep *msg.Reply) {
 	fmt.Print("Sending reply.\n")
-	for _, conn := range c.conns {
+	for _, conn := range c.connsByAddr {
 		conn.SendReply(rep)
 	}
 }
@@ -292,7 +321,7 @@ func (c *ChaussetteConn) SendConfig(cfg *msg.Config) {
 // SendConfig :
 func (c *Chaussette) SendConfig(cfg *msg.Config) {
 	fmt.Print("Sending configuration.\n")
-	for _, conn := range c.conns {
+	for _, conn := range c.connsByAddr {
 		conn.SendConfig(cfg)
 	}
 }
