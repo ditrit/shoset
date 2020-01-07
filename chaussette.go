@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -20,6 +21,7 @@ type Chaussette struct {
 	//	id          string
 	connsByAddr map[string]*ChaussetteConn
 	connsByName map[string]map[string]*ChaussetteConn
+	brothers    map[string]bool
 	logicalName string
 	done        chan bool
 	bindAddress string
@@ -30,6 +32,7 @@ type Chaussette struct {
 	qConfigs    *msg.Queue
 	tlsConfig   *tls.Config
 	tlsServerOK bool
+	brothersIn  map[string]bool
 }
 
 var certPath = "./cert.pem"
@@ -42,10 +45,12 @@ func NewChaussette(logicalName string) *Chaussette {
 	c.logicalName = logicalName
 	c.connsByAddr = make(map[string]*ChaussetteConn)
 	c.connsByName = make(map[string]map[string]*ChaussetteConn)
+	c.brothers = make(map[string]bool)
 	c.qEvents = msg.NewQueue()
 	c.qCommands = msg.NewQueue()
 	c.qReplies = msg.NewQueue()
 	c.qConfigs = msg.NewQueue()
+	c.brothersIn = make(map[string]bool)
 
 	cert, err := tls.LoadX509KeyPair(certPath, keyPath)
 	if err != nil { // only client in insecure mode
@@ -66,6 +71,7 @@ func NewChaussette(logicalName string) *Chaussette {
 type ChaussetteConn struct {
 	socket            *tls.Conn
 	remoteLogicalName string
+	remoteBindAddress string
 	direction         string
 	address           string
 	chaussette        *Chaussette
@@ -73,21 +79,78 @@ type ChaussetteConn struct {
 	wb                *msg.Writer
 }
 
+//NewHandshakeMessage : Build a config Message
+func (c *Chaussette) NewHandshakeMessage() *msg.Config {
+	lName := c.logicalName
+	listes := map[string]map[string][]string{"in": map[string][]string{}, "out": map[string][]string{}}
+	for _, conn := range c.connsByAddr {
+		dir := conn.direction
+		if listes[dir] == nil {
+			return nil
+		}
+		rlName := conn.remoteLogicalName
+		addr := conn.address
+		if rlName != "" {
+			if listes[dir][rlName] == nil {
+				listes[dir][rlName] = []string{addr}
+			} else {
+				listes[dir][rlName] = append(listes[dir][rlName], addr)
+			}
+		}
+	}
+	return msg.NewHandshake(c.bindAddress, lName, listes)
+}
+
+//NewInstanceMessage : Build a config Message
+func (c *Chaussette) NewInstanceMessage(address string, logicalName string) *msg.Config {
+	return msg.NewInstance(address, logicalName)
+}
+
+//NewConnectToMessage : Build a config Message
+func (c *Chaussette) NewConnectToMessage(address string) *msg.Config {
+	return msg.NewConnectTo(address)
+}
+
+func getIP(address string) (string, error) {
+	parts := strings.Split(address, ":")
+	if len(parts) != 2 {
+		return "", errors.New("address '" + address + "should respect the format hots_name_or_ip:port")
+	}
+	hostIps, err := net.LookupHost(parts[0])
+	if err != nil || len(hostIps) == 0 {
+		return "", errors.New("address '" + address + "' can not be resolved")
+	}
+	port, err := strconv.Atoi(parts[1])
+	if err != nil {
+		return "", errors.New("'" + parts[1] + "' is not a port number")
+	}
+	if port < 1 || port > 65535 {
+		return "", errors.New("'" + parts[1] + "' is not a valid port number")
+	}
+	ipaddr := hostIps[0] + ":" + parts[1]
+	return ipaddr, nil
+}
+
 //Connect : Connect to another Chaussette
 func (c *Chaussette) Connect(address string) (*ChaussetteConn, error) {
 	conn := new(ChaussetteConn)
 	conn.chaussette = c
+	conn.direction = "out"
 	conn.socket = new(tls.Conn)
 	conn.rb = new(msg.Reader)
 	conn.wb = new(msg.Writer)
-	conn.address = address
-	go conn.runOutConn(address)
+	ipAddress, err := getIP(address)
+	if err != nil {
+		return nil, err
+	}
+	conn.address = ipAddress
+	go conn.runOutConn(conn.address)
 	return conn, nil
 }
 
 // RunOutConn : handler for the socket
 func (c *ChaussetteConn) runOutConn(address string) {
-	myConfig := msg.NewConfig(c.chaussette.logicalName)
+	myConfig := c.chaussette.NewHandshakeMessage()
 	for {
 		c.chaussette.setConn(address, c)
 		conn, err := tls.Dial("tcp", c.address, c.chaussette.tlsConfig)
@@ -97,7 +160,6 @@ func (c *ChaussetteConn) runOutConn(address string) {
 			c.socket = conn
 			c.rb = msg.NewReader(c.socket)
 			c.wb = msg.NewWriter(c.socket)
-			c.direction = "out"
 
 			// receive messages
 			for {
@@ -148,6 +210,12 @@ func (c *ChaussetteConn) setRemoteLogicalName(logicalName string) {
 	}
 }
 
+func (c *ChaussetteConn) setRemoteBindAddress(bindAddress string) {
+	if bindAddress != "" {
+		c.remoteBindAddress = bindAddress
+	}
+}
+
 //Bind : Connect to another Chaussette
 func (c *Chaussette) Bind(address string) error {
 	if c.bindAddress != "" {
@@ -158,7 +226,12 @@ func (c *Chaussette) Bind(address string) error {
 		fmt.Println("TLS configuration not OK (certificate not found / loaded)")
 		return errors.New("TLS configuration not OK (certificate not found / loaded)")
 	}
-	c.bindAddress = address
+	ipAddress, err := getIP(address)
+	if err != nil {
+		return err
+	}
+	c.bindAddress = ipAddress
+	fmt.Printf("Bind : handleBind adress %s", ipAddress)
 	go c.handleBind()
 	return nil
 }
@@ -168,7 +241,6 @@ func (c *Chaussette) handleBind() error {
 	listener, err := net.Listen("tcp", c.bindAddress)
 	if err != nil {
 		fmt.Println("Failed to bind:", err.Error())
-		fmt.Print("GSServer initialized\n")
 		return err
 	}
 	defer listener.Close()
@@ -176,12 +248,12 @@ func (c *Chaussette) handleBind() error {
 	for {
 		unencConn, err := listener.Accept()
 		if err != nil {
-			fmt.Printf("server: accept %s", err)
+			fmt.Printf("serverChaussette accept error: %s", err)
 			break
 		}
 		tlsConn := tls.Server(unencConn, c.tlsConfig)
 		conn, _ := c.inboudConn(tlsConn)
-		fmt.Printf("GSServer : accepted from %s", conn.address)
+		fmt.Printf("Chaussette : accepted from %s", conn.address)
 		go conn.runInConn()
 	}
 	return nil
@@ -191,6 +263,7 @@ func (c *Chaussette) handleBind() error {
 func (c *Chaussette) inboudConn(tlsConn *tls.Conn) (*ChaussetteConn, error) {
 	conn := new(ChaussetteConn)
 	conn.socket = tlsConn
+	conn.direction = "in"
 	conn.chaussette = c
 	conn.address = tlsConn.RemoteAddr().String()
 	c.setConn(conn.address, conn)
@@ -203,8 +276,7 @@ func (c *Chaussette) inboudConn(tlsConn *tls.Conn) (*ChaussetteConn, error) {
 func (c *ChaussetteConn) runInConn() {
 	c.rb = msg.NewReader(c.socket)
 	c.wb = msg.NewWriter(c.socket)
-	c.direction = "in"
-	myConfig := msg.NewConfig(c.chaussette.logicalName)
+	myConfig := c.chaussette.NewHandshakeMessage()
 
 	// receive messages
 	for {
@@ -217,6 +289,68 @@ func (c *ChaussetteConn) runInConn() {
 		}
 	}
 
+}
+
+// handleConfigMessages :
+func (c *ChaussetteConn) handleConfigMessages() error {
+	var cfg msg.Config
+	err := c.rb.ReadConfig(&cfg)
+	switch cfg.GetCommandName() {
+	case "handshake":
+		if c.remoteLogicalName == "" {
+			c.setRemoteLogicalName(cfg.GetLogicalName())
+		}
+		if c.remoteBindAddress == "" {
+			c.setRemoteBindAddress(cfg.GetBindAddress())
+		}
+		if c.direction == "in" {
+			if c.remoteBindAddress != "" {
+				cfgNewInstance := c.chaussette.NewInstanceMessage(c.remoteBindAddress, c.remoteLogicalName)
+				fmt.Printf("\n newInstance : %#v\n", cfgNewInstance)
+				for _, conn := range c.chaussette.connsByName[c.remoteLogicalName] {
+					if conn.direction == "in" {
+						conn.SendConfig(cfgNewInstance)
+					}
+				}
+				myBrothers := cfg.Conns["out"][c.chaussette.logicalName]
+				for _, myBrother := range myBrothers {
+					c.chaussette.brothers[myBrother] = true
+				}
+				for addrBrother := range c.chaussette.brothers {
+					cfgConnectTo := c.chaussette.NewConnectToMessage(addrBrother)
+					c.SendConfig(cfgConnectTo)
+				}
+			}
+		}
+		if c.direction == "out" {
+			/*
+				connBrothers := cfg.Conns["in"][c.chaussette.logicalName]
+				for _, connBrother := range connBrothers {
+					if c.chaussette.connsByAddr[connBrother] == nil {
+						c.chaussette.Connect(connBrother)
+					}
+				}*/
+
+		}
+	case "newInstance":
+		if c.direction == "out" {
+			cfgConnectTo := c.chaussette.NewConnectToMessage(cfg.Address)
+			for _, conn := range c.chaussette.connsByAddr {
+				if conn.direction == "in" {
+					conn.SendConfig(cfgConnectTo)
+				}
+			}
+		}
+	case "connectTo":
+		if c.direction == "out" {
+
+			if c.chaussette.connsByAddr[cfg.Address] == nil {
+				fmt.Printf("\n %s.connectTo : %s\n", c.chaussette.bindAddress, cfg.Address)
+				c.chaussette.Connect(cfg.Address)
+			}
+		}
+	}
+	return err
 }
 
 func (c *ChaussetteConn) receiveMsg() error {
@@ -248,12 +382,7 @@ func (c *ChaussetteConn) receiveMsg() error {
 		err = c.rb.ReadReply(&rep)
 		c.chaussette.qReplies.Push(rep)
 	case "cfg":
-		var cfg msg.Config
-		err = c.rb.ReadConfig(&cfg)
-		if c.remoteLogicalName == "" {
-			c.setRemoteLogicalName(cfg.GetLogicalName())
-		}
-		//c.chaussette.qConfigs.Push(cfg)
+		c.handleConfigMessages()
 	default:
 		c.chaussette.deleteConn(c.address)
 		return errors.New("receiveMsg : non implemented type of message " + msgType)
@@ -433,29 +562,38 @@ func chaussetteClient(logicalName string, address string) {
 	c.Connect(address)
 	time.Sleep(time.Second * time.Duration(1))
 	go func() {
-		command := msg.NewCommand("orchestrator", "deploy", "{\"appli\": \"toto\"}")
-		c.SendCommand(command)
-		event := msg.NewEvent("bus", "coucou", "ok")
-		c.SendEvent(event)
-
-		events := msg.NewIterator(c.qEvents)
-		defer events.Close()
-		rec := c.WaitEvent(events, "bus", "started", 20)
-		if rec != nil {
-			fmt.Printf(">Received Event: \n%#v\n", *rec)
-		} else {
-			fmt.Print("Timeout expired !")
-		}
-		events2 := msg.NewIterator(c.qEvents)
-		defer events.Close()
-		rec2 := c.WaitEvent(events2, "bus", "starting", 20)
-		if rec2 != nil {
-			fmt.Printf(">Received Event 2: \n%#v\n", *rec2)
-		} else {
-			fmt.Print("Timeout expired  2 !")
+		for {
+			time.Sleep(time.Second * time.Duration(5))
+			config := c.NewHandshakeMessage()
+			fmt.Println(config.String())
 		}
 	}()
+	/*
+		go func() {
+			command := msg.NewCommand("orchestrator", "deploy", "{\"appli\": \"toto\"}")
+			c.SendCommand(command)
+			event := msg.NewEvent("bus", "coucou", "ok")
+			c.SendEvent(event)
 
+			events := msg.NewIterator(c.qEvents)
+			defer events.Close()
+			rec := c.WaitEvent(events, "bus", "started", 20)
+			if rec != nil {
+				fmt.Printf(">Received Event: \n%#v\n", *rec)
+			} else {
+				fmt.Print("Timeout expired !")
+			}
+			events2 := msg.NewIterator(c.qEvents)
+			defer events.Close()
+			rec2 := c.WaitEvent(events2, "bus", "starting", 20)
+			if rec2 != nil {
+				fmt.Printf(">Received Event 2: \n%#v\n", *rec2)
+			} else {
+				fmt.Print("Timeout expired  2 !")
+			}
+		}()
+
+	*/
 	<-c.done
 }
 
@@ -466,16 +604,59 @@ func chaussetteServer(logicalName string, address string) {
 		fmt.Println("Gandalf server socket can not be created")
 	}
 	go func() {
-		time.Sleep(time.Second * time.Duration(5))
-		event := msg.NewEvent("bus", "starting", "ok")
-		s.SendEvent(event)
-		time.Sleep(time.Millisecond * time.Duration(200))
-		event = msg.NewEvent("bus", "started", "ok")
-		s.SendEvent(event)
-		command := msg.NewCommand("bus", "register", "{\"topic\": \"toto\"}")
-		s.SendCommand(command)
-		reply := msg.NewReply(command, "success", "OK")
-		s.SendReply(reply)
+		for {
+			time.Sleep(time.Second * time.Duration(5))
+			config := s.NewHandshakeMessage()
+			fmt.Println(config.String())
+		}
 	}()
+	/*
+		go func() {
+			time.Sleep(time.Second * time.Duration(5))
+			event := msg.NewEvent("bus", "starting", "ok")
+			s.SendEvent(event)
+			time.Sleep(time.Millisecond * time.Duration(200))
+			event = msg.NewEvent("bus", "started", "ok")
+			s.SendEvent(event)
+			command := msg.NewCommand("bus", "register", "{\"topic\": \"toto\"}")
+			s.SendCommand(command)
+			reply := msg.NewReply(command, "success", "OK")
+			s.SendReply(reply)
+		}()
+	*/
 	<-s.done
+}
+
+func chaussetteTest() {
+	done := make(chan bool)
+
+	fmt.Printf("\n--\ncreation c1\n")
+	c1 := NewChaussette("c")
+	c1.Bind("localhost:8301")
+
+	fmt.Printf("\n--\ncreation c2\n")
+	c2 := NewChaussette("c")
+	c2.Bind("localhost:8302")
+
+	fmt.Printf("\n--\ncreation b1\n")
+	b1 := NewChaussette("b")
+	b1.Bind("localhost:8201")
+	b1.Connect("localhost:8302")
+	b1.Connect("localhost:8301")
+
+	fmt.Printf("\n--\ncreation a1\n")
+	a1 := NewChaussette("a")
+	a1.Bind("localhost:8001")
+	a1.Connect("localhost:8201")
+
+	fmt.Printf("\n--\ncreation b2\n")
+	b2 := NewChaussette("b")
+	b2.Bind("localhost:8202")
+	b2.Connect("localhost:8301")
+
+	time.Sleep(time.Second * time.Duration(1))
+	fmt.Printf("\n--\nb1 config b1\n  %s\n", b1.NewHandshakeMessage().String())
+	fmt.Printf("\n--\nb2 config b2\n  %s\n", b2.NewHandshakeMessage().String())
+
+	<-done
 }

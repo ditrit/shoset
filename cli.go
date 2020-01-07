@@ -20,14 +20,22 @@ func main() {
 
 	var isServer bool
 	var isClient bool
+	var isTest bool
 
 	flag.BoolVar(&isServer, "s", false, "Server mode (shorthand)")
 	flag.BoolVar(&isServer, "server", false, "Server mode")
 	flag.BoolVar(&isClient, "c", false, "Client mode (shorthand)")
 	flag.BoolVar(&isClient, "client", false, "Client mode")
+	flag.BoolVar(&isTest, "t", false, "Test mode (shorthand)")
+	flag.BoolVar(&isTest, "test", false, "Test mode")
 	flag.Parse()
 
 	args := flag.Args()
+
+	if isTest == true {
+		chaussetteTest()
+		return
+	}
 
 	if (isServer == isClient) || (len(args) != 2) {
 		flag.Usage()
