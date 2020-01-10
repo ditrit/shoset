@@ -18,6 +18,7 @@ type ChaussetteConn struct {
 	socket   *tls.Conn
 	name     string // remote logical name
 	bindAddr string // remote bind addr
+	brothers map[string]bool
 	dir      string
 	addr     string
 	ch       *Chaussette
@@ -60,6 +61,7 @@ func (c *ChaussetteConn) runOutConn(addr string) {
 	for {
 		c.ch.SetConn(addr, c)
 		conn, err := tls.Dial("tcp", c.addr, c.ch.tlsConfig)
+		defer conn.Close()
 		if err != nil {
 			time.Sleep(time.Millisecond * time.Duration(100))
 		} else {
@@ -121,7 +123,7 @@ func (c *ChaussetteConn) runInConn() {
 	c.rb = msg.NewReader(c.socket)
 	c.wb = msg.NewWriter(c.socket)
 	myConfig := msg.NewHandshake(c.ch.bindAddr, c.ch.lName)
-
+	defer c.socket.Close()
 	// receive messages
 	for {
 		if c.name == "" { // remote logical Name

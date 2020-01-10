@@ -168,6 +168,7 @@ func (c *Chaussette) Connect(address string) (*ChaussetteConn, error) {
 		return nil, err
 	}
 	conn.addr = ipAddress
+	conn.brothers = make(map[string]bool)
 	go conn.runOutConn(conn.addr)
 	return conn, nil
 }
