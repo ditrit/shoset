@@ -69,8 +69,8 @@ func (c *Chaussette) String() string {
 	return str
 }
 
-var certPath = "./cert.pem"
-var keyPath = "./key.pem"
+var certPath = "./certs/cert.pem"
+var keyPath = "./certs/key.pem"
 
 // NewChaussette : constructor
 func NewChaussette(lName string) *Chaussette {
