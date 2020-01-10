@@ -28,38 +28,14 @@ func (r *Reader) ReadString() (string, error) {
 	return r.b.ReadString('\n')
 }
 
-// ReadEvent : encode a message in a safe way for goroutines
-func (r *Reader) ReadEvent(data *Event) error {
+// ReadMessage : decode a message in a safe way for goroutines
+func (r *Reader) ReadMessage(data interface{}) error {
 	r.m.Lock()
 	defer r.m.Unlock()
 	enc := gob.NewDecoder(r.b)
-	err := enc.Decode(&data)
+	err := enc.Decode(data)
 	if err != nil {
-		fmt.Printf("error in ReadEvent : %s\n", err)
+		fmt.Printf("error in ReadMessage : %s\n", err)
 	}
 	return err
-}
-
-// ReadCommand : encode a message in a safe way for goroutines
-func (r *Reader) ReadCommand(data *Command) error {
-	r.m.Lock()
-	defer r.m.Unlock()
-	enc := gob.NewDecoder(r.b)
-	return enc.Decode(data)
-}
-
-// ReadReply : encode a message in a safe way for goroutines
-func (r *Reader) ReadReply(data *Reply) error {
-	r.m.Lock()
-	defer r.m.Unlock()
-	enc := gob.NewDecoder(r.b)
-	return enc.Decode(data)
-}
-
-// ReadConfig : encode a message in a safe way for goroutines
-func (r *Reader) ReadConfig(data *Config) error {
-	r.m.Lock()
-	defer r.m.Unlock()
-	enc := gob.NewDecoder(r.b)
-	return enc.Decode(data)
 }

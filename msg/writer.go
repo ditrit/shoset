@@ -42,25 +42,8 @@ func (r *Writer) Flush() error {
 	return errors.New("Writer not initialized")
 }
 
-// WriteEvent : encode a message in a safe way for goroutines
-func (r *Writer) WriteEvent(data Event) error {
-	if r.b != nil {
-		r.m.Lock()
-		defer r.m.Unlock()
-		defer fmt.Printf(">WriteEvent: \n%#v\n", data)
-		enc := gob.NewEncoder(r.b)
-		err := enc.Encode(data)
-		r.b.Flush()
-		if err != nil {
-			fmt.Printf("error in Writing Event : %s\n", err)
-		}
-		return err
-	}
-	return errors.New("Writer not initialized")
-}
-
-// WriteCommand : encode a message in a safe way for goroutines
-func (r *Writer) WriteCommand(data Command) error {
+// WriteMessage : encode a message in a safe way for goroutines
+func (r *Writer) WriteMessage(data interface{}) error {
 	if r.b != nil {
 		r.m.Lock()
 		defer r.m.Unlock()
@@ -68,39 +51,7 @@ func (r *Writer) WriteCommand(data Command) error {
 		err := enc.Encode(data)
 		r.b.Flush()
 		if err != nil {
-			fmt.Printf("error in Writing Command : %s\n", err)
-		}
-		return err
-	}
-	return errors.New("Writer not initialized")
-}
-
-// WriteReply : encode a message in a safe way for goroutines
-func (r *Writer) WriteReply(data Reply) error {
-	if r.b != nil {
-		r.m.Lock()
-		defer r.m.Unlock()
-		enc := gob.NewEncoder(r.b)
-		err := enc.Encode(data)
-		r.b.Flush()
-		if err != nil {
-			fmt.Printf("error in Writing Reply : %s\n", err)
-		}
-		return err
-	}
-	return errors.New("Writer not initialized")
-}
-
-// WriteConfig : encode a message in a safe way for goroutines
-func (r *Writer) WriteConfig(data Config) error {
-	if r.b != nil {
-		r.m.Lock()
-		defer r.m.Unlock()
-		enc := gob.NewEncoder(r.b)
-		err := enc.Encode(data)
-		r.b.Flush()
-		if err != nil {
-			fmt.Printf("error writing Config : %s\n", err)
+			fmt.Printf("error in Writing Message : %s\n", err)
 		}
 		return err
 	}
