@@ -10,6 +10,7 @@ type Config struct {
 	BindAddress string
 	Address     string
 	Brothers    []string
+	Conns       []string
 }
 
 func (c *Config) String() string {
@@ -29,12 +30,12 @@ func NewHandshake(bindAddress, logicalName string) *Config {
 	return c
 }
 
-// NewBrothers : Config constructor
-func NewBrothers(brothers []string) *Config {
+// NewConns : Config constructor
+func NewConns(dir string, conns []string) *Config {
 	c := new(Config)
 	c.InitMessageBase()
-	c.CommandName = "brothers"
-	c.Brothers = brothers
+	c.CommandName = dir
+	c.Conns = conns
 	return c
 }
 
@@ -74,3 +75,6 @@ func (c Config) GetCommandName() string { return c.CommandName }
 
 // GetBrothers :
 func (c Config) GetBrothers() []string { return c.Brothers }
+
+// GetConns :
+func (c Config) GetConns() []string { return c.Conns }

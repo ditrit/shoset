@@ -26,6 +26,7 @@ type Chaussette struct {
 	connsByAddr map[string]*ChaussetteConn
 	connsByName map[string]map[string]*ChaussetteConn
 	brothers    map[string]bool
+	neighbors   map[string]map[string]bool
 	lName       string // logical Name of the chaussette
 	Done        chan bool
 	bindAddr    string
@@ -33,40 +34,10 @@ type Chaussette struct {
 	queue       map[string]*msg.Queue
 	handle      map[string]func(*ChaussetteConn) error
 	sendConn    map[string]func(*ChaussetteConn, interface{})
-	send        map[string]func(*Chaussette, interface{})
+	send        map[string]func(*Chaussette, msg.Message)
 	wait        map[string]func(*Chaussette, *msg.Iterator, map[string]string, int) *msg.Message
 	tlsConfig   *tls.Config
 	tlsServerOK bool
-}
-
-// GetBrothers :
-func (c *Chaussette) GetBrothers() map[string]bool {
-	return c.brothers
-}
-
-// GetBindAddr :
-func (c *Chaussette) GetBindAddr() string {
-	return c.bindAddr
-}
-
-// GetConnsByAddr :
-func (c *Chaussette) GetConnsByAddr() map[string]*ChaussetteConn {
-	return c.connsByAddr
-}
-
-// GetConnsByName :
-func (c *Chaussette) GetConnsByName() map[string]map[string]*ChaussetteConn {
-	return c.connsByName
-}
-
-// String :
-func (c *Chaussette) String() string {
-	str := fmt.Sprintf("Chaussette{ lName: %s, bindAddr: %s, brothers %#v\n", c.lName, c.bindAddr, c.brothers)
-	for _, conn := range c.connsByAddr {
-		str += fmt.Sprintf(" - %s\n", conn.String())
-	}
-	str += fmt.Sprintf("\n")
-	return str
 }
 
 var certPath = "./certs/cert.pem"
@@ -80,16 +51,16 @@ func NewChaussette(lName string) *Chaussette {
 	c.connsByAddr = make(map[string]*ChaussetteConn)
 	c.connsByName = make(map[string]map[string]*ChaussetteConn)
 	c.brothers = make(map[string]bool)
+	c.neighbors = make(map[string]map[string]bool)
 	c.queue = make(map[string]*msg.Queue)
 	c.handle = make(map[string]func(*ChaussetteConn) error)
-	c.sendConn = make(map[string]func(*ChaussetteConn, interface{}))
-	c.send = make(map[string]func(*Chaussette, interface{}))
+	c.send = make(map[string]func(*Chaussette, msg.Message))
 	c.wait = make(map[string]func(*Chaussette, *msg.Iterator, map[string]string, int) *msg.Message)
 
-	c.RegisterMessageBehaviors("cfg", HandleConfig, SendConfigConn, SendConfig, WaitConfig)
-	c.RegisterMessageBehaviors("evt", HandleEvent, SendEventConn, SendEvent, WaitEvent)
-	c.RegisterMessageBehaviors("cmd", HandleCommand, SendCommandConn, SendCommand, WaitCommand)
-	c.RegisterMessageBehaviors("rep", HandleReply, SendReplyConn, SendReply, WaitReply)
+	c.RegisterMessageBehaviors("cfg", HandleConfig, SendConfig, WaitConfig)
+	c.RegisterMessageBehaviors("evt", HandleEvent, SendEvent, WaitEvent)
+	c.RegisterMessageBehaviors("cmd", HandleCommand, SendCommand, WaitCommand)
+	c.RegisterMessageBehaviors("rep", HandleReply, SendReply, WaitReply)
 
 	cert, err := tls.LoadX509KeyPair(certPath, keyPath)
 	if err != nil { // only client in insecure mode
@@ -110,14 +81,59 @@ func NewChaussette(lName string) *Chaussette {
 func (c *Chaussette) RegisterMessageBehaviors(
 	msgType string,
 	handle func(*ChaussetteConn) error,
-	sendConn func(*ChaussetteConn, interface{}),
-	send func(*Chaussette, interface{}),
+	send func(*Chaussette, msg.Message),
 	wait func(*Chaussette, *msg.Iterator, map[string]string, int) *msg.Message) {
 	c.queue[msgType] = msg.NewQueue()
 	c.handle[msgType] = handle
 	c.send[msgType] = send
-	c.sendConn[msgType] = sendConn
 	c.wait[msgType] = wait
+}
+
+// GetBrothers :
+func (c *Chaussette) GetBrothers() map[string]bool {
+	return c.brothers
+}
+
+// SetBrother :
+func (c *Chaussette) SetBrother(brother string) {
+	c.brothers[brother] = true
+}
+
+/*
+// GetNeighbors :
+func (c *Chaussette) GetNeighbors() map[string]map[string]bool {
+	return c.neighbors
+}
+*/
+
+// GetBindAddr :
+func (c *Chaussette) GetBindAddr() string {
+	return c.bindAddr
+}
+
+// GetName :
+func (c *Chaussette) GetName() string {
+	return c.lName
+}
+
+// GetConnsByAddr :
+func (c *Chaussette) GetConnsByAddr() map[string]*ChaussetteConn {
+	return c.connsByAddr
+}
+
+// GetConnsByName :
+func (c *Chaussette) GetConnsByName() map[string]map[string]*ChaussetteConn {
+	return c.connsByName
+}
+
+// String :
+func (c *Chaussette) String() string {
+	str := fmt.Sprintf("Chaussette{ lName: %s, bindAddr: %s, brothers %#v\n", c.lName, c.bindAddr, c.brothers)
+	for k, conn := range c.connsByAddr {
+		str += fmt.Sprintf(" - [%s] %s\n", k, conn.String())
+	}
+	str += fmt.Sprintf("\n")
+	return str
 }
 
 // FQueue :
@@ -130,19 +146,40 @@ func (c *Chaussette) FHandle(msgType string) func(*ChaussetteConn) error {
 	return c.handle[msgType]
 }
 
-// FSendConn :
-func (c *Chaussette) FSendConn(msgType string) func(*ChaussetteConn, interface{}) {
-	return c.sendConn[msgType]
-}
-
 // FSend :
-func (c *Chaussette) FSend(msgType string) func(*Chaussette, interface{}) {
+func (c *Chaussette) FSend(msgType string) func(*Chaussette, msg.Message) {
 	return c.send[msgType]
 }
 
 // FWait :
 func (c *Chaussette) FWait(msgType string) func(*Chaussette, *msg.Iterator, map[string]string, int) *msg.Message {
 	return c.wait[msgType]
+}
+
+//NewHandshake : Build a config Message
+func (c *Chaussette) NewHandshake() *msg.Config {
+	return msg.NewHandshake(c.bindAddr, c.lName)
+}
+
+//NewCfgOut : Build a config Message
+func (c *Chaussette) NewCfgOut() *msg.Config {
+	var bros []string
+	for _, conn := range c.GetConnsByAddr() {
+		if conn.dir == "out" {
+			bros = append(bros, conn.addr)
+		}
+	}
+	fmt.Printf("####### bros -> %#v ##############\n", bros)
+	return msg.NewConns("out", bros)
+}
+
+//NewCfgIn : Build a config Message
+func (c *Chaussette) NewCfgIn() *msg.Config {
+	var bros []string
+	for addr := range c.brothers {
+		bros = append(bros, addr)
+	}
+	return msg.NewConns("in", bros)
 }
 
 //NewInstanceMessage : Build a config Message
@@ -252,7 +289,7 @@ func (c *Chaussette) inboudConn(tlsConn *tls.Conn) (*ChaussetteConn, error) {
 	conn.dir = "in"
 	conn.ch = c
 	conn.addr = tlsConn.RemoteAddr().String()
-	c.SetConn(conn.addr, conn)
+	//c.SetConn(conn.addr, conn)
 	conn.rb = new(msg.Reader)
 	conn.wb = new(msg.Writer)
 	return conn, nil

@@ -23,10 +23,10 @@ func SendEventConn(c *ChaussetteConn, evt interface{}) {
 }
 
 // SendEvent :
-func SendEvent(c *Chaussette, evt interface{}) {
+func SendEvent(c *Chaussette, evt msg.Message) {
 	fmt.Print("Sending event.\n")
 	for _, conn := range c.GetConnsByAddr() {
-		SendEventConn(conn, evt)
+		conn.SendMessage(evt)
 	}
 }
 

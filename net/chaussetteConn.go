@@ -57,7 +57,8 @@ func (c *ChaussetteConn) WriteMessage(data interface{}) error {
 
 // RunOutConn : handler for the socket
 func (c *ChaussetteConn) runOutConn(addr string) {
-	myConfig := msg.NewHandshake(c.ch.bindAddr, c.ch.lName)
+
+	myConfig := c.GetCh().NewHandshake()
 	for {
 		c.ch.SetConn(addr, c)
 		conn, err := tls.Dial("tcp", c.addr, c.ch.tlsConfig)
@@ -72,7 +73,7 @@ func (c *ChaussetteConn) runOutConn(addr string) {
 			// receive messages
 			for {
 				if c.name == "" { // remote logical Name
-					c.ch.sendConn["cfg"](c, myConfig)
+					c.SendMessage(*myConfig)
 				}
 				c.receiveMsg()
 			}
@@ -122,19 +123,25 @@ func (c *ChaussetteConn) SetBindAddr(bindAddr string) {
 func (c *ChaussetteConn) runInConn() {
 	c.rb = msg.NewReader(c.socket)
 	c.wb = msg.NewWriter(c.socket)
-	myConfig := msg.NewHandshake(c.ch.bindAddr, c.ch.lName)
+	myConfig := c.GetCh().NewHandshake()
 	defer c.socket.Close()
 	// receive messages
 	for {
 		if c.name == "" { // remote logical Name
-			c.ch.sendConn["cfg"](c, myConfig)
+			c.SendMessage(*myConfig)
 		}
 		err := c.receiveMsg()
 		if err != nil {
 			return
 		}
 	}
+}
 
+// SendMessage :
+func (c *ChaussetteConn) SendMessage(msg msg.Message) {
+	fmt.Printf("Sending message %s(%s) -> %s(%s) %#v.\n", c.GetCh().GetName(), c.GetCh().GetBindAddr(), c.GetName(), c.addr, msg)
+	c.WriteString(msg.GetMsgType())
+	c.WriteMessage(msg)
 }
 
 func (c *ChaussetteConn) receiveMsg() error {

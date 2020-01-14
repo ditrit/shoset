@@ -23,10 +23,10 @@ func SendCommandConn(c *ChaussetteConn, cmd interface{}) {
 }
 
 // SendCommand :
-func SendCommand(c *Chaussette, cmd interface{}) {
+func SendCommand(c *Chaussette, cmd msg.Message) {
 	fmt.Print("Sending Command.\n")
 	for _, conn := range c.GetConnsByAddr() {
-		SendCommandConn(conn, cmd)
+		conn.SendMessage(cmd)
 	}
 }
 

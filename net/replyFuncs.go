@@ -23,10 +23,10 @@ func SendReplyConn(c *ChaussetteConn, rep interface{}) {
 }
 
 // SendReply :
-func SendReply(c *Chaussette, rep interface{}) {
+func SendReply(c *Chaussette, rep msg.Message) {
 	fmt.Print("Sending Reply.\n")
 	for _, conn := range c.GetConnsByAddr() {
-		SendReplyConn(conn, rep)
+		conn.SendMessage(rep)
 	}
 }
 
