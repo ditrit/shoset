@@ -139,7 +139,7 @@ func (c *ChaussetteConn) runInConn() {
 
 // SendMessage :
 func (c *ChaussetteConn) SendMessage(msg msg.Message) {
-	fmt.Printf("Sending message %s(%s) -> %s(%s) %#v.\n", c.GetCh().GetName(), c.GetCh().GetBindAddr(), c.GetName(), c.addr, msg)
+	//fmt.Printf("Sending message %s(%s) -> %s(%s) %#v.\n", c.GetCh().GetName(), c.GetCh().GetBindAddr(), c.GetName(), c.addr, msg)
 	c.WriteString(msg.GetMsgType())
 	c.WriteMessage(msg)
 }

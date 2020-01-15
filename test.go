@@ -76,27 +76,21 @@ func chaussetteServer(logicalName string, address string) {
 func chaussetteTest() {
 	done := make(chan bool)
 
-	fmt.Printf("\n--\ncreation c1\n")
 	c1 := net.NewChaussette("c")
 	c1.Bind("localhost:8301")
 
-	fmt.Printf("\n--\ncreation c2\n")
 	c2 := net.NewChaussette("c")
 	c2.Bind("localhost:8302")
 
-	fmt.Printf("\n--\ncreation c3\n")
 	c3 := net.NewChaussette("c")
 	c3.Bind("localhost:8303")
 
-	fmt.Printf("\n--\ncreation d1\n")
 	d1 := net.NewChaussette("d")
 	d1.Bind("localhost:8401")
 
-	fmt.Printf("\n--\ncreation d2\n")
 	d2 := net.NewChaussette("d")
 	d2.Bind("localhost:8402")
 
-	fmt.Printf("\n--\ncreation b1\n")
 	b1 := net.NewChaussette("b")
 	b1.Bind("localhost:8201")
 	b1.Connect("localhost:8302")
@@ -105,33 +99,28 @@ func chaussetteTest() {
 	b1.Connect("localhost:8401")
 	b1.Connect("localhost:8402")
 
-	fmt.Printf("\n--\ncreation a1\n")
 	a1 := net.NewChaussette("a")
 	a1.Bind("localhost:8101")
 	a1.Connect("localhost:8201")
 
-	fmt.Printf("\n--\ncreation b2\n")
 	b2 := net.NewChaussette("b")
 	b2.Bind("localhost:8202")
 	b2.Connect("localhost:8301")
 
-	fmt.Printf("\n--\ncreation b3\n")
 	b3 := net.NewChaussette("b")
 	b3.Bind("localhost:8203")
 	b3.Connect("localhost:8303")
 
-	fmt.Printf("\n--\ncreation a1\n")
 	a2 := net.NewChaussette("a")
 	a2.Bind("localhost:8102")
 	a2.Connect("localhost:8202")
 
-	time.Sleep(time.Second * time.Duration(3))
+	time.Sleep(time.Second * time.Duration(1))
 	fmt.Printf("a1 : %s", a1.String())
 	fmt.Printf("a2 : %s", a2.String())
 	fmt.Printf("b1 : %s", b1.String())
 	fmt.Printf("b2 : %s", b2.String())
 	fmt.Printf("b3 : %s", b3.String())
-
 	fmt.Printf("c1 : %s", c1.String())
 	fmt.Printf("c2 : %s", c2.String())
 	fmt.Printf("c3 : %s", c3.String())

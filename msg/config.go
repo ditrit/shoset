@@ -9,7 +9,6 @@ type Config struct {
 	LogicalName string
 	BindAddress string
 	Address     string
-	Brothers    []string
 	Conns       []string
 }
 
@@ -17,7 +16,7 @@ func (c *Config) String() string {
 	if c == nil {
 		fmt.Printf("\nError : *Config.String : nil\n")
 	}
-	return fmt.Sprintf("[ CommandName: %s, LogicalName: %s, BindAddress: %s, Address: %s, Brothers: %#v", c.CommandName, c.LogicalName, c.BindAddress, c.Address, c.Brothers)
+	return fmt.Sprintf("[ CommandName: %s, LogicalName: %s, BindAddress: %s, Address: %s, Conns : %#v\n", c.CommandName, c.LogicalName, c.BindAddress, c.Address, c.Conns)
 }
 
 // NewHandshake : Config constructor
@@ -27,6 +26,15 @@ func NewHandshake(bindAddress, logicalName string) *Config {
 	c.CommandName = "handshake"
 	c.LogicalName = logicalName
 	c.BindAddress = bindAddress
+	return c
+}
+
+// NewNameBrothers : Config constructor
+func NewNameBrothers(brothers []string) *Config {
+	c := new(Config)
+	c.InitMessageBase()
+	c.CommandName = "nameBrothers"
+	c.Conns = brothers
 	return c
 }
 
@@ -72,9 +80,6 @@ func (c Config) GetBindAddress() string { return c.BindAddress }
 
 // GetCommandName :
 func (c Config) GetCommandName() string { return c.CommandName }
-
-// GetBrothers :
-func (c Config) GetBrothers() []string { return c.Brothers }
 
 // GetConns :
 func (c Config) GetConns() []string { return c.Conns }

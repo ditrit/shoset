@@ -23,21 +23,22 @@ type MessageHandlers interface {
 //Chaussette : client gandalf Socket
 type Chaussette struct {
 	//	id          string
-	connsByAddr map[string]*ChaussetteConn
-	connsByName map[string]map[string]*ChaussetteConn
-	brothers    map[string]bool
-	neighbors   map[string]map[string]bool
-	lName       string // logical Name of the chaussette
-	Done        chan bool
-	bindAddr    string
-	m           sync.RWMutex
-	queue       map[string]*msg.Queue
-	handle      map[string]func(*ChaussetteConn) error
-	sendConn    map[string]func(*ChaussetteConn, interface{})
-	send        map[string]func(*Chaussette, msg.Message)
-	wait        map[string]func(*Chaussette, *msg.Iterator, map[string]string, int) *msg.Message
-	tlsConfig   *tls.Config
-	tlsServerOK bool
+	connsByAddr  map[string]*ChaussetteConn
+	connsByName  map[string]map[string]*ChaussetteConn
+	brothers     map[string]bool
+	nameBrothers map[string]bool
+	neighbors    map[string]map[string]bool
+	lName        string // logical Name of the chaussette
+	Done         chan bool
+	bindAddr     string
+	m            sync.RWMutex
+	queue        map[string]*msg.Queue
+	handle       map[string]func(*ChaussetteConn) error
+	sendConn     map[string]func(*ChaussetteConn, interface{})
+	send         map[string]func(*Chaussette, msg.Message)
+	wait         map[string]func(*Chaussette, *msg.Iterator, map[string]string, int) *msg.Message
+	tlsConfig    *tls.Config
+	tlsServerOK  bool
 }
 
 var certPath = "./certs/cert.pem"
@@ -51,6 +52,7 @@ func NewChaussette(lName string) *Chaussette {
 	c.connsByAddr = make(map[string]*ChaussetteConn)
 	c.connsByName = make(map[string]map[string]*ChaussetteConn)
 	c.brothers = make(map[string]bool)
+	c.nameBrothers = make(map[string]bool)
 	c.neighbors = make(map[string]map[string]bool)
 	c.queue = make(map[string]*msg.Queue)
 	c.handle = make(map[string]func(*ChaussetteConn) error)
@@ -99,6 +101,21 @@ func (c *Chaussette) SetBrother(brother string) {
 	c.brothers[brother] = true
 }
 
+// GetNameBrothers :
+func (c *Chaussette) GetNameBrothers() map[string]bool {
+	return c.nameBrothers
+}
+
+// InNameBrothers :
+func (c *Chaussette) InNameBrothers(addr string) bool {
+	return c.nameBrothers[addr]
+}
+
+// SetNameBrother :
+func (c *Chaussette) SetNameBrother(nameBrother string) {
+	c.nameBrothers[nameBrother] = true
+}
+
 /*
 // GetNeighbors :
 func (c *Chaussette) GetNeighbors() map[string]map[string]bool {
@@ -128,7 +145,7 @@ func (c *Chaussette) GetConnsByName() map[string]map[string]*ChaussetteConn {
 
 // String :
 func (c *Chaussette) String() string {
-	str := fmt.Sprintf("Chaussette{ lName: %s, bindAddr: %s, brothers %#v\n", c.lName, c.bindAddr, c.brothers)
+	str := fmt.Sprintf("Chaussette{ lName: %s, bindAddr: %s, brothers %#v, nameBrothers %#v\n", c.lName, c.bindAddr, c.brothers, c.nameBrothers)
 	for k, conn := range c.connsByAddr {
 		str += fmt.Sprintf(" - [%s] %s\n", k, conn.String())
 	}
@@ -169,7 +186,6 @@ func (c *Chaussette) NewCfgOut() *msg.Config {
 			bros = append(bros, conn.addr)
 		}
 	}
-	fmt.Printf("####### bros -> %#v ##############\n", bros)
 	return msg.NewConns("out", bros)
 }
 
@@ -254,7 +270,7 @@ func (c *Chaussette) Bind(address string) error {
 		return err
 	}
 	c.bindAddr = ipAddress
-	fmt.Printf("Bind : handleBind adress %s", ipAddress)
+	//fmt.Printf("Bind : handleBind adress %s", ipAddress)
 	go c.handleBind()
 	return nil
 }
@@ -276,7 +292,7 @@ func (c *Chaussette) handleBind() error {
 		}
 		tlsConn := tls.Server(unencConn, c.tlsConfig)
 		conn, _ := c.inboudConn(tlsConn)
-		fmt.Printf("Chaussette : accepted from %s", conn.addr)
+		//fmt.Printf("Chaussette : accepted from %s", conn.addr)
 		go conn.runInConn()
 	}
 	return nil
