@@ -20,26 +20,41 @@ type MessageHandlers interface {
 	Wait(*Chaussette, *msg.Iterator, string, int) *msg.Message
 }
 
-//Chaussette : client gandalf Socket
+//Chaussette :
 type Chaussette struct {
 	//	id          string
-	connsByAddr  map[string]*ChaussetteConn
-	connsByName  map[string]map[string]*ChaussetteConn
-	connsJoin    map[string]*ChaussetteConn
-	brothers     map[string]bool
-	nameBrothers map[string]bool
-	neighbors    map[string]map[string]bool
-	lName        string // logical Name of the chaussette
-	Done         chan bool
-	bindAddr     string
-	m            sync.RWMutex
-	queue        map[string]*msg.Queue
-	handle       map[string]func(*ChaussetteConn) error
-	sendConn     map[string]func(*ChaussetteConn, interface{})
-	send         map[string]func(*Chaussette, msg.Message)
-	wait         map[string]func(*Chaussette, *msg.Iterator, map[string]string, int) *msg.Message
-	tlsConfig    *tls.Config
-	tlsServerOK  bool
+	connsByAddr  map[string]*ChaussetteConn            // ensemble des connexions
+	connsByName  map[string]map[string]*ChaussetteConn // connexions par nom logique
+	connsJoin    map[string]*ChaussetteConn            // connexions nécessaires au join (non utilisées en dehors du join)
+	brothers     map[string]bool                       // "freres" au sens large (ex: toutes les instances de connecteur reliées à un même aggregateur)
+	nameBrothers map[string]bool                       // "freres" ayant un même nom logique (ex: instances d'un même connecteur)
+	lName        string                                // Nom logique de la chaussette
+	bindAddr     string                                // Adresse sur laquelle la chaussette est bindée
+
+	// map des queues par type de message (enregistrées via RegisterMessageBehaviors)
+	queue map[string]*msg.Queue
+
+	// map des fonctions de gestion des messages par type (enregistrées via RegisterMessageBehaviors)
+	handle map[string]func(*ChaussetteConn) error
+
+	// map des fonctions d'envoi de message (enregistrées via RegisterMessageBehaviors)
+	send map[string]func(*Chaussette, msg.Message)
+
+	// map des fonctions d'attente de message (enregistrées via RegisterMessageBehaviors)
+	// les fonctions d'attente sont synchrones, à charge à l'utilisateur de gérer l'asynchronisme selon le language qu'il utilise
+	// une fonction d'attente possède 3 arguments :
+	//   - un iterateur a appeler pour chaque nouevel élément
+	//   - un filtre sur le message (défini par une map de strings)
+	// 	 - un timeout après lequel la fonction retourne nil si aucun message n'est arrivé.
+	wait map[string]func(*Chaussette, *msg.Iterator, map[string]string, int) *msg.Message
+
+	// configuration TLS
+	tlsConfig   *tls.Config
+	tlsServerOK bool
+
+	// synchronisation des goroutines
+	Done chan bool
+	m    sync.RWMutex
 }
 
 var certPath = "./certs/cert.pem"
@@ -47,25 +62,29 @@ var keyPath = "./certs/key.pem"
 
 // NewChaussette : constructor
 func NewChaussette(lName string) *Chaussette {
+	// Creation
 	c := new(Chaussette)
-	//	c.id = uuid.New()
+
+	// Initialisation
 	c.lName = lName
 	c.connsByAddr = make(map[string]*ChaussetteConn)
 	c.connsByName = make(map[string]map[string]*ChaussetteConn)
 	c.connsJoin = make(map[string]*ChaussetteConn)
 	c.brothers = make(map[string]bool)
 	c.nameBrothers = make(map[string]bool)
-	c.neighbors = make(map[string]map[string]bool)
+
 	c.queue = make(map[string]*msg.Queue)
 	c.handle = make(map[string]func(*ChaussetteConn) error)
 	c.send = make(map[string]func(*Chaussette, msg.Message))
 	c.wait = make(map[string]func(*Chaussette, *msg.Iterator, map[string]string, int) *msg.Message)
 
-	c.RegisterMessageBehaviors("cfg", HandleConfig, SendConfig, WaitConfig)
-	c.RegisterMessageBehaviors("evt", HandleEvent, SendEvent, WaitEvent)
-	c.RegisterMessageBehaviors("cmd", HandleCommand, SendCommand, WaitCommand)
-	c.RegisterMessageBehaviors("rep", HandleReply, SendReply, WaitReply)
+	// Enregistrement des handlers par type de message  (fonctions de gestion, d'envoi et de reception des messages)
+	c.RegisterMessageBehaviors("cfg", HandleConfig, SendConfig, WaitConfig)    // messages de type configuration
+	c.RegisterMessageBehaviors("evt", HandleEvent, SendEvent, WaitEvent)       // messages de type événement
+	c.RegisterMessageBehaviors("cmd", HandleCommand, SendCommand, WaitCommand) // messages de type commande
+	c.RegisterMessageBehaviors("rep", HandleReply, SendReply, WaitReply)       // messages de type réponse à une commande
 
+	// Configuration TLS
 	cert, err := tls.LoadX509KeyPair(certPath, keyPath)
 	if err != nil { // only client in insecure mode
 		fmt.Println("Unable to Load certificate")
@@ -78,6 +97,7 @@ func NewChaussette(lName string) *Chaussette {
 		}
 		c.tlsServerOK = true
 	}
+
 	return c
 }
 
@@ -123,13 +143,6 @@ func (c *Chaussette) InConnsJoin(addr string) bool {
 func (c *Chaussette) SetNameBrother(nameBrother string) {
 	c.nameBrothers[nameBrother] = true
 }
-
-/*
-// GetNeighbors :
-func (c *Chaussette) GetNeighbors() map[string]map[string]bool {
-	return c.neighbors
-}
-*/
 
 // GetBindAddr :
 func (c *Chaussette) GetBindAddr() string {
