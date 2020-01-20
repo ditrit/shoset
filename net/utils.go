@@ -23,6 +23,19 @@ func getIP(address string) (string, error) {
 	if port < 1 || port > 65535 {
 		return "", errors.New("'" + parts[1] + "' is not a valid port number")
 	}
-	ipaddr := hostIps[0] + ":" + parts[1]
+	host := getV4(hostIps)
+	if host == "" {
+		return "", errors.New("failed to get ipv4 address for localhost")
+	}
+	ipaddr := host + ":" + parts[1]
 	return ipaddr, nil
+}
+// Grab ip4/6 string array and return an ipv4 str
+func getV4(hostIps []string) string {
+	for i := 0; i < len(hostIps); i++ {
+		if net.ParseIP(hostIps[i]).To4() != nil {
+			return hostIps[i]
+		}
+	}
+	return ""
 }
