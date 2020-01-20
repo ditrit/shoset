@@ -128,3 +128,136 @@ func chaussetteTest() {
 	fmt.Printf("d2 : %s", d2.String())
 	<-done
 }
+
+func chaussetteTestEtoile() {
+	done := make(chan bool)
+
+	cl1 := net.NewChaussette("cl")
+	cl1.Bind("localhost:8001")
+
+	cl2 := net.NewChaussette("cl")
+	cl2.Bind("localhost:8002")
+	cl2.Join("localhost:8001")
+	cl3 := net.NewChaussette("cl")
+	cl3.Bind("localhost:8003")
+	cl3.Join("localhost:8002")
+
+	cl4 := net.NewChaussette("cl")
+	cl4.Bind("localhost:8004")
+	cl4.Join("localhost:8001")
+
+	cl5 := net.NewChaussette("cl")
+	cl5.Bind("localhost:8005")
+	cl5.Join("localhost:8001")
+
+	aga1 := net.NewChaussette("aga")
+	aga1.Bind("localhost:8111")
+	aga1.Connect("localhost:8001")
+	aga2 := net.NewChaussette("aga")
+	aga2.Bind("localhost:8112")
+	aga2.Connect("localhost:8005")
+
+	agb1 := net.NewChaussette("agb")
+	agb1.Bind("localhost:8121")
+	agb1.Connect("localhost:8002")
+	agb2 := net.NewChaussette("agb")
+	agb2.Bind("localhost:8122")
+	agb2.Connect("localhost:8003")
+
+	time.Sleep(time.Second * time.Duration(2))
+
+	Ca1 := net.NewChaussette("Ca")
+	Ca1.Bind("localhost:8211")
+	Ca1.Connect("localhost:8111")
+	Ca2 := net.NewChaussette("Ca")
+	Ca2.Bind("localhost:8212")
+	Ca2.Connect("localhost:8111")
+	Ca3 := net.NewChaussette("Ca")
+	Ca3.Bind("localhost:8213")
+	Ca3.Connect("localhost:8111")
+
+	Cb1 := net.NewChaussette("Cb")
+	Cb1.Bind("localhost:8221")
+	Cb1.Connect("localhost:8112")
+	Cb2 := net.NewChaussette("Cb")
+	Cb2.Bind("localhost:8222")
+	Cb2.Connect("localhost:8112")
+
+	Cc1 := net.NewChaussette("Cc")
+	Cc1.Bind("localhost:8231")
+	Cc1.Connect("localhost:8111")
+	Cc2 := net.NewChaussette("Cc")
+	Cc2.Bind("localhost:8232")
+	Cc2.Connect("localhost:8111")
+
+	Cd1 := net.NewChaussette("Cd")
+	Cd1.Bind("localhost:8241")
+	Cd1.Connect("localhost:8111")
+	Cd2 := net.NewChaussette("Cd")
+	Cd2.Bind("localhost:8242")
+	Cd2.Connect("localhost:8112")
+
+	Ce1 := net.NewChaussette("Ce")
+	Ce1.Bind("localhost:8251")
+	Ce1.Connect("localhost:8122")
+	Ce2 := net.NewChaussette("Ce")
+	Ce2.Bind("localhost:8252")
+	Ce2.Connect("localhost:8122")
+
+	Cf1 := net.NewChaussette("Cf")
+	Cf1.Bind("localhost:8261")
+	Cf1.Connect("localhost:8121")
+	Cf2 := net.NewChaussette("Cg")
+	Cf2.Bind("localhost:8262")
+	Cf2.Connect("localhost:8121")
+
+	Cg1 := net.NewChaussette("Cg")
+	Cg1.Bind("localhost:8271")
+	Cg1.Connect("localhost:8121")
+	Cg2 := net.NewChaussette("Cg")
+	Cg2.Bind("localhost:8272")
+	Cg2.Connect("localhost:8122")
+
+	Ch1 := net.NewChaussette("Ch")
+	Ch1.Bind("localhost:8281")
+	Ch1.Connect("localhost:8111")
+
+	time.Sleep(time.Second * time.Duration(2))
+	fmt.Printf("cl1 : %s", cl2.String())
+	fmt.Printf("cl2 : %s", cl2.String())
+	fmt.Printf("cl3 : %s", cl3.String())
+	fmt.Printf("cl4 : %s", cl4.String())
+	fmt.Printf("cl5 : %s", cl5.String())
+
+	fmt.Printf("aga1 : %s", aga1.String())
+	fmt.Printf("aga2 : %s", aga2.String())
+
+	fmt.Printf("agb1 : %s", agb1.String())
+	fmt.Printf("agb2 : %s", agb2.String())
+
+	fmt.Printf("Ca1 : %s", Ca1.String())
+	fmt.Printf("Ca2 : %s", Ca2.String())
+	fmt.Printf("Ca3 : %s", Ca3.String())
+
+	fmt.Printf("Cb1 : %s", Cb1.String())
+	fmt.Printf("Cb2 : %s", Cb2.String())
+
+	fmt.Printf("Cc1 : %s", Cc1.String())
+	fmt.Printf("Cc2 : %s", Cc2.String())
+
+	fmt.Printf("Cd1 : %s", Cd1.String())
+	fmt.Printf("Cd2 : %s", Cd2.String())
+
+	fmt.Printf("Ce1 : %s", Ce1.String())
+	fmt.Printf("Ce2 : %s", Ce2.String())
+
+	fmt.Printf("Cf1 : %s", Cf1.String())
+	fmt.Printf("Cf2 : %s", Cf2.String())
+
+	fmt.Printf("Cg1 : %s", Cg1.String())
+	fmt.Printf("Cg2 : %s", Cg2.String())
+
+	fmt.Printf("Ch1 : %s", Ch1.String())
+
+	<-done
+}

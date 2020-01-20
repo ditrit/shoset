@@ -12,6 +12,10 @@ func HandleConfig(c *ChaussetteConn) error {
 	switch cfg.GetCommandName() {
 	case "handshake":
 		if c.GetName() == "" {
+			if c.GetDir() == "in" {
+				myConfig := c.GetCh().NewHandshake()
+				c.SendMessage(*myConfig)
+			}
 			c.SetName(cfg.GetLogicalName())
 		}
 		if c.GetBindAddr() == "" {
@@ -19,6 +23,11 @@ func HandleConfig(c *ChaussetteConn) error {
 		}
 		if c.GetDir() == "in" {
 			c.GetCh().SetConn(c.GetBindAddr(), c)
+			if len(c.GetCh().GetNameBrothers()) > 0 {
+				for bro := range c.GetCh().GetNameBrothers() {
+					c.SendMessage(msg.NewConnectTo(bro))
+				}
+			}
 		}
 		if c.GetDir() == "out" {
 			cfgBros := c.GetCh().NewCfgOut()
@@ -83,6 +92,29 @@ func HandleConfig(c *ChaussetteConn) error {
 			if c.GetCh().GetConnsByAddr()[cfg.Address] == nil {
 				c.GetCh().Connect(cfg.Address)
 			}
+		}
+	case "join":
+		newMember := cfg.GetBindAddress()  // recupere l'adresse distante
+		thisOne := c.GetCh().GetBindAddr() // adresse locale
+		if c.GetDir() == "in" {
+			if !c.GetCh().InConnsJoin(newMember) && newMember != thisOne {
+				c.GetCh().Join(newMember)
+			}
+		}
+		cfgNewMember := msg.NewCfgMember(newMember)
+		for connAddr, conn := range c.GetCh().GetConnsJoin() {
+			if connAddr != newMember && connAddr != thisOne {
+				conn.SendMessage(cfgNewMember)
+			}
+		}
+		if c.GetDir() == "out" {
+		}
+
+	case "member":
+		newMember := cfg.GetBindAddress()
+		thisOne := c.GetCh().GetBindAddr()
+		if !c.GetCh().InConnsJoin(newMember) && newMember != thisOne {
+			c.GetCh().Join(newMember)
 		}
 	}
 	return err

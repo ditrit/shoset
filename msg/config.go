@@ -10,6 +10,7 @@ type Config struct {
 	BindAddress string
 	Address     string
 	Conns       []string
+	Bros        []string
 }
 
 func (c *Config) String() string {
@@ -17,6 +18,24 @@ func (c *Config) String() string {
 		fmt.Printf("\nError : *Config.String : nil\n")
 	}
 	return fmt.Sprintf("[ CommandName: %s, LogicalName: %s, BindAddress: %s, Address: %s, Conns : %#v\n", c.CommandName, c.LogicalName, c.BindAddress, c.Address, c.Conns)
+}
+
+// NewCfgJoin :
+func NewCfgJoin(bindAddress string) *Config {
+	c := new(Config)
+	c.InitMessageBase()
+	c.CommandName = "join"
+	c.BindAddress = bindAddress
+	return c
+}
+
+// NewCfgMember :
+func NewCfgMember(bindAddress string) *Config {
+	c := new(Config)
+	c.InitMessageBase()
+	c.CommandName = "member"
+	c.BindAddress = bindAddress
+	return c
 }
 
 // NewHandshake : Config constructor
@@ -83,3 +102,6 @@ func (c Config) GetCommandName() string { return c.CommandName }
 
 // GetConns :
 func (c Config) GetConns() []string { return c.Conns }
+
+// GetBros :
+func (c Config) GetBros() []string { return c.Bros }

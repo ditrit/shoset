@@ -25,6 +25,7 @@ type Chaussette struct {
 	//	id          string
 	connsByAddr  map[string]*ChaussetteConn
 	connsByName  map[string]map[string]*ChaussetteConn
+	connsJoin    map[string]*ChaussetteConn
 	brothers     map[string]bool
 	nameBrothers map[string]bool
 	neighbors    map[string]map[string]bool
@@ -51,6 +52,7 @@ func NewChaussette(lName string) *Chaussette {
 	c.lName = lName
 	c.connsByAddr = make(map[string]*ChaussetteConn)
 	c.connsByName = make(map[string]map[string]*ChaussetteConn)
+	c.connsJoin = make(map[string]*ChaussetteConn)
 	c.brothers = make(map[string]bool)
 	c.nameBrothers = make(map[string]bool)
 	c.neighbors = make(map[string]map[string]bool)
@@ -111,6 +113,12 @@ func (c *Chaussette) InNameBrothers(addr string) bool {
 	return c.nameBrothers[addr]
 }
 
+// InConnsJoin :
+func (c *Chaussette) InConnsJoin(addr string) bool {
+	_, ok := c.connsJoin[addr]
+	return ok
+}
+
 // SetNameBrother :
 func (c *Chaussette) SetNameBrother(nameBrother string) {
 	c.nameBrothers[nameBrother] = true
@@ -143,9 +151,14 @@ func (c *Chaussette) GetConnsByName() map[string]map[string]*ChaussetteConn {
 	return c.connsByName
 }
 
+// GetConnsJoin :
+func (c *Chaussette) GetConnsJoin() map[string]*ChaussetteConn {
+	return c.connsJoin
+}
+
 // String :
 func (c *Chaussette) String() string {
-	str := fmt.Sprintf("Chaussette{ lName: %s, bindAddr: %s, brothers %#v, nameBrothers %#v\n", c.lName, c.bindAddr, c.brothers, c.nameBrothers)
+	str := fmt.Sprintf("Chaussette{ lName: %s, bindAddr: %s, brothers %#v, nameBrothers %#v, joinConns %#v\n", c.lName, c.bindAddr, c.brothers, c.nameBrothers, c.connsJoin)
 	for k, conn := range c.connsByAddr {
 		str += fmt.Sprintf(" - [%s] %s\n", k, conn.String())
 	}
@@ -226,6 +239,26 @@ func (c *Chaussette) Connect(address string) (*ChaussetteConn, error) {
 	return conn, nil
 }
 
+//Join : Join to group of Chaussettes and duplicate in and out connexions
+func (c *Chaussette) Join(address string) (*ChaussetteConn, error) {
+
+	conn := new(ChaussetteConn)
+	conn.ch = c
+	conn.dir = "out"
+	conn.socket = new(tls.Conn)
+	conn.rb = new(msg.Reader)
+	conn.wb = new(msg.Writer)
+	ipAddress, err := getIP(address)
+	if err != nil {
+		return nil, err
+	}
+	conn.addr = ipAddress
+	conn.bindAddr = ipAddress
+	conn.brothers = make(map[string]bool)
+	go conn.runJoinConn()
+	return conn, nil
+}
+
 func (c *Chaussette) deleteConn(connAddr string) {
 	c.m.Lock()
 	conn := c.connsByAddr[connAddr]
@@ -237,6 +270,15 @@ func (c *Chaussette) deleteConn(connAddr string) {
 	}
 	delete(c.connsByAddr, connAddr)
 	c.m.Unlock()
+}
+
+// SetConnJoin :
+func (c *Chaussette) SetConnJoin(connAddr string, conn *ChaussetteConn) {
+	if conn != nil {
+		c.m.Lock()
+		c.connsJoin[connAddr] = conn
+		c.m.Unlock()
+	}
 }
 
 // SetConn :

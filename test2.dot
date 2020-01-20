@@ -1,0 +1,149 @@
+digraph G {
+    rankdir=LR;
+    nodesep=.15;
+
+    subgraph clusterC {
+        node [style=filled, shape=box, color=lightgrey];
+        label = "Cluster Gandalf";
+        color = blue;
+
+        cl1 [label="Cl 1 (8001)"];
+        cl2 [label="Cl 2 (8002)"];
+        cl3 [label="Cl 3 (8003)"];
+        cl4 [label="Cl 4 (8004)"];
+        cl5 [label="Cl 5 (8005)"];
+
+        cl2 -> cl1 [style=dashed];
+        cl3 -> cl2 [style=dashed];
+        cl4 -> cl1 [style=dashed];
+        cl5 -> cl1 [style=dashed];
+    }
+
+    subgraph clusterAs {
+        subgraph clusterA1 {
+            node [style=filled, shape=box, color=lightgrey];
+            label = "Aggregator A";
+            color = red;
+
+            aga1 [label="Agg A 1 (8111)"];
+            aga2 [label="Agg A  2 (8112)"];
+
+        }
+
+        subgraph clusterA2 {
+            node [style=filled, shape=box, color=lightgrey];
+            label = "Aggregator B";
+            color = red;
+
+            agb1 [label="Agg B 1 (8121)"];
+            agb2 [label="Agg B 2 (8022)"];
+
+        }
+
+        color = white
+    }
+
+
+    subgraph clusterCa {
+            node [style=filled, color=lightgrey];
+            label = "Connector A";
+            color = grey;
+
+            ca1 [label="Ca1 (8211)"];
+            ca2 [label="Ca2 (8212)"];
+            ca3 [label="Ca3 (8213)"];
+        }
+
+    subgraph clusterCb {
+            node [style=filled, color=lightgrey];
+            label = "Connector B";
+            color = grey;
+
+            cb1 [label="Cb1 (8221)"];
+            cb2 [label="Cb2 (8222)"];
+        }
+
+    subgraph clusterCc {
+            node [style=filled, color=lightgrey];
+            label = "Connector C";
+            color = grey;
+    
+            cc1 [label="Cc1 (8231)"];
+            cc2 [label="Cc2 (8232)"];
+        }
+
+    subgraph clusterCd {
+            node [style=filled, color=lightgrey];
+            label = "Connector D";
+            color = grey;
+    
+            cd1 [label="Cd1 (8241)"];
+            cd2 [label="Cd2 (8242)"];
+        }
+
+    subgraph clusterCe {
+            node [style=filled, color=lightgrey];
+            label = "Connector E";
+            color = grey;
+    
+            ce1 [label="Ce1 (8251)"];
+            ce2 [label="Ce2 (8252)"];
+        }
+
+    subgraph clusterCf {
+            node [style=filled, color=lightgrey];
+            label = "Connector F";
+            color = grey;
+    
+            cf1 [label="Cf1 (8261)"];
+            cf2 [label="Cf2 (8262)"];
+        }
+
+    subgraph clusterCg {
+            node [style=filled, color=lightgrey];
+            label = "Connector G";
+            color = grey;
+    
+            cg1 [label="Cg1 (8271)"];
+            cg2 [label="Cg2 (8272)"];
+        }
+
+    subgraph clusterCh {
+            node [style=filled, color=lightgrey];
+            label = "Connector H";
+            color = grey;
+    
+            ch1 [label="Ch1 (8281)"];
+        }
+ 
+    aga1 -> cl1;
+    aga2 -> cl5;
+
+    agb1 -> cl2;
+    agb2 -> cl3;
+
+    ca1 -> aga1;
+    ca2 -> aga1;
+    ca3 -> aga1;
+
+    cb1 -> aga2;
+    cb2 -> aga2;
+
+    cc1 -> aga1;
+    cc2 -> aga1;
+
+    cd1 -> aga1;
+    cd2 -> aga2;
+
+    ce1 -> agb2;
+    ce2 -> agb2;
+
+    cf1 -> agb1;
+    cf2 -> agb1;
+
+    cg1 -> agb1;
+    cg2 -> agb2;
+
+    ch1 -> aga1;
+
+}

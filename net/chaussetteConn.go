@@ -81,6 +81,32 @@ func (c *ChaussetteConn) runOutConn(addr string) {
 	}
 }
 
+// RunJoinConn : handler for the socket
+func (c *ChaussetteConn) runJoinConn() {
+	joinConfig := msg.NewCfgJoin(c.GetCh().GetBindAddr())
+	for {
+		c.ch.SetConnJoin(c.addr, c)
+		c.ch.SetNameBrother(c.addr)
+		conn, err := tls.Dial("tcp", c.addr, c.ch.tlsConfig)
+		defer conn.Close()
+		if err != nil {
+			time.Sleep(time.Millisecond * time.Duration(100))
+		} else {
+			c.socket = conn
+			c.rb = msg.NewReader(c.socket)
+			c.wb = msg.NewWriter(c.socket)
+
+			// receive messages
+			for {
+				if c.name == "" { // remote logical Name
+					c.SendMessage(*joinConfig)
+				}
+				c.receiveMsg()
+			}
+		}
+	}
+}
+
 // GetDir :
 func (c *ChaussetteConn) GetDir() string {
 	return c.dir
@@ -123,13 +149,13 @@ func (c *ChaussetteConn) SetBindAddr(bindAddr string) {
 func (c *ChaussetteConn) runInConn() {
 	c.rb = msg.NewReader(c.socket)
 	c.wb = msg.NewWriter(c.socket)
-	myConfig := c.GetCh().NewHandshake()
+	//myConfig := c.GetCh().NewHandshake()
 	defer c.socket.Close()
 	// receive messages
 	for {
-		if c.name == "" { // remote logical Name
-			c.SendMessage(*myConfig)
-		}
+		//if c.name == "" { // remote logical Name
+		//	c.SendMessage(*myConfig)
+		//}
 		err := c.receiveMsg()
 		if err != nil {
 			return
@@ -139,7 +165,7 @@ func (c *ChaussetteConn) runInConn() {
 
 // SendMessage :
 func (c *ChaussetteConn) SendMessage(msg msg.Message) {
-	//fmt.Printf("Sending message %s(%s) -> %s(%s) %#v.\n", c.GetCh().GetName(), c.GetCh().GetBindAddr(), c.GetName(), c.addr, msg)
+	//fmt.Printf("     Sending message %s(%s) -> %s(%s) %#v.\n", c.GetCh().GetName(), c.GetCh().GetBindAddr(), c.GetName(), c.addr, msg)
 	c.WriteString(msg.GetMsgType())
 	c.WriteMessage(msg)
 }
