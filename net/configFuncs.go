@@ -5,7 +5,7 @@ import (
 )
 
 // HandleConfig :
-func HandleConfig(c *ChaussetteConn) error {
+func HandleConfig(c *ShosetConn) error {
 	var cfg msg.Config
 	ch := c.GetCh()
 	err := c.ReadMessage(&cfg)
@@ -121,10 +121,10 @@ func HandleConfig(c *ChaussetteConn) error {
 }
 
 // SendConfig :
-func SendConfig(c *Chaussette, cfg msg.Message) {
+func SendConfig(c *Shoset, cfg msg.Message) {
 }
 
 // WaitConfig :
-func WaitConfig(c *Chaussette, replies *msg.Iterator, args map[string]string, timeout int) *msg.Message {
+func WaitConfig(c *Shoset, replies *msg.Iterator, args map[string]string, timeout int) *msg.Message {
 	return nil
 }

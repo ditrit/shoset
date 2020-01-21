@@ -8,7 +8,7 @@ import (
 )
 
 // HandleReply :
-func HandleReply(c *ChaussetteConn) error {
+func HandleReply(c *ShosetConn) error {
 	var rep msg.Reply
 	err := c.ReadMessage(&rep)
 	c.GetCh().FQueue("rep").Push(rep)
@@ -16,14 +16,14 @@ func HandleReply(c *ChaussetteConn) error {
 }
 
 // SendReplyConn :
-func SendReplyConn(c *ChaussetteConn, rep interface{}) {
+func SendReplyConn(c *ShosetConn, rep interface{}) {
 	fmt.Print("Sending reply.\n")
 	c.WriteString("rep")
 	c.WriteMessage(rep)
 }
 
 // SendReply :
-func SendReply(c *Chaussette, rep msg.Message) {
+func SendReply(c *Shoset, rep msg.Message) {
 	fmt.Print("Sending Reply.\n")
 	for _, conn := range c.GetConnsByAddr() {
 		conn.SendMessage(rep)
@@ -31,7 +31,7 @@ func SendReply(c *Chaussette, rep msg.Message) {
 }
 
 // WaitReply :
-func WaitReply(c *Chaussette, replies *msg.Iterator, args map[string]string, timeout int) *msg.Message {
+func WaitReply(c *Shoset, replies *msg.Iterator, args map[string]string, timeout int) *msg.Message {
 	commandUUID, ok := args["uuid"]
 	if !ok {
 		return nil

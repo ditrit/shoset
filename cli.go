@@ -36,12 +36,12 @@ func main() {
 	args := flag.Args()
 
 	if isTest == true {
-		chaussetteTest()
+		shosetTest()
 		return
 	}
 
 	if isTestEtoile == true {
-		chaussetteTestEtoile()
+		shosetTestEtoile()
 		return
 	}
 
@@ -54,10 +54,10 @@ func main() {
 	address := args[1]
 
 	if isServer == true {
-		chaussetteServer(name, address)
+		shosetServer(name, address)
 	}
 	if isClient == true {
-		chaussetteClient(name, address)
+		shosetClient(name, address)
 	}
 
 }

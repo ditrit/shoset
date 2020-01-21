@@ -13,50 +13,50 @@ import (
 	"../msg"
 )
 
-// ChaussetteConn : client connection
-type ChaussetteConn struct {
+// ShosetConn : client connection
+type ShosetConn struct {
 	socket   *tls.Conn
 	name     string // remote logical name
 	bindAddr string // remote bind addr
 	brothers map[string]bool
 	dir      string
 	addr     string
-	ch       *Chaussette
+	ch       *Shoset
 	rb       *msg.Reader
 	wb       *msg.Writer
 }
 
-func (c *ChaussetteConn) String() string {
-	return fmt.Sprintf("ChaussetteConn{ way: %s, lName: %s, addr(bindAddr): %s(%s)", c.dir, c.name, c.addr, c.bindAddr)
+func (c *ShosetConn) String() string {
+	return fmt.Sprintf("ShosetConn{ way: %s, lName: %s, addr(bindAddr): %s(%s)", c.dir, c.name, c.addr, c.bindAddr)
 }
 
 // ReadString :
-func (c *ChaussetteConn) ReadString() (string, error) {
+func (c *ShosetConn) ReadString() (string, error) {
 	return c.rb.ReadString()
 }
 
 // ReadMessage :
-func (c *ChaussetteConn) ReadMessage(data interface{}) error {
+func (c *ShosetConn) ReadMessage(data interface{}) error {
 	return c.rb.ReadMessage(data)
 }
 
 // WriteString :
-func (c *ChaussetteConn) WriteString(data string) (int, error) {
+func (c *ShosetConn) WriteString(data string) (int, error) {
 	return c.wb.WriteString(data)
 }
 
 // Flush :
-func (c *ChaussetteConn) Flush() error {
+func (c *ShosetConn) Flush() error {
 	return c.wb.Flush()
 }
 
 // WriteMessage :
-func (c *ChaussetteConn) WriteMessage(data interface{}) error {
+func (c *ShosetConn) WriteMessage(data interface{}) error {
 	return c.wb.WriteMessage(data)
 }
 
 // RunOutConn : handler for the socket
-func (c *ChaussetteConn) runOutConn(addr string) {
+func (c *ShosetConn) runOutConn(addr string) {
 
 	myConfig := c.GetCh().NewHandshake()
 	for {
@@ -82,7 +82,7 @@ func (c *ChaussetteConn) runOutConn(addr string) {
 }
 
 // RunJoinConn : handler for the socket
-func (c *ChaussetteConn) runJoinConn() {
+func (c *ShosetConn) runJoinConn() {
 	joinConfig := msg.NewCfgJoin(c.GetCh().GetBindAddr())
 	for {
 		c.ch.SetConnJoin(c.addr, c)
@@ -108,45 +108,45 @@ func (c *ChaussetteConn) runJoinConn() {
 }
 
 // GetDir :
-func (c *ChaussetteConn) GetDir() string {
+func (c *ShosetConn) GetDir() string {
 	return c.dir
 }
 
 // GetCh :
-func (c *ChaussetteConn) GetCh() *Chaussette {
+func (c *ShosetConn) GetCh() *Shoset {
 	return c.ch
 }
 
 // GetName : // remote logical Name
-func (c *ChaussetteConn) GetName() string { // remote logical Name
+func (c *ShosetConn) GetName() string { // remote logical Name
 	return c.name // remote logical Name
 }
 
 // GetBindAddr :
-func (c *ChaussetteConn) GetBindAddr() string {
+func (c *ShosetConn) GetBindAddr() string {
 	return c.bindAddr
 }
 
 // SetName : // remote logical Name
-func (c *ChaussetteConn) SetName(lName string) { // remote logical Name
+func (c *ShosetConn) SetName(lName string) { // remote logical Name
 	if lName != "" {
 		c.name = lName // remote logical Name
 		if c.ch.connsByName[lName] == nil {
-			c.ch.connsByName[lName] = make(map[string]*ChaussetteConn)
+			c.ch.connsByName[lName] = make(map[string]*ShosetConn)
 		}
 		c.ch.connsByName[lName][c.addr] = c
 	}
 }
 
 // SetBindAddr :
-func (c *ChaussetteConn) SetBindAddr(bindAddr string) {
+func (c *ShosetConn) SetBindAddr(bindAddr string) {
 	if bindAddr != "" {
 		c.bindAddr = bindAddr
 	}
 }
 
 // runInbound : handler for the connection
-func (c *ChaussetteConn) runInConn() {
+func (c *ShosetConn) runInConn() {
 	c.rb = msg.NewReader(c.socket)
 	c.wb = msg.NewWriter(c.socket)
 	//myConfig := c.GetCh().NewHandshake()
@@ -164,13 +164,13 @@ func (c *ChaussetteConn) runInConn() {
 }
 
 // SendMessage :
-func (c *ChaussetteConn) SendMessage(msg msg.Message) {
+func (c *ShosetConn) SendMessage(msg msg.Message) {
 	//fmt.Printf("     Sending message %s(%s) -> %s(%s) %#v.\n", c.GetCh().GetName(), c.GetCh().GetBindAddr(), c.GetName(), c.addr, msg)
 	c.WriteString(msg.GetMsgType())
 	c.WriteMessage(msg)
 }
 
-func (c *ChaussetteConn) receiveMsg() error {
+func (c *ShosetConn) receiveMsg() error {
 	// read message type
 	msgType, err := c.rb.ReadString()
 	switch {
