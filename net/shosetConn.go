@@ -15,15 +15,16 @@ import (
 
 // ShosetConn : client connection
 type ShosetConn struct {
-	socket   *tls.Conn
-	name     string // remote logical name
-	bindAddr string // remote bind addr
-	brothers map[string]bool
-	dir      string
-	addr     string
-	ch       *Shoset
-	rb       *msg.Reader
-	wb       *msg.Writer
+	socket   	*tls.Conn
+	name	    string // remote logical name
+	ShosetType	string // remote ShosetType
+	bindAddr	string // remote bind addr
+	brothers	map[string]bool
+	dir     	string
+	addr    	string
+	ch      	*Shoset
+	rb      	*msg.Reader
+	wb      	*msg.Writer
 }
 
 func (c *ShosetConn) String() string {
@@ -121,6 +122,8 @@ func (c *ShosetConn) GetCh() *Shoset {
 func (c *ShosetConn) GetName() string { // remote logical Name
 	return c.name // remote logical Name
 }
+// GetShosetType : // remote ShosetTypeName
+func (c *ShosetConn) GetShosetType() string { return c.ShosetType }
 
 // GetBindAddr :
 func (c *ShosetConn) GetBindAddr() string {
@@ -135,6 +138,13 @@ func (c *ShosetConn) SetName(lName string) { // remote logical Name
 			c.ch.connsByName[lName] = make(map[string]*ShosetConn)
 		}
 		c.ch.connsByName[lName][c.addr] = c
+	}
+}
+
+// SetShosetType : // remote ShosetType
+func (c *ShosetConn) SetShosetType(ShosetType string) {
+	if ShosetType != "" {
+		c.ShosetType = ShosetType
 	}
 }
 

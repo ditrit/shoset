@@ -7,6 +7,7 @@ type Config struct {
 	MessageBase
 	CommandName string
 	LogicalName string
+	ShosetType	string
 	BindAddress string
 	Address     string
 	Conns       []string
@@ -39,12 +40,13 @@ func NewCfgMember(bindAddress string) *Config {
 }
 
 // NewHandshake : Config constructor
-func NewHandshake(bindAddress, logicalName string) *Config {
+func NewHandshake(bindAddress, logicalName, ShosetType string) *Config {
 	c := new(Config)
 	c.InitMessageBase()
 	c.CommandName = "handshake"
 	c.LogicalName = logicalName
 	c.BindAddress = bindAddress
+	c.ShosetType = ShosetType
 	return c
 }
 
@@ -67,11 +69,12 @@ func NewConns(dir string, conns []string) *Config {
 }
 
 // NewInstance : Config constructor
-func NewInstance(address string, logicalName string) *Config {
+func NewInstance(address, logicalName, ShosetType string) *Config {
 	c := new(Config)
 	c.InitMessageBase()
 	c.CommandName = "newInstance"
 	c.LogicalName = logicalName
+	c.ShosetType = ShosetType
 	c.Address = address
 	return c
 }
@@ -90,6 +93,9 @@ func (c Config) GetMsgType() string { return "cfg" }
 
 // GetLogicalName :
 func (c Config) GetLogicalName() string { return c.LogicalName }
+
+// GetShosetType
+func (c Config) GetShosetType() string { return c.ShosetType}
 
 // GetAddress :
 func (c Config) GetAddress() string { return c.Address }
