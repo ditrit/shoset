@@ -176,7 +176,7 @@ func (c *Shoset) GetConnsJoin() map[string]*ShosetConn {
 
 // String :
 func (c *Shoset) String() string {
-	str := fmt.Sprintf("Shoset{ lName: %s, bindAddr: %s, brothers %#v, nameBrothers %#v, joinConns %#v\n", c.lName, c.bindAddr, c.brothers, c.nameBrothers, c.connsJoin)
+	str := fmt.Sprintf("Shoset{ lName: %s, bindAddr: %s, type: %s, brothers %#v, nameBrothers %#v, joinConns %#v\n", c.lName, c.bindAddr, c.ShosetType, c.brothers, c.nameBrothers, c.connsJoin)
 	for k, conn := range c.connsByAddr {
 		str += fmt.Sprintf(" - [%s] %s\n", k, conn.String())
 	}

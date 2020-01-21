@@ -28,7 +28,7 @@ type ShosetConn struct {
 }
 
 func (c *ShosetConn) String() string {
-	return fmt.Sprintf("ShosetConn{ way: %s, lName: %s, addr(bindAddr): %s(%s)", c.dir, c.name, c.addr, c.bindAddr)
+	return fmt.Sprintf("ShosetConn{ way: %s, lName: %s, Type: %s, addr(bindAddr): %s(%s)", c.dir, c.name, c.ShosetType, c.addr, c.bindAddr)
 }
 
 // ReadString :
