@@ -8,7 +8,7 @@ import (
 )
 
 // HandleCommand :
-func HandleCommand(c *ChaussetteConn) error {
+func HandleCommand(c *ShosetConn) error {
 	var cmd msg.Command
 	err := c.ReadMessage(&cmd)
 	c.GetCh().FQueue("cmd").Push(cmd)
@@ -16,14 +16,14 @@ func HandleCommand(c *ChaussetteConn) error {
 }
 
 // SendCommandConn :
-func SendCommandConn(c *ChaussetteConn, cmd interface{}) {
+func SendCommandConn(c *ShosetConn, cmd interface{}) {
 	fmt.Print("Sending config.\n")
 	c.WriteString("cmd")
 	c.WriteMessage(cmd)
 }
 
 // SendCommand :
-func SendCommand(c *Chaussette, cmd msg.Message) {
+func SendCommand(c *Shoset, cmd msg.Message) {
 	fmt.Print("Sending Command.\n")
 	for _, conn := range c.GetConnsByAddr() {
 		conn.SendMessage(cmd)
@@ -31,7 +31,7 @@ func SendCommand(c *Chaussette, cmd msg.Message) {
 }
 
 // WaitCommand :
-func WaitCommand(c *Chaussette, replies *msg.Iterator, args map[string]string, timeout int) *msg.Message {
+func WaitCommand(c *Shoset, replies *msg.Iterator, args map[string]string, timeout int) *msg.Message {
 	commandName, ok := args["name"]
 	if !ok {
 		return nil

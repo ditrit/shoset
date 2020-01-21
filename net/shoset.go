@@ -14,31 +14,31 @@ import (
 
 // MessageHandlers interface
 type MessageHandlers interface {
-	Handle(*ChaussetteConn) error
-	SendConn(*ChaussetteConn, *msg.Message)
-	Send(*Chaussette, *msg.Message)
-	Wait(*Chaussette, *msg.Iterator, string, int) *msg.Message
+	Handle(*ShosetConn) error
+	SendConn(*ShosetConn, *msg.Message)
+	Send(*Shoset, *msg.Message)
+	Wait(*Shoset, *msg.Iterator, string, int) *msg.Message
 }
 
-//Chaussette :
-type Chaussette struct {
+//Shoset :
+type Shoset struct {
 	//	id          string
-	connsByAddr  map[string]*ChaussetteConn            // ensemble des connexions
-	connsByName  map[string]map[string]*ChaussetteConn // connexions par nom logique
-	connsJoin    map[string]*ChaussetteConn            // connexions nécessaires au join (non utilisées en dehors du join)
+	connsByAddr  map[string]*ShosetConn            // ensemble des connexions
+	connsByName  map[string]map[string]*ShosetConn // connexions par nom logique
+	connsJoin    map[string]*ShosetConn            // connexions nécessaires au join (non utilisées en dehors du join)
 	brothers     map[string]bool                       // "freres" au sens large (ex: toutes les instances de connecteur reliées à un même aggregateur)
 	nameBrothers map[string]bool                       // "freres" ayant un même nom logique (ex: instances d'un même connecteur)
-	lName        string                                // Nom logique de la chaussette
-	bindAddr     string                                // Adresse sur laquelle la chaussette est bindée
+	lName        string                                // Nom logique de la shoset
+	bindAddr     string                                // Adresse sur laquelle la shoset est bindée
 
 	// map des queues par type de message (enregistrées via RegisterMessageBehaviors)
 	queue map[string]*msg.Queue
 
 	// map des fonctions de gestion des messages par type (enregistrées via RegisterMessageBehaviors)
-	handle map[string]func(*ChaussetteConn) error
+	handle map[string]func(*ShosetConn) error
 
 	// map des fonctions d'envoi de message (enregistrées via RegisterMessageBehaviors)
-	send map[string]func(*Chaussette, msg.Message)
+	send map[string]func(*Shoset, msg.Message)
 
 	// map des fonctions d'attente de message (enregistrées via RegisterMessageBehaviors)
 	// les fonctions d'attente sont synchrones, à charge à l'utilisateur de gérer l'asynchronisme selon le language qu'il utilise
@@ -46,7 +46,7 @@ type Chaussette struct {
 	//   - un iterateur a appeler pour chaque nouevel élément
 	//   - un filtre sur le message (défini par une map de strings)
 	// 	 - un timeout après lequel la fonction retourne nil si aucun message n'est arrivé.
-	wait map[string]func(*Chaussette, *msg.Iterator, map[string]string, int) *msg.Message
+	wait map[string]func(*Shoset, *msg.Iterator, map[string]string, int) *msg.Message
 
 	// configuration TLS
 	tlsConfig   *tls.Config
@@ -60,23 +60,23 @@ type Chaussette struct {
 var certPath = "./certs/cert.pem"
 var keyPath = "./certs/key.pem"
 
-// NewChaussette : constructor
-func NewChaussette(lName string) *Chaussette {
+// NewShoset : constructor
+func NewShoset(lName string) *Shoset {
 	// Creation
-	c := new(Chaussette)
+	c := new(Shoset)
 
 	// Initialisation
 	c.lName = lName
-	c.connsByAddr = make(map[string]*ChaussetteConn)
-	c.connsByName = make(map[string]map[string]*ChaussetteConn)
-	c.connsJoin = make(map[string]*ChaussetteConn)
+	c.connsByAddr = make(map[string]*ShosetConn)
+	c.connsByName = make(map[string]map[string]*ShosetConn)
+	c.connsJoin = make(map[string]*ShosetConn)
 	c.brothers = make(map[string]bool)
 	c.nameBrothers = make(map[string]bool)
 
 	c.queue = make(map[string]*msg.Queue)
-	c.handle = make(map[string]func(*ChaussetteConn) error)
-	c.send = make(map[string]func(*Chaussette, msg.Message))
-	c.wait = make(map[string]func(*Chaussette, *msg.Iterator, map[string]string, int) *msg.Message)
+	c.handle = make(map[string]func(*ShosetConn) error)
+	c.send = make(map[string]func(*Shoset, msg.Message))
+	c.wait = make(map[string]func(*Shoset, *msg.Iterator, map[string]string, int) *msg.Message)
 
 	// Enregistrement des handlers par type de message  (fonctions de gestion, d'envoi et de reception des messages)
 	c.RegisterMessageBehaviors("cfg", HandleConfig, SendConfig, WaitConfig)    // messages de type configuration
@@ -102,11 +102,11 @@ func NewChaussette(lName string) *Chaussette {
 }
 
 // RegisterMessageBehaviors :
-func (c *Chaussette) RegisterMessageBehaviors(
+func (c *Shoset) RegisterMessageBehaviors(
 	msgType string,
-	handle func(*ChaussetteConn) error,
-	send func(*Chaussette, msg.Message),
-	wait func(*Chaussette, *msg.Iterator, map[string]string, int) *msg.Message) {
+	handle func(*ShosetConn) error,
+	send func(*Shoset, msg.Message),
+	wait func(*Shoset, *msg.Iterator, map[string]string, int) *msg.Message) {
 	c.queue[msgType] = msg.NewQueue()
 	c.handle[msgType] = handle
 	c.send[msgType] = send
@@ -114,64 +114,64 @@ func (c *Chaussette) RegisterMessageBehaviors(
 }
 
 // GetBrothers :
-func (c *Chaussette) GetBrothers() map[string]bool {
+func (c *Shoset) GetBrothers() map[string]bool {
 	return c.brothers
 }
 
 // SetBrother :
-func (c *Chaussette) SetBrother(brother string) {
+func (c *Shoset) SetBrother(brother string) {
 	c.brothers[brother] = true
 }
 
 // GetNameBrothers :
-func (c *Chaussette) GetNameBrothers() map[string]bool {
+func (c *Shoset) GetNameBrothers() map[string]bool {
 	return c.nameBrothers
 }
 
 // InNameBrothers :
-func (c *Chaussette) InNameBrothers(addr string) bool {
+func (c *Shoset) InNameBrothers(addr string) bool {
 	return c.nameBrothers[addr]
 }
 
 // InConnsJoin :
-func (c *Chaussette) InConnsJoin(addr string) bool {
+func (c *Shoset) InConnsJoin(addr string) bool {
 	_, ok := c.connsJoin[addr]
 	return ok
 }
 
 // SetNameBrother :
-func (c *Chaussette) SetNameBrother(nameBrother string) {
+func (c *Shoset) SetNameBrother(nameBrother string) {
 	c.nameBrothers[nameBrother] = true
 }
 
 // GetBindAddr :
-func (c *Chaussette) GetBindAddr() string {
+func (c *Shoset) GetBindAddr() string {
 	return c.bindAddr
 }
 
 // GetName :
-func (c *Chaussette) GetName() string {
+func (c *Shoset) GetName() string {
 	return c.lName
 }
 
 // GetConnsByAddr :
-func (c *Chaussette) GetConnsByAddr() map[string]*ChaussetteConn {
+func (c *Shoset) GetConnsByAddr() map[string]*ShosetConn {
 	return c.connsByAddr
 }
 
 // GetConnsByName :
-func (c *Chaussette) GetConnsByName() map[string]map[string]*ChaussetteConn {
+func (c *Shoset) GetConnsByName() map[string]map[string]*ShosetConn {
 	return c.connsByName
 }
 
 // GetConnsJoin :
-func (c *Chaussette) GetConnsJoin() map[string]*ChaussetteConn {
+func (c *Shoset) GetConnsJoin() map[string]*ShosetConn {
 	return c.connsJoin
 }
 
 // String :
-func (c *Chaussette) String() string {
-	str := fmt.Sprintf("Chaussette{ lName: %s, bindAddr: %s, brothers %#v, nameBrothers %#v, joinConns %#v\n", c.lName, c.bindAddr, c.brothers, c.nameBrothers, c.connsJoin)
+func (c *Shoset) String() string {
+	str := fmt.Sprintf("Shoset{ lName: %s, bindAddr: %s, brothers %#v, nameBrothers %#v, joinConns %#v\n", c.lName, c.bindAddr, c.brothers, c.nameBrothers, c.connsJoin)
 	for k, conn := range c.connsByAddr {
 		str += fmt.Sprintf(" - [%s] %s\n", k, conn.String())
 	}
@@ -180,32 +180,32 @@ func (c *Chaussette) String() string {
 }
 
 // FQueue :
-func (c *Chaussette) FQueue(msgType string) *msg.Queue {
+func (c *Shoset) FQueue(msgType string) *msg.Queue {
 	return c.queue[msgType]
 }
 
 // FHandle :
-func (c *Chaussette) FHandle(msgType string) func(*ChaussetteConn) error {
+func (c *Shoset) FHandle(msgType string) func(*ShosetConn) error {
 	return c.handle[msgType]
 }
 
 // FSend :
-func (c *Chaussette) FSend(msgType string) func(*Chaussette, msg.Message) {
+func (c *Shoset) FSend(msgType string) func(*Shoset, msg.Message) {
 	return c.send[msgType]
 }
 
 // FWait :
-func (c *Chaussette) FWait(msgType string) func(*Chaussette, *msg.Iterator, map[string]string, int) *msg.Message {
+func (c *Shoset) FWait(msgType string) func(*Shoset, *msg.Iterator, map[string]string, int) *msg.Message {
 	return c.wait[msgType]
 }
 
 //NewHandshake : Build a config Message
-func (c *Chaussette) NewHandshake() *msg.Config {
+func (c *Shoset) NewHandshake() *msg.Config {
 	return msg.NewHandshake(c.bindAddr, c.lName)
 }
 
 //NewCfgOut : Build a config Message
-func (c *Chaussette) NewCfgOut() *msg.Config {
+func (c *Shoset) NewCfgOut() *msg.Config {
 	var bros []string
 	for _, conn := range c.GetConnsByAddr() {
 		if conn.dir == "out" {
@@ -216,7 +216,7 @@ func (c *Chaussette) NewCfgOut() *msg.Config {
 }
 
 //NewCfgIn : Build a config Message
-func (c *Chaussette) NewCfgIn() *msg.Config {
+func (c *Shoset) NewCfgIn() *msg.Config {
 	var bros []string
 	for addr := range c.brothers {
 		bros = append(bros, addr)
@@ -225,18 +225,18 @@ func (c *Chaussette) NewCfgIn() *msg.Config {
 }
 
 //NewInstanceMessage : Build a config Message
-func (c *Chaussette) NewInstanceMessage(address string, lName string) *msg.Config {
+func (c *Shoset) NewInstanceMessage(address string, lName string) *msg.Config {
 	return msg.NewInstance(address, lName)
 }
 
 //NewConnectToMessage : Build a config Message
-func (c *Chaussette) NewConnectToMessage(address string) *msg.Config {
+func (c *Shoset) NewConnectToMessage(address string) *msg.Config {
 	return msg.NewConnectTo(address)
 }
 
-//Connect : Connect to another Chaussette
-func (c *Chaussette) Connect(address string) (*ChaussetteConn, error) {
-	conn := new(ChaussetteConn)
+//Connect : Connect to another Shoset
+func (c *Shoset) Connect(address string) (*ShosetConn, error) {
+	conn := new(ShosetConn)
 	conn.ch = c
 	conn.dir = "out"
 	conn.socket = new(tls.Conn)
@@ -252,10 +252,10 @@ func (c *Chaussette) Connect(address string) (*ChaussetteConn, error) {
 	return conn, nil
 }
 
-//Join : Join to group of Chaussettes and duplicate in and out connexions
-func (c *Chaussette) Join(address string) (*ChaussetteConn, error) {
+//Join : Join to group of Shosets and duplicate in and out connexions
+func (c *Shoset) Join(address string) (*ShosetConn, error) {
 
-	conn := new(ChaussetteConn)
+	conn := new(ShosetConn)
 	conn.ch = c
 	conn.dir = "out"
 	conn.socket = new(tls.Conn)
@@ -272,7 +272,7 @@ func (c *Chaussette) Join(address string) (*ChaussetteConn, error) {
 	return conn, nil
 }
 
-func (c *Chaussette) deleteConn(connAddr string) {
+func (c *Shoset) deleteConn(connAddr string) {
 	c.m.Lock()
 	conn := c.connsByAddr[connAddr]
 	if conn != nil {
@@ -286,7 +286,7 @@ func (c *Chaussette) deleteConn(connAddr string) {
 }
 
 // SetConnJoin :
-func (c *Chaussette) SetConnJoin(connAddr string, conn *ChaussetteConn) {
+func (c *Shoset) SetConnJoin(connAddr string, conn *ShosetConn) {
 	if conn != nil {
 		c.m.Lock()
 		c.connsJoin[connAddr] = conn
@@ -295,14 +295,14 @@ func (c *Chaussette) SetConnJoin(connAddr string, conn *ChaussetteConn) {
 }
 
 // SetConn :
-func (c *Chaussette) SetConn(connAddr string, conn *ChaussetteConn) {
+func (c *Shoset) SetConn(connAddr string, conn *ShosetConn) {
 	if conn != nil {
 		c.m.Lock()
 		c.connsByAddr[connAddr] = conn
 		lName := conn.name
 		if lName != "" {
 			if c.connsByName[lName] == nil {
-				c.connsByName[lName] = make(map[string]*ChaussetteConn)
+				c.connsByName[lName] = make(map[string]*ShosetConn)
 			}
 			c.connsByName[lName][connAddr] = conn
 		}
@@ -310,11 +310,11 @@ func (c *Chaussette) SetConn(connAddr string, conn *ChaussetteConn) {
 	}
 }
 
-//Bind : Connect to another Chaussette
-func (c *Chaussette) Bind(address string) error {
+//Bind : Connect to another Shoset
+func (c *Shoset) Bind(address string) error {
 	if c.bindAddr != "" {
-		fmt.Println("Chaussette already bound")
-		return errors.New("Chaussette already bound")
+		fmt.Println("Shoset already bound")
+		return errors.New("Shoset already bound")
 	}
 	if c.tlsServerOK == false {
 		fmt.Println("TLS configuration not OK (certificate not found / loaded)")
@@ -331,7 +331,7 @@ func (c *Chaussette) Bind(address string) error {
 }
 
 // runBindTo : handler for the socket
-func (c *Chaussette) handleBind() error {
+func (c *Shoset) handleBind() error {
 	listener, err := net.Listen("tcp", c.bindAddr)
 	if err != nil {
 		fmt.Println("Failed to bind:", err.Error())
@@ -342,20 +342,20 @@ func (c *Chaussette) handleBind() error {
 	for {
 		unencConn, err := listener.Accept()
 		if err != nil {
-			fmt.Printf("serverChaussette accept error: %s", err)
+			fmt.Printf("serverShoset accept error: %s", err)
 			break
 		}
 		tlsConn := tls.Server(unencConn, c.tlsConfig)
 		conn, _ := c.inboudConn(tlsConn)
-		//fmt.Printf("Chaussette : accepted from %s", conn.addr)
+		//fmt.Printf("Shoset : accepted from %s", conn.addr)
 		go conn.runInConn()
 	}
 	return nil
 }
 
 //inboudConn : Add a new connection from a client
-func (c *Chaussette) inboudConn(tlsConn *tls.Conn) (*ChaussetteConn, error) {
-	conn := new(ChaussetteConn)
+func (c *Shoset) inboudConn(tlsConn *tls.Conn) (*ShosetConn, error) {
+	conn := new(ShosetConn)
 	conn.socket = tlsConn
 	conn.dir = "in"
 	conn.ch = c
