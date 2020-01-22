@@ -15,6 +15,7 @@ func main() {
 		fmt.Printf("  server and client modes are exclusive\n")
 		fmt.Printf(" arguments:\n")
 		fmt.Printf("  name	       logical name used for routing\n")
+		fmt.Printf("  ShosetType    node type used for routing\n")
 		fmt.Printf("  ipaddr:port  address to bind / connect the socket \n")
 	}
 
@@ -51,13 +52,15 @@ func main() {
 	}
 
 	name := args[0]
-	address := args[1]
+	ShosetType := args[1]
+	address := args[2]
+
 
 	if isServer == true {
-		shosetServer(name, address)
+		shosetServer(name, ShosetType, address)
 	}
 	if isClient == true {
-		shosetClient(name, address)
+		shosetClient(name, ShosetType, address)
 	}
 
 }
