@@ -24,6 +24,8 @@ type Cell struct {
 	m					Message
 }
 
+func (c *Cell) GetMessage() Message { return c.m }
+
 // NewQueue : constructor
 func NewQueue() *Queue {
 	q := new(Queue)
