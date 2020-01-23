@@ -40,11 +40,11 @@ func WaitReply(c *Shoset, replies *msg.Iterator, args map[string]string, timeout
 	cont := true
 	go func() {
 		for cont {
-			message := replies.Get()
+			message := replies.Get().GetMessage()
 			if message != nil {
-				reply := (*message).(msg.Reply)
+				reply := message.(msg.Reply)
 				if reply.GetCmdUUID() == commandUUID {
-					term <- message
+					term <- &message
 				}
 			} else {
 				time.Sleep(time.Duration(10) * time.Millisecond)
