@@ -11,7 +11,7 @@ import (
 func HandleReply(c *ShosetConn) error {
 	var rep msg.Reply
 	err := c.ReadMessage(&rep)
-	c.GetCh().FQueue("rep").Push(rep)
+	c.GetCh().FQueue("rep").Push(rep, c.ShosetType, c.bindAddr)
 	return err
 }
 

@@ -23,6 +23,7 @@ func main() {
 	var isClient bool
 	var isTest bool
 	var isTestEtoile bool
+	var isQueueTest bool
 
 	flag.BoolVar(&isServer, "s", false, "Server mode (shorthand)")
 	flag.BoolVar(&isServer, "server", false, "Server mode")
@@ -32,6 +33,7 @@ func main() {
 	flag.BoolVar(&isTest, "test", false, "Test mode")
 	flag.BoolVar(&isTestEtoile, "test2", false, "Test etoile mode")
 	flag.BoolVar(&isTestEtoile, "t2", false, "Test etoile mode")
+	flag.BoolVar(&isQueueTest, "q", false, "queue test mode")
 	flag.Parse()
 
 	args := flag.Args()
@@ -43,6 +45,11 @@ func main() {
 
 	if isTestEtoile == true {
 		shosetTestEtoile()
+		return
+	}
+
+	if isQueueTest == true {
+		test_queue()
 		return
 	}
 

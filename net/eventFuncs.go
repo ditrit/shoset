@@ -11,7 +11,7 @@ import (
 func HandleEvent(c *ShosetConn) error {
 	var evt msg.Event
 	err := c.ReadMessage(&evt)
-	c.GetCh().FQueue("evt").Push(evt)
+	c.GetCh().FQueue("evt").Push(evt, c.ShosetType, c.bindAddr)
 	return err
 }
 

@@ -11,7 +11,7 @@ import (
 func HandleCommand(c *ShosetConn) error {
 	var cmd msg.Command
 	err := c.ReadMessage(&cmd)
-	c.GetCh().FQueue("cmd").Push(cmd)
+	c.GetCh().FQueue("cmd").Push(cmd, c.ShosetType, c.bindAddr)
 	return err
 }
 

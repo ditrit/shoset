@@ -1,6 +1,7 @@
 package main
 
 import (
+	"chaussette/msg"
 	"fmt"
 	"time"
 
@@ -259,5 +260,35 @@ func shosetTestEtoile() {
 
 	fmt.Printf("Ch1 : %s", Ch1.String())
 
+	<-done
+}
+
+func test_queue() {
+	done := make(chan bool)
+	// First let's make 2 sockets talk each other
+	C1 := net.NewShoset("C1", "c")
+	C1.Bind("localhost:8261")
+	C1.Connect("localhost:8262")
+
+	C2 := net.NewShoset("C2", "cl")
+	C2.Bind("localhost:8262")
+	C2.Connect("localhost:8261")
+
+	// Let's check for sockets connections
+	time.Sleep(time.Second * time.Duration(2))
+	fmt.Printf("C1 : %s", C1.String())
+	fmt.Printf("C2 : %s", C2.String())
+
+	// Make C1 send a message to C2
+	socket := C1.GetConnsByAddr()[C2.GetBindAddr()]
+	m := msg.NewCommand("test", "test", "content")
+	m.Timeout = 10000
+	fmt.Printf("Message Pushed: %+v\n", m)
+	socket.SendMessage(m)
+
+	// Let's dump C2 queue for cmd msg
+	time.Sleep(time.Second * time.Duration(2))
+	cell := C2.FQueue("cmd").FirstCell()
+	fmt.Printf("Cell in queue: %+v\n", *cell)
 	<-done
 }
