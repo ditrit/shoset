@@ -61,7 +61,6 @@ func (c *ShosetConn) runOutConn(addr string) {
 
 	myConfig := c.GetCh().NewHandshake()
 	for {
-		c.ch.SetConn(addr, c)
 		conn, err := tls.Dial("tcp", c.addr, c.ch.tlsConfig)
 		defer conn.Close()
 		if err != nil {
@@ -70,6 +69,7 @@ func (c *ShosetConn) runOutConn(addr string) {
 			c.socket = conn
 			c.rb = msg.NewReader(c.socket)
 			c.wb = msg.NewWriter(c.socket)
+			c.ch.SetConn(addr, c)
 
 			// receive messages
 			for {
