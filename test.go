@@ -288,7 +288,7 @@ func test_queue() {
 
 	// Let's dump C2 queue for cmd msg
 	time.Sleep(time.Second * time.Duration(2))
-	cell := C2.FQueue("cmd").FirstCell()
+	cell := C2.FQueue("cmd").First()
 	fmt.Printf("Cell in queue: %+v\n", *cell)
 	<-done
 }

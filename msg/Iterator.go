@@ -32,11 +32,11 @@ func (i *Iterator) Close() {
 }
 
 // Get : get next unseen element
-func (i *Iterator) Get() *Message {
+func (i *Iterator) Get() *Cell {
 	i.m.Lock()
 	defer i.m.Unlock()
 
-	var message *Message
+	var cell *Cell
 	// Si la queue est vide, on ne renvoie rien
 	if i.queue.IsEmpty() {
 		return nil
@@ -44,16 +44,16 @@ func (i *Iterator) Get() *Message {
 
 	// Si l'iterateur n'a pas été initialisé,
 	if i.current == "" {
-		message = i.queue.First() // premier message de la queue
+		cell = i.queue.First() // premiere cell de la queue
 	} else {
-		message = i.queue.Next(i.current) // message suivant
+		cell = i.queue.Next(i.current) // cell suivante
 	}
 
 	// si on a trouvé un nouveau message à renvoyer
-	if message != nil {
-		i.current = (*message).GetUUID() // on pointe dessus
+	if cell != nil {
+		i.current = (*cell).GetMessage().GetUUID() // on pointe dessus
 	}
-	return message
+	return cell
 
 	/*
 		// on cherche une valeur qui n'a pas déjà été lue

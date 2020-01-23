@@ -24,6 +24,8 @@ type Cell struct {
 	m					Message
 }
 
+func (c *Cell) GetMessage() Message { return c.m }
+
 // NewQueue : constructor
 func NewQueue() *Queue {
 	q := new(Queue)
@@ -66,8 +68,8 @@ func (q *Queue) Push(m Message, RemoteShosetType, RemoteAddress string) {
 	return
 }
 
-// First Cell :
-func (q *Queue) FirstCell() *Cell {
+// First :
+func (q *Queue) First() *Cell {
 	q.m.Lock()
 	defer q.m.Unlock()
 	ele := q.qlist.Back()
@@ -78,27 +80,15 @@ func (q *Queue) FirstCell() *Cell {
 	return nil
 }
 
-// First :
-func (q *Queue) First() *Message {
-	q.m.Lock()
-	defer q.m.Unlock()
-	ele := q.qlist.Back()
-	if ele != nil {
-		value := ele.Value.(Cell).m
-		return &value
-	}
-	return nil
-}
-
 // Next :
-func (q *Queue) Next(key string) *Message {
+func (q *Queue) Next(key string) *Cell {
 	q.m.Lock()
 	defer q.m.Unlock()
 	cellFromKey := q.dict[key]
 	if cellFromKey != nil {
 		nextEle := cellFromKey.Prev()
 		if nextEle != nil {
-			nextMessage := nextEle.Value.(Cell).m
+			nextMessage := nextEle.Value.(Cell)
 			return &nextMessage
 		}
 	}

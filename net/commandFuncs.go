@@ -40,11 +40,11 @@ func WaitCommand(c *Shoset, replies *msg.Iterator, args map[string]string, timeo
 	cont := true
 	go func() {
 		for cont {
-			message := replies.Get()
+			message := replies.Get().GetMessage()
 			if message != nil {
-				command := (*message).(msg.Command)
+				command := message.(msg.Command)
 				if command.GetCommand() == commandName {
-					term <- message
+					term <- &message
 				}
 			} else {
 				time.Sleep(time.Duration(10) * time.Millisecond)
@@ -52,7 +52,7 @@ func WaitCommand(c *Shoset, replies *msg.Iterator, args map[string]string, timeo
 		}
 	}()
 	select {
-	case res := <-term:
+	case res := <- term:
 		cont = false
 		return res
 	case <-time.After(time.Duration(timeout) * time.Second):
