@@ -84,7 +84,6 @@ func NewShoset(lName, ShosetType string) *Shoset {
 	c.RegisterMessageBehaviors("cfg", HandleConfig, SendConfig, WaitConfig)    // messages de type configuration
 	c.RegisterMessageBehaviors("evt", HandleEvent, SendEvent, WaitEvent)       // messages de type événement
 	c.RegisterMessageBehaviors("cmd", HandleCommand, SendCommand, WaitCommand) // messages de type commande
-	c.RegisterMessageBehaviors("rep", HandleReply, SendReply, WaitReply)       // messages de type réponse à une commande
 
 	// Configuration TLS
 	cert, err := tls.LoadX509KeyPair(certPath, keyPath)
