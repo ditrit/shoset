@@ -69,7 +69,7 @@ func (c *ShosetConn) runOutConn(addr string) {
 			c.socket = conn
 			c.rb = msg.NewReader(c.socket)
 			c.wb = msg.NewWriter(c.socket)
-			c.ch.SetConn(addr, c)
+			c.ch.SetConn(addr, c.ShosetType, c)
 
 			// receive messages
 			for {

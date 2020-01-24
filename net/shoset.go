@@ -23,9 +23,10 @@ type MessageHandlers interface {
 //Shoset :
 type Shoset struct {
 	//	id          string
-	connsByAddr  map[string]*ShosetConn            // ensemble des connexions
-	connsByName  map[string]map[string]*ShosetConn // connexions par nom logique
-	connsJoin    map[string]*ShosetConn            // connexions nécessaires au join (non utilisées en dehors du join)
+	connsByAddr map[string]*ShosetConn                      // ensemble des connexions
+	connsByName map[string]map[string]*ShosetConn           // connexions par nom logique
+	conssByType map[string]map[string]*ShosetConn           // connexions par type
+	connsJoin   map[string]*ShosetConn                      // connexions nécessaires au join (non utilisées en dehors du join)
 	brothers     map[string]bool                       // "freres" au sens large (ex: toutes les instances de connecteur reliées à un même aggregateur)
 	nameBrothers map[string]bool                       // "freres" ayant un même nom logique (ex: instances d'un même connecteur)
 	lName        string                                // Nom logique de la shoset
@@ -70,6 +71,7 @@ func NewShoset(lName, ShosetType string) *Shoset {
 	c.lName = lName
 	c.ShosetType = ShosetType
 	c.connsByAddr = make(map[string]*ShosetConn)
+	c.conssByType = make(map[string]map[string]*ShosetConn)
 	c.connsByName = make(map[string]map[string]*ShosetConn)
 	c.connsJoin = make(map[string]*ShosetConn)
 	c.brothers = make(map[string]bool)
@@ -284,8 +286,14 @@ func (c *Shoset) deleteConn(connAddr string) {
 		if c.connsByName[lName] != nil {
 			delete(c.connsByName[lName], connAddr)
 		}
+
+		ShosetType := conn.ShosetType
+		if c.conssByType[ShosetType] != nil {
+			delete(c.conssByType[ShosetType], connAddr)
+		}
+
+		delete(c.connsByAddr, connAddr)
 	}
-	delete(c.connsByAddr, connAddr)
 	c.m.Unlock()
 }
 
@@ -299,10 +307,16 @@ func (c *Shoset) SetConnJoin(connAddr string, conn *ShosetConn) {
 }
 
 // SetConn :
-func (c *Shoset) SetConn(connAddr string, conn *ShosetConn) {
+func (c *Shoset) SetConn(connAddr, connType string, conn *ShosetConn) {
 	if conn != nil {
 		c.m.Lock()
 		c.connsByAddr[connAddr] = conn
+
+		if c.conssByType[connType] == nil {
+			c.conssByType[connType] = make(map[string]*ShosetConn)
+		}
+		c.conssByType[connType][connAddr] = conn
+
 		lName := conn.name
 		if lName != "" {
 			if c.connsByName[lName] == nil {
