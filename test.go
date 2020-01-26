@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"./net"
+	"shoset/net"
 )
 
 func shosetClient(logicalName string, address string) {

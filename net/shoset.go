@@ -9,7 +9,7 @@ import (
 
 	//	uuid "github.com/kjk/betterguid"
 
-	"../msg"
+	"shoset/msg"
 )
 
 // MessageHandlers interface

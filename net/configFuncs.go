@@ -1,7 +1,7 @@
 package net
 
 import (
-	"../msg"
+	"shoset/msg"
 )
 
 // HandleConfig :
