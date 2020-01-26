@@ -29,6 +29,7 @@ type Shoset struct {
 	brothers     map[string]bool                       // "freres" au sens large (ex: toutes les instances de connecteur reliées à un même aggregateur)
 	nameBrothers map[string]bool                       // "freres" ayant un même nom logique (ex: instances d'un même connecteur)
 	lName        string                                // Nom logique de la shoset
+	ShosetType	 string								   // Type logique de la shoset
 	bindAddr     string                                // Adresse sur laquelle la shoset est bindée
 
 	// map des queues par type de message (enregistrées via RegisterMessageBehaviors)
@@ -61,12 +62,13 @@ var certPath = "./certs/cert.pem"
 var keyPath = "./certs/key.pem"
 
 // NewShoset : constructor
-func NewShoset(lName string) *Shoset {
+func NewShoset(lName, ShosetType string) *Shoset {
 	// Creation
 	c := new(Shoset)
 
 	// Initialisation
 	c.lName = lName
+	c.ShosetType = ShosetType
 	c.connsByAddr = make(map[string]*ShosetConn)
 	c.connsByName = make(map[string]map[string]*ShosetConn)
 	c.connsJoin = make(map[string]*ShosetConn)
@@ -82,7 +84,6 @@ func NewShoset(lName string) *Shoset {
 	c.RegisterMessageBehaviors("cfg", HandleConfig, SendConfig, WaitConfig)    // messages de type configuration
 	c.RegisterMessageBehaviors("evt", HandleEvent, SendEvent, WaitEvent)       // messages de type événement
 	c.RegisterMessageBehaviors("cmd", HandleCommand, SendCommand, WaitCommand) // messages de type commande
-	c.RegisterMessageBehaviors("rep", HandleReply, SendReply, WaitReply)       // messages de type réponse à une commande
 
 	// Configuration TLS
 	cert, err := tls.LoadX509KeyPair(certPath, keyPath)
@@ -154,6 +155,9 @@ func (c *Shoset) GetName() string {
 	return c.lName
 }
 
+// GetShosetType
+func (c *Shoset) GetShosetType() string { return c.ShosetType }
+
 // GetConnsByAddr :
 func (c *Shoset) GetConnsByAddr() map[string]*ShosetConn {
 	return c.connsByAddr
@@ -171,7 +175,7 @@ func (c *Shoset) GetConnsJoin() map[string]*ShosetConn {
 
 // String :
 func (c *Shoset) String() string {
-	str := fmt.Sprintf("Shoset{ lName: %s, bindAddr: %s, brothers %#v, nameBrothers %#v, joinConns %#v\n", c.lName, c.bindAddr, c.brothers, c.nameBrothers, c.connsJoin)
+	str := fmt.Sprintf("Shoset{ lName: %s, bindAddr: %s, type: %s, brothers %#v, nameBrothers %#v, joinConns %#v\n", c.lName, c.bindAddr, c.ShosetType, c.brothers, c.nameBrothers, c.connsJoin)
 	for k, conn := range c.connsByAddr {
 		str += fmt.Sprintf(" - [%s] %s\n", k, conn.String())
 	}
@@ -201,7 +205,7 @@ func (c *Shoset) FWait(msgType string) func(*Shoset, *msg.Iterator, map[string]s
 
 //NewHandshake : Build a config Message
 func (c *Shoset) NewHandshake() *msg.Config {
-	return msg.NewHandshake(c.bindAddr, c.lName)
+	return msg.NewHandshake(c.bindAddr, c.lName, c.ShosetType)
 }
 
 //NewCfgOut : Build a config Message
@@ -225,8 +229,8 @@ func (c *Shoset) NewCfgIn() *msg.Config {
 }
 
 //NewInstanceMessage : Build a config Message
-func (c *Shoset) NewInstanceMessage(address string, lName string) *msg.Config {
-	return msg.NewInstance(address, lName)
+func (c *Shoset) NewInstanceMessage(address, lName, ShosetType string) *msg.Config {
+	return msg.NewInstance(address, lName, ShosetType)
 }
 
 //NewConnectToMessage : Build a config Message

@@ -17,6 +17,7 @@ func HandleConfig(c *ShosetConn) error {
 				c.SendMessage(*myConfig)
 			}
 			c.SetName(cfg.GetLogicalName())
+			c.SetShosetType(cfg.GetShosetType())
 		}
 		if c.GetBindAddr() == "" {
 			c.SetBindAddr(cfg.GetBindAddress())

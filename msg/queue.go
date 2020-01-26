@@ -15,6 +15,17 @@ type Queue struct {
 	m     sync.Mutex
 }
 
+// Cell : witch contain messages and useful intel
+type Cell struct {
+	key					string
+	timeout				int64
+	RemoteShosetType	string
+	RemoteAddress		string
+	m					Message
+}
+
+func (c *Cell) GetMessage() Message { return c.m }
+
 // NewQueue : constructor
 func NewQueue() *Queue {
 	q := new(Queue)
@@ -30,46 +41,54 @@ func (q *Queue) Init() {
 }
 
 // Push : insert a new value in the queue except if the UUID is already present and remove after timeout expiration
-func (q *Queue) Push(m Message) {
-	fmt.Printf("Push a message!")
-	key := m.GetUUID()
-	timeout := m.GetTimeout()
+func (q *Queue) Push(m Message, RemoteShosetType, RemoteAddress string) {
+	fmt.Printf("Push a message!\n")
+
+	// Let's first initialize the Cell with all our data
+	var c Cell
+	c.key = m.GetUUID()
+	c.timeout = m.GetTimeout()
+	c.RemoteShosetType = RemoteShosetType
+	c.RemoteAddress = RemoteAddress
+	c.m = m
+
 	q.m.Lock()
 	defer q.m.Unlock()
-	ele := q.dict[key]
+	ele := q.dict[c.key]
 	if ele != nil {
 		return
 	}
-	ele = q.qlist.PushFront(m)
-	q.dict[key] = ele
+
+	ele = q.qlist.PushFront(c)
+	q.dict[c.key] = ele
 	go func() {
-		time.Sleep(time.Duration(timeout) * time.Millisecond)
-		q.remove(key)
+		time.Sleep(time.Duration(c.timeout) * time.Millisecond)
+		q.remove(c.key)
 	}()
 	return
 }
 
 // First :
-func (q *Queue) First() *Message {
+func (q *Queue) First() *Cell {
 	q.m.Lock()
 	defer q.m.Unlock()
 	ele := q.qlist.Back()
 	if ele != nil {
-		value := ele.Value.(Message)
+		value := ele.Value.(Cell)
 		return &value
 	}
 	return nil
 }
 
 // Next :
-func (q *Queue) Next(key string) *Message {
+func (q *Queue) Next(key string) *Cell {
 	q.m.Lock()
 	defer q.m.Unlock()
-	eleFromKey := q.dict[key]
-	if eleFromKey != nil {
-		nextEle := eleFromKey.Prev()
+	cellFromKey := q.dict[key]
+	if cellFromKey != nil {
+		nextEle := cellFromKey.Prev()
 		if nextEle != nil {
-			nextMessage := nextEle.Value.(Message)
+			nextMessage := nextEle.Value.(Cell)
 			return &nextMessage
 		}
 	}
@@ -86,14 +105,14 @@ func (q *Queue) remove(key string) {
 	// 1. suivant s'il existe
 	// 2. sinon sur le précédent s'il existe
 	// 3. sinon c'est que la queue est vide
-	ele := q.dict[key]
-	nextEle := ele.Prev() // cas 1.
-	if nextEle == nil {
-		nextEle = ele.Next() // cas 2.
+	cell := q.dict[key]
+	nextCell := cell.Prev() // cas 1.
+	if nextCell == nil {
+		nextCell = cell.Next() // cas 2.
 	}
 	nextUUID := ""
-	if nextEle != nil {
-		nextUUID = nextEle.Value.(Message).GetUUID()
+	if nextCell != nil {
+		nextUUID = nextCell.Value.(Cell).m.GetUUID()
 	}
 
 	// suppression et repositionnement pour chaque iterateur
@@ -109,7 +128,7 @@ func (q *Queue) remove(key string) {
 
 	// supprimer le message dans la queue (dans la liste et dans la map)
 	delete(q.dict, key)
-	q.qlist.Remove(ele)
+	q.qlist.Remove(cell)
 }
 
 // IsEmpty : the event queue is empty
@@ -119,11 +138,11 @@ func (q *Queue) IsEmpty() bool {
 
 // Print :
 func (q *Queue) Print() {
-	ele := q.qlist.Back()
+	cell := q.qlist.Back()
 	fmt.Printf("   Queue{\n")
-	for ele != nil {
-		fmt.Printf("      %s,\n", ele.Value.(Message).GetUUID())
-		ele = ele.Prev()
+	for cell != nil {
+		fmt.Printf("      %s,\n", cell.Value.(Cell).m.GetUUID())
+		cell = cell.Prev()
 	}
-	fmt.Printf("nb eles : %d\n", q.qlist.Len())
+	fmt.Printf("nb cell : %d\n", q.qlist.Len())
 }

@@ -15,6 +15,7 @@ func main() {
 		fmt.Printf("  server and client modes are exclusive\n")
 		fmt.Printf(" arguments:\n")
 		fmt.Printf("  name	       logical name used for routing\n")
+		fmt.Printf("  ShosetType    node type used for routing\n")
 		fmt.Printf("  ipaddr:port  address to bind / connect the socket \n")
 	}
 
@@ -22,6 +23,7 @@ func main() {
 	var isClient bool
 	var isTest bool
 	var isTestEtoile bool
+	var isQueueTest bool
 
 	flag.BoolVar(&isServer, "s", false, "Server mode (shorthand)")
 	flag.BoolVar(&isServer, "server", false, "Server mode")
@@ -31,6 +33,7 @@ func main() {
 	flag.BoolVar(&isTest, "test", false, "Test mode")
 	flag.BoolVar(&isTestEtoile, "test2", false, "Test etoile mode")
 	flag.BoolVar(&isTestEtoile, "t2", false, "Test etoile mode")
+	flag.BoolVar(&isQueueTest, "q", false, "queue test mode")
 	flag.Parse()
 
 	args := flag.Args()
@@ -45,19 +48,26 @@ func main() {
 		return
 	}
 
+	if isQueueTest == true {
+		test_queue()
+		return
+	}
+
 	if (isServer == isClient) || (len(args) != 2) {
 		flag.Usage()
 		os.Exit(1)
 	}
 
 	name := args[0]
-	address := args[1]
+	ShosetType := args[1]
+	address := args[2]
+
 
 	if isServer == true {
-		shosetServer(name, address)
+		shosetServer(name, ShosetType, address)
 	}
 	if isClient == true {
-		shosetClient(name, address)
+		shosetClient(name, ShosetType, address)
 	}
 
 }

@@ -1,14 +1,15 @@
 package main
 
 import (
+	"chaussette/msg"
 	"fmt"
 	"time"
 
 	"shoset/net"
 )
 
-func shosetClient(logicalName string, address string) {
-	c := net.NewShoset(logicalName)
+func shosetClient(logicalName, ShosetType, address string) {
+	c := net.NewShoset(logicalName, ShosetType)
 	c.Connect(address)
 	time.Sleep(time.Second * time.Duration(1))
 	go func() {
@@ -45,8 +46,8 @@ func shosetClient(logicalName string, address string) {
 	<-c.Done
 }
 
-func shosetServer(logicalName string, address string) {
-	s := net.NewShoset(logicalName)
+func shosetServer(logicalName, ShosetType, address string) {
+	s := net.NewShoset(logicalName, ShosetType)
 	err := s.Bind(address)
 	if err != nil {
 		fmt.Println("Gandalf server socket can not be created")
@@ -76,22 +77,22 @@ func shosetServer(logicalName string, address string) {
 func shosetTest() {
 	done := make(chan bool)
 
-	c1 := net.NewShoset("c")
+	c1 := net.NewShoset("c", "c")
 	c1.Bind("localhost:8301")
 
-	c2 := net.NewShoset("c")
+	c2 := net.NewShoset("c", "c")
 	c2.Bind("localhost:8302")
 
-	c3 := net.NewShoset("c")
+	c3 := net.NewShoset("c", "c")
 	c3.Bind("localhost:8303")
 
-	d1 := net.NewShoset("d")
+	d1 := net.NewShoset("d","a")
 	d1.Bind("localhost:8401")
 
-	d2 := net.NewShoset("d")
+	d2 := net.NewShoset("d", "a")
 	d2.Bind("localhost:8402")
 
-	b1 := net.NewShoset("b")
+	b1 := net.NewShoset("b", "c")
 	b1.Bind("localhost:8201")
 	b1.Connect("localhost:8302")
 	b1.Connect("localhost:8301")
@@ -99,19 +100,19 @@ func shosetTest() {
 	b1.Connect("localhost:8401")
 	b1.Connect("localhost:8402")
 
-	a1 := net.NewShoset("a")
+	a1 := net.NewShoset("a", "c")
 	a1.Bind("localhost:8101")
 	a1.Connect("localhost:8201")
 
-	b2 := net.NewShoset("b")
+	b2 := net.NewShoset("b", "c")
 	b2.Bind("localhost:8202")
 	b2.Connect("localhost:8301")
 
-	b3 := net.NewShoset("b")
+	b3 := net.NewShoset("b", "c")
 	b3.Bind("localhost:8203")
 	b3.Connect("localhost:8303")
 
-	a2 := net.NewShoset("a")
+	a2 := net.NewShoset("a", "c")
 	a2.Bind("localhost:8102")
 	a2.Connect("localhost:8202")
 
@@ -132,93 +133,93 @@ func shosetTest() {
 func shosetTestEtoile() {
 	done := make(chan bool)
 
-	cl1 := net.NewShoset("cl")
+	cl1 := net.NewShoset("cl", "cl")
 	cl1.Bind("localhost:8001")
 
-	cl2 := net.NewShoset("cl")
+	cl2 := net.NewShoset("cl", "cl")
 	cl2.Bind("localhost:8002")
 	cl2.Join("localhost:8001")
-	cl3 := net.NewShoset("cl")
+	cl3 := net.NewShoset("cl", "cl")
 	cl3.Bind("localhost:8003")
 	cl3.Join("localhost:8002")
 
-	cl4 := net.NewShoset("cl")
+	cl4 := net.NewShoset("cl", "cl")
 	cl4.Bind("localhost:8004")
 	cl4.Join("localhost:8001")
 
-	cl5 := net.NewShoset("cl")
+	cl5 := net.NewShoset("cl", "cl")
 	cl5.Bind("localhost:8005")
 	cl5.Join("localhost:8001")
 
-	aga1 := net.NewShoset("aga")
+	aga1 := net.NewShoset("aga", "a")
 	aga1.Bind("localhost:8111")
 	aga1.Connect("localhost:8001")
-	aga2 := net.NewShoset("aga")
+	aga2 := net.NewShoset("aga", "a")
 	aga2.Bind("localhost:8112")
 	aga2.Connect("localhost:8005")
 
-	agb1 := net.NewShoset("agb")
+	agb1 := net.NewShoset("agb", "a")
 	agb1.Bind("localhost:8121")
 	agb1.Connect("localhost:8002")
-	agb2 := net.NewShoset("agb")
+	agb2 := net.NewShoset("agb", "a")
 	agb2.Bind("localhost:8122")
 	agb2.Connect("localhost:8003")
 
 	time.Sleep(time.Second * time.Duration(2))
 
-	Ca1 := net.NewShoset("Ca")
+	Ca1 := net.NewShoset("Ca", "c")
 	Ca1.Bind("localhost:8211")
 	Ca1.Connect("localhost:8111")
-	Ca2 := net.NewShoset("Ca")
+	Ca2 := net.NewShoset("Ca", "c")
 	Ca2.Bind("localhost:8212")
 	Ca2.Connect("localhost:8111")
-	Ca3 := net.NewShoset("Ca")
+	Ca3 := net.NewShoset("Ca", "c")
 	Ca3.Bind("localhost:8213")
 	Ca3.Connect("localhost:8111")
 
-	Cb1 := net.NewShoset("Cb")
+	Cb1 := net.NewShoset("Cb", "c")
 	Cb1.Bind("localhost:8221")
 	Cb1.Connect("localhost:8112")
-	Cb2 := net.NewShoset("Cb")
+	Cb2 := net.NewShoset("Cb", "c")
 	Cb2.Bind("localhost:8222")
 	Cb2.Connect("localhost:8112")
 
-	Cc1 := net.NewShoset("Cc")
+	Cc1 := net.NewShoset("Cc", "c")
 	Cc1.Bind("localhost:8231")
 	Cc1.Connect("localhost:8111")
-	Cc2 := net.NewShoset("Cc")
+	Cc2 := net.NewShoset("Cc", "c")
 	Cc2.Bind("localhost:8232")
 	Cc2.Connect("localhost:8111")
 
-	Cd1 := net.NewShoset("Cd")
+	Cd1 := net.NewShoset("Cd", "c")
 	Cd1.Bind("localhost:8241")
 	Cd1.Connect("localhost:8111")
-	Cd2 := net.NewShoset("Cd")
+	Cd2 := net.NewShoset("Cd", "c")
 	Cd2.Bind("localhost:8242")
 	Cd2.Connect("localhost:8112")
 
-	Ce1 := net.NewShoset("Ce")
+	Ce1 := net.NewShoset("Ce", "c")
 	Ce1.Bind("localhost:8251")
 	Ce1.Connect("localhost:8122")
-	Ce2 := net.NewShoset("Ce")
+	Ce2 := net.NewShoset("Ce", "c")
 	Ce2.Bind("localhost:8252")
 	Ce2.Connect("localhost:8122")
 
-	Cf1 := net.NewShoset("Cf")
+	Cf1 := net.NewShoset("Cf", "c")
 	Cf1.Bind("localhost:8261")
 	Cf1.Connect("localhost:8121")
-	Cf2 := net.NewShoset("Cg")
+	Cf2 := net.NewShoset("Cg", "c")
 	Cf2.Bind("localhost:8262")
 	Cf2.Connect("localhost:8121")
 
-	Cg1 := net.NewShoset("Cg")
+	Cg1 := net.NewShoset("Cg", "c")
 	Cg1.Bind("localhost:8271")
 	Cg1.Connect("localhost:8121")
-	Cg2 := net.NewShoset("Cg")
+	Cg2 := net.NewShoset("Cg", "c")
 	Cg2.Bind("localhost:8272")
 	Cg2.Connect("localhost:8122")
 
-	Ch1 := net.NewShoset("Ch")
+	Ch1 := net.NewShoset("Ch", "c")
 	Ch1.Bind("localhost:8281")
 	Ch1.Connect("localhost:8111")
 
@@ -259,5 +260,35 @@ func shosetTestEtoile() {
 
 	fmt.Printf("Ch1 : %s", Ch1.String())
 
+	<-done
+}
+
+func test_queue() {
+	done := make(chan bool)
+	// First let's make 2 sockets talk each other
+	C1 := net.NewShoset("C1", "c")
+	C1.Bind("localhost:8261")
+	C1.Connect("localhost:8262")
+
+	C2 := net.NewShoset("C2", "cl")
+	C2.Bind("localhost:8262")
+	C2.Connect("localhost:8261")
+
+	// Let's check for sockets connections
+	time.Sleep(time.Second * time.Duration(2))
+	fmt.Printf("C1 : %s", C1.String())
+	fmt.Printf("C2 : %s", C2.String())
+
+	// Make C1 send a message to C2
+	socket := C1.GetConnsByAddr()[C2.GetBindAddr()]
+	m := msg.NewCommand("test", "test", "content")
+	m.Timeout = 10000
+	fmt.Printf("Message Pushed: %+v\n", m)
+	socket.SendMessage(m)
+
+	// Let's dump C2 queue for cmd msg
+	time.Sleep(time.Second * time.Duration(2))
+	cell := C2.FQueue("cmd").First()
+	fmt.Printf("Cell in queue: %+v\n", *cell)
 	<-done
 }

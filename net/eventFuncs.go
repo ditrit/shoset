@@ -11,7 +11,7 @@ import (
 func HandleEvent(c *ShosetConn) error {
 	var evt msg.Event
 	err := c.ReadMessage(&evt)
-	c.GetCh().FQueue("evt").Push(evt)
+	c.GetCh().FQueue("evt").Push(evt, c.ShosetType, c.bindAddr)
 	return err
 }
 
@@ -41,11 +41,11 @@ func WaitEvent(c *Shoset, replies *msg.Iterator, args map[string]string, timeout
 	cont := true
 	go func() {
 		for cont {
-			message := replies.Get()
+			message := replies.Get().GetMessage()
 			if message != nil {
-				event := (*message).(msg.Event)
+				event := message.(msg.Event)
 				if event.GetTopic() == topicName && (eventName == "" || event.GetEvent() == eventName) {
-					term <- message
+					term <- &message
 				}
 			} else {
 				time.Sleep(time.Duration(10) * time.Millisecond)
