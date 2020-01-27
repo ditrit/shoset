@@ -23,7 +23,7 @@ func HandleConfig(c *ShosetConn) error {
 			c.SetBindAddr(cfg.GetBindAddress())
 		}
 		if c.GetDir() == "in" {
-			c.GetCh().SetConn(c.GetBindAddr(), c)
+			c.GetCh().SetConn(c.GetBindAddr(), c.GetShosetType(), c)
 			if len(c.GetCh().GetNameBrothers()) > 0 {
 				for bro := range c.GetCh().GetNameBrothers() {
 					c.SendMessage(msg.NewConnectTo(bro))
