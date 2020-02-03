@@ -30,6 +30,7 @@ func getIP(address string) (string, error) {
 	ipaddr := host + ":" + parts[1]
 	return ipaddr, nil
 }
+
 // Grab ip4/6 string array and return an ipv4 str
 func getV4(hostIps []string) string {
 	for i := 0; i < len(hostIps); i++ {

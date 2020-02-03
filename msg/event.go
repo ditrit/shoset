@@ -22,6 +22,17 @@ func NewEvent(params map[string]string) *Event {
 	return e
 }
 
+// NewEventClassic : Event Classic constructor
+func NewEventClassic(topic, event, payload string) *Event {
+	var tab = map[string]string{
+		"topic":   topic,
+		"event":   event,
+		"payload": payload,
+	}
+
+	return NewEvent(tab)
+}
+
 // GetMsgType accessor
 func (e Event) GetMsgType() string { return "evt" }
 
@@ -31,6 +42,5 @@ func (e Event) GetTopic() string { return e.Topic }
 // GetEvent :
 func (e Event) GetEvent() string { return e.Event }
 
-// ReferencesUUID :
+// GetReferencesUUID :
 func (e Event) GetReferencesUUID() string { return e.ReferencesUUID }
-
