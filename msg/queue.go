@@ -17,13 +17,14 @@ type Queue struct {
 
 // Cell : witch contain messages and useful intel
 type Cell struct {
-	key					string
-	timeout				int64
-	RemoteShosetType	string
-	RemoteAddress		string
-	m					Message
+	key              string
+	timeout          int64
+	RemoteShosetType string
+	RemoteAddress    string
+	m                Message
 }
 
+// GetMessage :
 func (c *Cell) GetMessage() Message { return c.m }
 
 // NewQueue : constructor

@@ -1,17 +1,17 @@
 package main
 
 import (
-	"chaussette/msg"
 	"fmt"
 	"time"
 
+	"shoset/msg"
 	"shoset/net"
 )
 
 func shosetClient(logicalName, ShosetType, address string) {
 	c := net.NewShoset(logicalName, ShosetType)
 	c.Connect(address)
-	time.Sleep(time.Second * time.Duration(1))
+
 	go func() {
 		for {
 			time.Sleep(time.Second * time.Duration(5))
@@ -49,9 +49,11 @@ func shosetClient(logicalName, ShosetType, address string) {
 func shosetServer(logicalName, ShosetType, address string) {
 	s := net.NewShoset(logicalName, ShosetType)
 	err := s.Bind(address)
+
 	if err != nil {
 		fmt.Println("Gandalf server socket can not be created")
 	}
+
 	go func() {
 		for {
 			time.Sleep(time.Second * time.Duration(5))
@@ -86,7 +88,7 @@ func shosetTest() {
 	c3 := net.NewShoset("c", "c")
 	c3.Bind("localhost:8303")
 
-	d1 := net.NewShoset("d","a")
+	d1 := net.NewShoset("d", "a")
 	d1.Bind("localhost:8401")
 
 	d2 := net.NewShoset("d", "a")
@@ -263,7 +265,7 @@ func shosetTestEtoile() {
 	<-done
 }
 
-func test_queue() {
+func testQueue() {
 	done := make(chan bool)
 	// First let's make 2 sockets talk each other
 	C1 := net.NewShoset("C1", "c")
@@ -275,7 +277,8 @@ func test_queue() {
 	C2.Connect("localhost:8261")
 
 	// Let's check for sockets connections
-	time.Sleep(time.Second * time.Duration(2))
+	time.Sleep(time.Second * time.Duration(1))
+
 	fmt.Printf("C1 : %s", C1.String())
 	fmt.Printf("C2 : %s", C2.String())
 
@@ -283,11 +286,11 @@ func test_queue() {
 	socket := C1.GetConnsByAddr()[C2.GetBindAddr()]
 	m := msg.NewCommand("test", "test", "content")
 	m.Timeout = 10000
-	fmt.Printf("Message Pushed: %+v\n", m)
+	fmt.Printf("Message Pushed: %+v\n", *m)
 	socket.SendMessage(m)
 
 	// Let's dump C2 queue for cmd msg
-	time.Sleep(time.Second * time.Duration(2))
+	time.Sleep(time.Second * time.Duration(1))
 	cell := C2.FQueue("cmd").First()
 	fmt.Printf("Cell in queue: %+v\n", *cell)
 	<-done

@@ -7,8 +7,6 @@ import (
 	"net"
 	"sync"
 
-	//	uuid "github.com/kjk/betterguid"
-
 	"shoset/msg"
 )
 
@@ -23,15 +21,15 @@ type MessageHandlers interface {
 //Shoset :
 type Shoset struct {
 	//	id          string
-	connsByAddr map[string]*ShosetConn                      // ensemble des connexions
-	connsByName map[string]map[string]*ShosetConn           // connexions par nom logique
-	conssByType map[string]map[string]*ShosetConn           // connexions par type
-	connsJoin   map[string]*ShosetConn                      // connexions nécessaires au join (non utilisées en dehors du join)
-	brothers     map[string]bool                       // "freres" au sens large (ex: toutes les instances de connecteur reliées à un même aggregateur)
-	nameBrothers map[string]bool                       // "freres" ayant un même nom logique (ex: instances d'un même connecteur)
-	lName        string                                // Nom logique de la shoset
-	ShosetType	 string								   // Type logique de la shoset
-	bindAddr     string                                // Adresse sur laquelle la shoset est bindée
+	connsByAddr  map[string]*ShosetConn            // ensemble des connexions
+	connsByName  map[string]map[string]*ShosetConn // connexions par nom logique
+	conssByType  map[string]map[string]*ShosetConn // connexions par type
+	connsJoin    map[string]*ShosetConn            // connexions nécessaires au join (non utilisées en dehors du join)
+	brothers     map[string]bool                   // "freres" au sens large (ex: toutes les instances de connecteur reliées à un même aggregateur)
+	nameBrothers map[string]bool                   // "freres" ayant un même nom logique (ex: instances d'un même connecteur)
+	lName        string                            // Nom logique de la shoset
+	ShosetType   string                            // Type logique de la shoset
+	bindAddr     string                            // Adresse sur laquelle la shoset est bindée
 
 	// map des queues par type de message (enregistrées via RegisterMessageBehaviors)
 	queue map[string]*msg.Queue
@@ -157,7 +155,7 @@ func (c *Shoset) GetName() string {
 	return c.lName
 }
 
-// GetShosetType
+// GetShosetType :
 func (c *Shoset) GetShosetType() string { return c.ShosetType }
 
 // GetConnsByAddr :
@@ -177,11 +175,11 @@ func (c *Shoset) GetConnsJoin() map[string]*ShosetConn {
 
 // String :
 func (c *Shoset) String() string {
-	str := fmt.Sprintf("Shoset{ lName: %s, bindAddr: %s, type: %s, brothers %#v, nameBrothers %#v, joinConns %#v\n", c.lName, c.bindAddr, c.ShosetType, c.brothers, c.nameBrothers, c.connsJoin)
+	str := fmt.Sprintf("Shoset { lName: %s, bindAddr: %s, type: %s, brothers %#v, nameBrothers %#v, joinConns %#v\n", c.lName, c.bindAddr, c.ShosetType, c.brothers, c.nameBrothers, c.connsJoin)
 	for k, conn := range c.connsByAddr {
 		str += fmt.Sprintf(" - [%s] %s\n", k, conn.String())
 	}
-	str += fmt.Sprintf("\n")
+	str += fmt.Sprintf("}\n")
 	return str
 }
 

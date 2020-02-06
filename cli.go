@@ -49,19 +49,20 @@ func main() {
 	}
 
 	if isQueueTest == true {
-		test_queue()
+		testQueue()
 		return
 	}
 
-	if (isServer == isClient) || (len(args) != 2) {
+	if (isServer == isClient) || (len(args) != 3) {
 		flag.Usage()
 		os.Exit(1)
 	}
 
+	fmt.Println(args)
+
 	name := args[0]
 	ShosetType := args[1]
 	address := args[2]
-
 
 	if isServer == true {
 		shosetServer(name, ShosetType, address)

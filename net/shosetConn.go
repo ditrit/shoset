@@ -15,16 +15,16 @@ import (
 
 // ShosetConn : client connection
 type ShosetConn struct {
-	socket   	*tls.Conn
-	name	    string // remote logical name
-	ShosetType	string // remote ShosetType
-	bindAddr	string // remote bind addr
-	brothers	map[string]bool
-	dir     	string
-	addr    	string
-	ch      	*Shoset
-	rb      	*msg.Reader
-	wb      	*msg.Writer
+	socket     *tls.Conn
+	name       string // remote logical name
+	ShosetType string // remote ShosetType
+	bindAddr   string // remote bind addr
+	brothers   map[string]bool
+	dir        string
+	addr       string
+	ch         *Shoset
+	rb         *msg.Reader
+	wb         *msg.Writer
 }
 
 func (c *ShosetConn) String() string {
@@ -122,6 +122,7 @@ func (c *ShosetConn) GetCh() *Shoset {
 func (c *ShosetConn) GetName() string { // remote logical Name
 	return c.name // remote logical Name
 }
+
 // GetShosetType : // remote ShosetTypeName
 func (c *ShosetConn) GetShosetType() string { return c.ShosetType }
 
@@ -201,9 +202,5 @@ func (c *ShosetConn) receiveMsg() error {
 		c.ch.deleteConn(c.addr)
 		return errors.New("receiveMsg : non implemented type of message " + msgType)
 	}
-	if err != nil {
-		c.ch.deleteConn(c.addr)
-		return errors.New("receiveMsg : unable to decode a message of type  " + msgType)
-	}
-	return err
+	return nil
 }

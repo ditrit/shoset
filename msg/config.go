@@ -7,7 +7,7 @@ type Config struct {
 	MessageBase
 	CommandName string
 	LogicalName string
-	ShosetType	string
+	ShosetType  string
 	BindAddress string
 	Address     string
 	Conns       []string
@@ -94,8 +94,8 @@ func (c Config) GetMsgType() string { return "cfg" }
 // GetLogicalName :
 func (c Config) GetLogicalName() string { return c.LogicalName }
 
-// GetShosetType
-func (c Config) GetShosetType() string { return c.ShosetType}
+// GetShosetType :
+func (c Config) GetShosetType() string { return c.ShosetType }
 
 // GetAddress :
 func (c Config) GetAddress() string { return c.Address }
