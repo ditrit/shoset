@@ -84,11 +84,12 @@ func (c *ShosetConn) runOutConn(addr string) {
 
 // RunJoinConn : handler for the socket
 func (c *ShosetConn) runJoinConn() {
-	joinConfig := msg.NewCfgJoin(c.GetCh().GetBindAddr())
+	ch := c.GetCh()
+	joinConfig := msg.NewCfgJoin(ch.GetBindAddr())
 	for {
-		c.ch.SetConnJoin(c.addr, c)
-		c.ch.SetNameBrother(c.addr)
-		conn, err := tls.Dial("tcp", c.addr, c.ch.tlsConfig)
+		ch.SetConnJoin(c.addr, c)
+		ch.SetNameBrother(c.addr)
+		conn, err := tls.Dial("tcp", c.addr, ch.tlsConfig)
 		defer conn.Close()
 		if err != nil {
 			time.Sleep(time.Millisecond * time.Duration(100))
@@ -135,10 +136,7 @@ func (c *ShosetConn) GetBindAddr() string {
 func (c *ShosetConn) SetName(lName string) { // remote logical Name
 	if lName != "" {
 		c.name = lName // remote logical Name
-		if c.ch.connsByName[lName] == nil {
-			c.ch.connsByName[lName] = make(map[string]*ShosetConn)
-		}
-		c.ch.connsByName[lName][c.addr] = c
+		c.GetCh().SetConnByName(c)
 	}
 }
 

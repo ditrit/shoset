@@ -55,6 +55,8 @@ type Shoset struct {
 	// synchronisation des goroutines
 	Done chan bool
 	m    sync.RWMutex
+	ma   sync.RWMutex
+	mj   sync.RWMutex
 }
 
 var certPath = "./certs/cert.pem"
@@ -114,35 +116,18 @@ func (c *Shoset) RegisterMessageBehaviors(
 	c.wait[msgType] = wait
 }
 
-// GetBrothers :
-func (c *Shoset) GetBrothers() map[string]bool {
-	return c.brothers
-}
-
 // SetBrother :
 func (c *Shoset) SetBrother(brother string) {
+	c.m.Lock()
 	c.brothers[brother] = true
-}
-
-// GetNameBrothers :
-func (c *Shoset) GetNameBrothers() map[string]bool {
-	return c.nameBrothers
-}
-
-// InNameBrothers :
-func (c *Shoset) InNameBrothers(addr string) bool {
-	return c.nameBrothers[addr]
-}
-
-// InConnsJoin :
-func (c *Shoset) InConnsJoin(addr string) bool {
-	_, ok := c.connsJoin[addr]
-	return ok
+	c.m.Unlock()
 }
 
 // SetNameBrother :
 func (c *Shoset) SetNameBrother(nameBrother string) {
+	c.m.Lock()
 	c.nameBrothers[nameBrother] = true
+	c.m.Unlock()
 }
 
 // GetBindAddr :
@@ -158,19 +143,11 @@ func (c *Shoset) GetName() string {
 // GetShosetType :
 func (c *Shoset) GetShosetType() string { return c.ShosetType }
 
-// GetConnsByAddr :
-func (c *Shoset) GetConnsByAddr() map[string]*ShosetConn {
-	return c.connsByAddr
-}
-
-// GetConnsByName :
-func (c *Shoset) GetConnsByName() map[string]map[string]*ShosetConn {
-	return c.connsByName
-}
-
-// GetConnsJoin :
-func (c *Shoset) GetConnsJoin() map[string]*ShosetConn {
-	return c.connsJoin
+// GetConnByAddr :
+func (c *Shoset) GetConnByAddr(addr string) *ShosetConn {
+	c.ma.Lock()
+	defer c.ma.Unlock()
+	return c.connsByAddr[addr]
 }
 
 // String :
@@ -183,23 +160,23 @@ func (c *Shoset) String() string {
 	return str
 }
 
-// FQueue :
-func (c *Shoset) FQueue(msgType string) *msg.Queue {
+// Queue :
+func (c *Shoset) Queue(msgType string) *msg.Queue {
 	return c.queue[msgType]
 }
 
-// FHandle :
-func (c *Shoset) FHandle(msgType string) func(*ShosetConn) error {
+// Handle :
+func (c *Shoset) Handle(msgType string) func(*ShosetConn) error {
 	return c.handle[msgType]
 }
 
-// FSend :
-func (c *Shoset) FSend(msgType string) func(*Shoset, msg.Message) {
+// Send :
+func (c *Shoset) Send(msgType string) func(*Shoset, msg.Message) {
 	return c.send[msgType]
 }
 
-// FWait :
-func (c *Shoset) FWait(msgType string) func(*Shoset, *msg.Iterator, map[string]string, int) *msg.Message {
+// Wait :
+func (c *Shoset) Wait(msgType string) func(*Shoset, *msg.Iterator, map[string]string, int) *msg.Message {
 	return c.wait[msgType]
 }
 
@@ -211,20 +188,24 @@ func (c *Shoset) NewHandshake() *msg.Config {
 //NewCfgOut : Build a config Message
 func (c *Shoset) NewCfgOut() *msg.Config {
 	var bros []string
-	for _, conn := range c.GetConnsByAddr() {
+	c.ma.Lock()
+	for _, conn := range c.connsByAddr {
 		if conn.dir == "out" {
 			bros = append(bros, conn.addr)
 		}
 	}
+	c.ma.Unlock()
 	return msg.NewConns("out", bros)
 }
 
 //NewCfgIn : Build a config Message
 func (c *Shoset) NewCfgIn() *msg.Config {
 	var bros []string
+	c.m.Lock()
 	for addr := range c.brothers {
 		bros = append(bros, addr)
 	}
+	c.m.Unlock()
 	return msg.NewConns("in", bros)
 }
 
@@ -259,7 +240,17 @@ func (c *Shoset) Connect(address string) (*ShosetConn, error) {
 //Join : Join to group of Shosets and duplicate in and out connexions
 func (c *Shoset) Join(address string) (*ShosetConn, error) {
 
-	conn := new(ShosetConn)
+	c.mj.Lock()
+	conn, ok := c.connsJoin[address]
+	c.mj.Unlock()
+	if ok {
+		return conn, nil
+	}
+	if address == c.bindAddr {
+		return nil, nil
+	}
+
+	conn = new(ShosetConn)
 	conn.ch = c
 	conn.dir = "out"
 	conn.socket = new(tls.Conn)
@@ -278,6 +269,7 @@ func (c *Shoset) Join(address string) (*ShosetConn, error) {
 
 func (c *Shoset) deleteConn(connAddr string) {
 	c.m.Lock()
+	c.ma.Lock()
 	conn := c.connsByAddr[connAddr]
 	if conn != nil {
 		lName := conn.name
@@ -293,14 +285,15 @@ func (c *Shoset) deleteConn(connAddr string) {
 		delete(c.connsByAddr, connAddr)
 	}
 	c.m.Unlock()
+	c.ma.Unlock()
 }
 
 // SetConnJoin :
 func (c *Shoset) SetConnJoin(connAddr string, conn *ShosetConn) {
 	if conn != nil {
-		c.m.Lock()
+		c.mj.Lock()
 		c.connsJoin[connAddr] = conn
-		c.m.Unlock()
+		c.mj.Unlock()
 	}
 }
 
@@ -308,22 +301,108 @@ func (c *Shoset) SetConnJoin(connAddr string, conn *ShosetConn) {
 func (c *Shoset) SetConn(connAddr, connType string, conn *ShosetConn) {
 	if conn != nil {
 		c.m.Lock()
+		c.ma.Lock()
 		c.connsByAddr[connAddr] = conn
 
 		if c.conssByType[connType] == nil {
 			c.conssByType[connType] = make(map[string]*ShosetConn)
 		}
 		c.conssByType[connType][connAddr] = conn
-
-		lName := conn.name
-		if lName != "" {
-			if c.connsByName[lName] == nil {
-				c.connsByName[lName] = make(map[string]*ShosetConn)
-			}
-			c.connsByName[lName][connAddr] = conn
-		}
 		c.m.Unlock()
+		c.ma.Unlock()
+		c.SetConnByName(conn)
 	}
+}
+
+// SetConnByName :
+func (c *Shoset) SetConnByName(conn *ShosetConn) {
+	c.m.Lock()
+	defer c.m.Unlock()
+	lName := conn.name
+	if lName != "" {
+		if c.connsByName[lName] == nil {
+			c.connsByName[lName] = make(map[string]*ShosetConn)
+		}
+		c.connsByName[lName][conn.addr] = conn
+	}
+}
+
+// SendCfgToBrothers :
+func (c *Shoset) SendCfgToBrothers(currentConn *ShosetConn) {
+	currentAddr := currentConn.GetBindAddr()
+	currentName := currentConn.GetName()
+	cfgNameBrothers := msg.NewNameBrothers([]string{currentAddr})
+	oldNameBrothers := []string{}
+	c.m.Lock()
+	for _, conn := range c.connsByName[currentName] {
+		if conn.GetDir() == "in" && conn.bindAddr != currentAddr {
+			conn.SendMessage(cfgNameBrothers)
+			oldNameBrothers = append(oldNameBrothers, conn.bindAddr)
+		}
+	}
+	c.m.Unlock()
+	if len(oldNameBrothers) > 0 {
+		currentConn.SendMessage(msg.NewNameBrothers(oldNameBrothers))
+	}
+}
+
+// SendConnectToNameBrothers :
+func (c *Shoset) SendConnectToNameBrothers(conn *ShosetConn) {
+	if len(c.nameBrothers) > 0 {
+		c.m.Lock()
+		defer c.m.Unlock()
+		for bro := range c.nameBrothers {
+			conn.SendMessage(msg.NewConnectTo(bro))
+		}
+	}
+}
+
+// SendConnectToInConnsByAddr :
+func (c *Shoset) SendConnectToInConnsByAddr(addr string) {
+	c.ma.Lock()
+	defer c.ma.Unlock()
+	if !c.nameBrothers[addr] {
+		for _, conn := range c.connsByAddr {
+			if conn.GetDir() == "in" {
+				conn.SendMessage(msg.NewConnectTo(addr))
+			}
+		}
+		c.nameBrothers[addr] = true
+	}
+}
+
+// SendMsgToConnsByAddr :
+func (c *Shoset) SendMsgToConnsByAddr(message msg.Message) {
+	c.ma.Lock()
+	defer c.ma.Unlock()
+	for _, conn := range c.connsByAddr {
+		conn.SendMessage(message)
+	}
+}
+
+// SendCfgInToInConnsByAddr :
+func (c *Shoset) SendCfgInToInConnsByAddr(currentConn *ShosetConn) {
+	c.ma.Lock()
+	defer c.ma.Unlock()
+	cfgIn := c.NewCfgIn()
+	for _, conn := range c.connsByAddr {
+		if conn.GetDir() == "in" {
+			currentConn.SendMessage(cfgIn)
+		}
+	}
+}
+
+// SendNewMemberToConnsJoin :
+func (c *Shoset) SendNewMemberToConnsJoin(addr string) {
+	thisOne := c.bindAddr
+	cfgNewMember := msg.NewCfgMember(addr)
+	c.mj.Lock()
+	for connAddr, conn := range c.connsJoin {
+		if connAddr != addr && connAddr != thisOne {
+			conn.SendMessage(cfgNewMember)
+		}
+	}
+	c.mj.Unlock()
 }
 
 //Bind : Connect to another Shoset

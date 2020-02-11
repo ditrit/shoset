@@ -11,7 +11,7 @@ import (
 func HandleEvent(c *ShosetConn) error {
 	var evt msg.Event
 	err := c.ReadMessage(&evt)
-	c.GetCh().FQueue("evt").Push(evt, c.ShosetType, c.bindAddr)
+	c.GetCh().Queue("evt").Push(evt, c.ShosetType, c.bindAddr)
 	return err
 }
 
@@ -25,9 +25,7 @@ func SendEventConn(c *ShosetConn, evt interface{}) {
 // SendEvent :
 func SendEvent(c *Shoset, evt msg.Message) {
 	fmt.Print("Sending event.\n")
-	for _, conn := range c.GetConnsByAddr() {
-		conn.SendMessage(evt)
-	}
+	c.SendMsgToConnsByAddr(evt)
 }
 
 // WaitEvent :

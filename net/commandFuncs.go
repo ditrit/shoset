@@ -11,23 +11,14 @@ import (
 func HandleCommand(c *ShosetConn) error {
 	var cmd msg.Command
 	err := c.ReadMessage(&cmd)
-	c.GetCh().FQueue("cmd").Push(cmd, c.ShosetType, c.bindAddr)
+	c.GetCh().Queue("cmd").Push(cmd, c.ShosetType, c.bindAddr)
 	return err
-}
-
-// SendCommandConn :
-func SendCommandConn(c *ShosetConn, cmd interface{}) {
-	fmt.Print("Sending config.\n")
-	c.WriteString("cmd")
-	c.WriteMessage(cmd)
 }
 
 // SendCommand :
 func SendCommand(c *Shoset, cmd msg.Message) {
 	fmt.Print("Sending Command.\n")
-	for _, conn := range c.GetConnsByAddr() {
-		conn.SendMessage(cmd)
-	}
+	c.SendMsgToConnsByAddr(cmd)
 }
 
 // WaitCommand :
@@ -52,7 +43,7 @@ func WaitCommand(c *Shoset, replies *msg.Iterator, args map[string]string, timeo
 		}
 	}()
 	select {
-	case res := <- term:
+	case res := <-term:
 		cont = false
 		return res
 	case <-time.After(time.Duration(timeout) * time.Second):
