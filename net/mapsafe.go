@@ -34,7 +34,7 @@ func (m *MapSafe) Set(key string, value interface{}) *MapSafe {
 func (m *MapSafe) Delete(key string) {
 	m.Lock()
 	_, ok := m.m[key]
-	if !ok {
+	if ok {
 		delete(m.m, key)
 	}
 	m.Unlock()

@@ -21,12 +21,12 @@ type MessageHandlers interface {
 //Shoset :
 type Shoset struct {
 	//	id          string
-	ConnsByAddr  *MapSafe                          // map[string]*ShosetConn    ensemble des connexions
+	ConnsByAddr  *MapSafeConn                      // map[string]*ShosetConn    ensemble des connexions
 	connsByName  map[string]map[string]*ShosetConn // map[string]map[string]*ShosetConn   connexions par nom logique
 	conssByType  map[string]map[string]*ShosetConn // map[string]map[string]*ShosetConn   connexions par type
-	ConnsJoin    *MapSafe                          // map[string]*ShosetConn    connexions nécessaires au join (non utilisées en dehors du join)
-	Brothers     *MapSafe                          // map[string]bool  "freres" au sens large (ex: toutes les instances de connecteur reliées à un même aggregateur)
-	NameBrothers *MapSafe                          // map[string]bool  "freres" ayant un même nom logique (ex: instances d'un même connecteur)
+	ConnsJoin    *MapSafeConn                      // map[string]*ShosetConn    connexions nécessaires au join (non utilisées en dehors du join)
+	Brothers     *MapSafeBool                      // map[string]bool  "freres" au sens large (ex: toutes les instances de connecteur reliées à un même aggregateur)
+	NameBrothers *MapSafeBool                      // map[string]bool  "freres" ayant un même nom logique (ex: instances d'un même connecteur)
 	lName        string                            // Nom logique de la shoset
 	ShosetType   string                            // Type logique de la shoset
 	bindAddr     string                            // Adresse sur laquelle la shoset est bindée
@@ -69,12 +69,12 @@ func NewShoset(lName, ShosetType string) *Shoset {
 	// Initialisation
 	c.lName = lName
 	c.ShosetType = ShosetType
-	c.ConnsByAddr = NewMapSafe()
+	c.ConnsByAddr = NewMapSafeConn()
 	c.conssByType = make(map[string]map[string]*ShosetConn)
 	c.connsByName = make(map[string]map[string]*ShosetConn)
-	c.ConnsJoin = NewMapSafe()
-	c.Brothers = NewMapSafe()
-	c.NameBrothers = NewMapSafe()
+	c.ConnsJoin = NewMapSafeConn()
+	c.Brothers = NewMapSafeBool()
+	c.NameBrothers = NewMapSafeBool()
 
 	c.queue = make(map[string]*msg.Queue)
 	c.handle = make(map[string]func(*ShosetConn) error)
@@ -132,8 +132,8 @@ func (c *Shoset) GetShosetType() string { return c.ShosetType }
 func (c *Shoset) String() string {
 	descr := fmt.Sprintf("Shoset { lName: %s, bindAddr: %s, type: %s, brothers %#v, nameBrothers %#v, joinConns %#v\n", c.lName, c.bindAddr, c.ShosetType, c.Brothers, c.NameBrothers, c.ConnsJoin)
 	c.ConnsByAddr.Iterate(
-		func(key string, val interface{}) {
-			descr = fmt.Sprintf("%s - [%s] %s\n", descr, key, val.(*ShosetConn).String())
+		func(key string, val *ShosetConn) {
+			descr = fmt.Sprintf("%s - [%s] %s\n", descr, key, val.String())
 		})
 	descr += "%s}\n"
 	return descr
@@ -168,8 +168,8 @@ func (c *Shoset) NewHandshake() *msg.Config {
 func (c *Shoset) NewCfgOut() *msg.Config {
 	var bros []string
 	c.ConnsByAddr.Iterate(
-		func(key string, val interface{}) {
-			conn := val.(*ShosetConn)
+		func(key string, val *ShosetConn) {
+			conn := val
 			if conn.dir == "out" {
 				bros = append(bros, conn.addr)
 			}
@@ -182,7 +182,7 @@ func (c *Shoset) NewCfgOut() *msg.Config {
 func (c *Shoset) NewCfgIn() *msg.Config {
 	var bros []string
 	c.Brothers.Iterate(
-		func(key string, val interface{}) {
+		func(key string, val bool) {
 			bros = append(bros, key)
 		},
 	)
@@ -222,7 +222,7 @@ func (c *Shoset) Join(address string) (*ShosetConn, error) {
 
 	exists := c.ConnsJoin.Get(address)
 	if exists != nil {
-		return exists.(*ShosetConn), nil
+		return exists, nil
 	}
 	if address == c.bindAddr {
 		return nil, nil
@@ -248,7 +248,7 @@ func (c *Shoset) Join(address string) (*ShosetConn, error) {
 func (c *Shoset) deleteConn(connAddr string) {
 	c.m.Lock()
 	c.ma.Lock()
-	conn := c.ConnsByAddr.Get(connAddr).(*ShosetConn)
+	conn := c.ConnsByAddr.Get(connAddr)
 	if conn != nil {
 		lName := conn.name
 		if c.connsByName[lName] != nil {

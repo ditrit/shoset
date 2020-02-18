@@ -27,7 +27,7 @@ func HandleConfig(c *ShosetConn) error {
 			ch.SetConn(c.GetBindAddr(), c.GetShosetType(), c)
 			if ch.NameBrothers.Len() > 0 {
 				ch.NameBrothers.Iterate(
-					func(bro string, val interface{}) {
+					func(bro string, val bool) {
 						c.SendMessage(msg.NewConnectTo(bro))
 					},
 				)
@@ -42,10 +42,10 @@ func HandleConfig(c *ShosetConn) error {
 			for _, bro := range cfg.Conns {
 				ch.Brothers.Set(bro, true)
 			}
-			//???? pas d'envoi depui ou vers conn ????
+			//???? pas d'envoi depuis ou vers conn ????
 			cfgIn := ch.NewCfgIn()
 			ch.ConnsByAddr.Iterate(
-				func(key string, conn interface{}) {
+				func(key string, conn *ShosetConn) {
 					c.SendMessage(cfgIn)
 				},
 			)
@@ -63,10 +63,10 @@ func HandleConfig(c *ShosetConn) error {
 	case "nameBrothers":
 		for _, addr := range cfg.GetConns() {
 			ch.ma.Lock()
-			if ch.NameBrothers.Get(addr) == nil {
+			if !ch.NameBrothers.Get(addr) {
 				ch.ConnsByAddr.Iterate(
-					func(key string, val interface{}) {
-						conn := val.(*ShosetConn)
+					func(key string, val *ShosetConn) {
+						conn := val
 						if conn.GetDir() == "in" {
 							conn.SendMessage(msg.NewConnectTo(addr))
 						}
@@ -89,13 +89,12 @@ func HandleConfig(c *ShosetConn) error {
 		if dir == "in" {
 			ch.Join(newMember)
 		}
-		//ch.SendNewMemberToConnsJoin(newMember)
 		thisOne := c.bindAddr
 		cfgNewMember := msg.NewCfgMember(newMember)
 		ch.ConnsJoin.Iterate(
-			func(key string, val interface{}) {
+			func(key string, val *ShosetConn) {
 				if key != newMember && key != thisOne {
-					val.(*ShosetConn).SendMessage(cfgNewMember)
+					val.SendMessage(cfgNewMember)
 				}
 			},
 		)
