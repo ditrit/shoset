@@ -87,7 +87,7 @@ func (c *ShosetConn) runJoinConn() {
 	ch := c.GetCh()
 	joinConfig := msg.NewCfgJoin(ch.GetBindAddr())
 	for {
-		ch.SetConnJoin(c.addr, c)
+		ch.ConnsJoin.Set(c.addr, c)
 		ch.SetNameBrother(c.addr)
 		conn, err := tls.Dial("tcp", c.addr, ch.tlsConfig)
 		defer conn.Close()

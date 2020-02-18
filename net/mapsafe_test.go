@@ -34,18 +34,17 @@ func TestMapSafeCRUD(t *testing.T) {
 	)
 }
 
-// TestFold : test MapSafe fold function
+// TestFold : test MapSafe folding using closure
 func TestFold(t *testing.T) {
 	m := net.NewMapSafe()
 	m.Set("a", 23).Set("b", 43).Set("c", 11)
-	strValue := m.Fold(
-		func(key string, val interface{}, str interface{}) interface{} {
-			str = fmt.Sprintf("%s, %s", str, val)
+	str := ""
+	m.Iterate(
+		func(key string, val interface{}) {
+			str = fmt.Sprintf("%s, %d", str, val.(int))
 			fmt.Printf(" - %s: %d\n", key, val.(int))
-			return str
-		},
-		"")
-	fmt.Printf("strValue : %s\n", strValue)
+		})
+	fmt.Printf("strValue : %s\n", str)
 }
 
 // TestConcurrency

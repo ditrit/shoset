@@ -49,12 +49,7 @@ func (m *MapSafe) Iterate(iter func(string, interface{})) {
 	m.Unlock()
 }
 
-// Fold : iterate and build a Value through MapSafe Values
-func (m *MapSafe) Fold(iter func(string, interface{}, interface{}) interface{}, res interface{}) interface{} {
-	m.Lock()
-	for key, val := range m.m {
-		res = iter(key, val, res)
-	}
-	m.Unlock()
-	return res
+// Len : return length of the map
+func (m *MapSafe) Len() int {
+	return len(m.m)
 }
