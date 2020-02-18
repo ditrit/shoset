@@ -25,7 +25,13 @@ func HandleConfig(c *ShosetConn) error {
 		}
 		if dir == "in" {
 			ch.SetConn(c.GetBindAddr(), c.GetShosetType(), c)
-			ch.SendConnectToNameBrothers(c)
+			if ch.NameBrothers.Len() > 0 {
+				ch.NameBrothers.Iterate(
+					func(bro string, val interface{}) {
+						c.SendMessage(msg.NewConnectTo(bro))
+					},
+				)
+			}
 		}
 		if dir == "out" {
 			cfgBros := ch.NewCfgOut()
@@ -57,7 +63,7 @@ func HandleConfig(c *ShosetConn) error {
 	case "nameBrothers":
 		for _, addr := range cfg.GetConns() {
 			ch.ma.Lock()
-			if !ch.nameBrothers[addr] {
+			if ch.NameBrothers.Get(addr) == nil {
 				ch.ConnsByAddr.Iterate(
 					func(key string, val interface{}) {
 						conn := val.(*ShosetConn)
@@ -66,7 +72,7 @@ func HandleConfig(c *ShosetConn) error {
 						}
 					},
 				)
-				ch.nameBrothers[addr] = true
+				ch.NameBrothers.Set(addr, true)
 			}
 			ch.ma.Unlock()
 		}
