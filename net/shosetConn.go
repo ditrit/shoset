@@ -59,7 +59,7 @@ func (c *ShosetConn) WriteMessage(data interface{}) error {
 // RunOutConn : handler for the socket
 func (c *ShosetConn) runOutConn(addr string) {
 
-	myConfig := c.GetCh().NewHandshake()
+	myConfig := NewHandshake(c.GetCh())
 	for {
 		conn, err := tls.Dial("tcp", c.addr, c.ch.tlsConfig)
 		defer conn.Close()
@@ -136,7 +136,7 @@ func (c *ShosetConn) GetBindAddr() string {
 func (c *ShosetConn) SetName(lName string) { // remote logical Name
 	if lName != "" {
 		c.name = lName // remote logical Name
-		c.GetCh().SetConnByName(c)
+		c.GetCh().ConnsByName.Set(c.name, c.addr, c)
 	}
 }
 
@@ -158,13 +158,9 @@ func (c *ShosetConn) SetBindAddr(bindAddr string) {
 func (c *ShosetConn) runInConn() {
 	c.rb = msg.NewReader(c.socket)
 	c.wb = msg.NewWriter(c.socket)
-	//myConfig := c.GetCh().NewHandshake()
 	defer c.socket.Close()
 	// receive messages
 	for {
-		//if c.name == "" { // remote logical Name
-		//	c.SendMessage(*myConfig)
-		//}
 		err := c.receiveMsg()
 		if err != nil {
 			return
@@ -193,7 +189,7 @@ func (c *ShosetConn) receiveMsg() error {
 	msgType = strings.Trim(msgType, "\n")
 
 	// read message data and handle it
-	fhandle, ok := c.ch.handle[msgType]
+	fhandle, ok := c.ch.Handle[msgType]
 	if ok {
 		fhandle(c)
 	} else {

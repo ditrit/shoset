@@ -14,7 +14,7 @@ func HandleConfig(c *ShosetConn) error {
 	case "handshake":
 		if c.GetName() == "" {
 			if dir == "in" {
-				myConfig := ch.NewHandshake()
+				myConfig := NewHandshake(ch)
 				c.SendMessage(*myConfig)
 			}
 			c.SetName(cfg.GetLogicalName())
@@ -34,7 +34,7 @@ func HandleConfig(c *ShosetConn) error {
 			}
 		}
 		if dir == "out" {
-			cfgBros := ch.NewCfgOut()
+			cfgBros := NewCfgOut(ch)
 			c.SendMessage(*cfgBros)
 		}
 	case "out":
@@ -43,13 +43,13 @@ func HandleConfig(c *ShosetConn) error {
 				ch.Brothers.Set(bro, true)
 			}
 			//???? pas d'envoi depuis ou vers conn ????
-			cfgIn := ch.NewCfgIn()
+			cfgIn := NewCfgIn(ch)
 			ch.ConnsByAddr.Iterate(
 				func(key string, conn *ShosetConn) {
 					c.SendMessage(cfgIn)
 				},
 			)
-			ch.SendCfgToBrothers(c)
+			sendCfgToBrothers(c)
 		}
 	case "in":
 		if dir == "out" {
@@ -58,11 +58,10 @@ func HandleConfig(c *ShosetConn) error {
 					ch.Connect(bro)
 				}
 			}
-			ch.SendCfgToBrothers(c)
+			sendCfgToBrothers(c)
 		}
 	case "nameBrothers":
 		for _, addr := range cfg.GetConns() {
-			ch.ma.Lock()
 			if !ch.NameBrothers.Get(addr) {
 				ch.ConnsByAddr.Iterate(
 					func(key string, val *ShosetConn) {
@@ -74,7 +73,6 @@ func HandleConfig(c *ShosetConn) error {
 				)
 				ch.NameBrothers.Set(addr, true)
 			}
-			ch.ma.Unlock()
 		}
 	case "connectTo":
 		if dir == "out" {
@@ -109,11 +107,60 @@ func HandleConfig(c *ShosetConn) error {
 	return err
 }
 
+func sendCfgToBrothers(currentConn *ShosetConn) {
+	ch := currentConn.GetCh()
+	currentAddr := currentConn.GetBindAddr()
+	currentName := currentConn.GetName()
+	cfgNameBrothers := msg.NewNameBrothers([]string{currentAddr})
+	oldNameBrothers := []string{}
+	ch.ConnsByName.Iterate(currentName,
+		func(key string, conn *ShosetConn) {
+			if conn.GetDir() == "in" && conn.bindAddr != currentAddr {
+				conn.SendMessage(cfgNameBrothers)
+				oldNameBrothers = append(oldNameBrothers, conn.bindAddr)
+			}
+		},
+	)
+	if len(oldNameBrothers) > 0 {
+		currentConn.SendMessage(msg.NewNameBrothers(oldNameBrothers))
+	}
+}
+
+//NewHandshake : Build a config Message
+func NewHandshake(ch *Shoset) *msg.Config {
+	return msg.NewHandshake(ch.bindAddr, ch.lName, ch.ShosetType)
+}
+
+//NewCfgOut : Build a config Message
+func NewCfgOut(ch *Shoset) *msg.Config {
+	var bros []string
+	ch.ConnsByAddr.Iterate(
+		func(key string, val *ShosetConn) {
+			conn := val
+			if conn.dir == "out" {
+				bros = append(bros, conn.addr)
+			}
+		},
+	)
+	return msg.NewConns("out", bros)
+}
+
+//NewCfgIn : Build a config Message
+func NewCfgIn(ch *Shoset) *msg.Config {
+	var bros []string
+	ch.Brothers.Iterate(
+		func(key string, val bool) {
+			bros = append(bros, key)
+		},
+	)
+	return msg.NewConns("in", bros)
+}
+
 // SendConfig :
-func SendConfig(c *Shoset, cfg msg.Message) {
+func SendConfig(ch *Shoset, cfg msg.Message) {
 }
 
 // WaitConfig :
-func WaitConfig(c *Shoset, replies *msg.Iterator, args map[string]string, timeout int) *msg.Message {
+func WaitConfig(ch *Shoset, replies *msg.Iterator, args map[string]string, timeout int) *msg.Message {
 	return nil
 }

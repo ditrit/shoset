@@ -24,12 +24,14 @@ func (m *MapSafeMapConn) Get(key string) *MapSafeConn {
 
 // Set : assign a value to a MapSafeMapConn
 func (m *MapSafeMapConn) Set(lname string, key string, value *ShosetConn) *MapSafeMapConn {
-	m.Lock()
-	if m.m[lname] == nil {
-		m.m[lname] = NewMapSafeConn()
+	if lname != "" && key != "" {
+		m.Lock()
+		if m.m[lname] == nil {
+			m.m[lname] = NewMapSafeConn()
+		}
+		m.m[lname].Set(key, value)
+		m.Unlock()
 	}
-	m.m[lname].Set(key, value)
-	m.Unlock()
 	return m
 }
 
