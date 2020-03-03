@@ -9,7 +9,7 @@ import (
 
 // GetEvent :
 func GetEvent(c *ShosetConn) (msg.Message, error) {
-	var evt msg.Config
+	var evt msg.Event
 	err := c.ReadMessage(&evt)
 	return evt, err
 }

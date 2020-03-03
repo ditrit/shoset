@@ -72,8 +72,12 @@ func NewShoset(lName, ShosetType string) *Shoset {
 	c.Wait = make(map[string]func(*Shoset, *msg.Iterator, map[string]string, int) *msg.Message)
 
 	c.Queue["cfg"] = msg.NewQueue()
-	c.Get["cfg"] = GetConfig
-	c.Handle["cfg"] = HandleConfig
+	c.Get["cfglink"] = GetConfigLink
+	c.Handle["cfglink"] = HandleConfigLink
+
+	c.Queue["cfgjoin"] = msg.NewQueue()
+	c.Get["cfgjoin"] = GetConfigJoin
+	c.Handle["cfgjoin"] = HandleConfigJoin
 
 	c.Queue["evt"] = msg.NewQueue()
 	c.Get["evt"] = GetEvent

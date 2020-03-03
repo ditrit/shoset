@@ -4,16 +4,16 @@ import (
 	"shoset/msg"
 )
 
-// GetConfig :
-func GetConfig(c *ShosetConn) (msg.Message, error) {
-	var cfg msg.Config
+// GetConfigLink :
+func GetConfigLink(c *ShosetConn) (msg.Message, error) {
+	var cfg msg.ConfigLink
 	err := c.ReadMessage(&cfg)
 	return cfg, err
 }
 
-// HandleConfig :
-func HandleConfig(c *ShosetConn, message msg.Message) error {
-	cfg := message.(msg.Config)
+// HandleConfigLink :
+func HandleConfigLink(c *ShosetConn, message msg.Message) error {
+	cfg := message.(msg.ConfigLink)
 	ch := c.GetCh()
 	dir := c.GetDir()
 	//	err := c.ReadMessage(&cfg)
@@ -21,8 +21,8 @@ func HandleConfig(c *ShosetConn, message msg.Message) error {
 	case "handshake":
 		if c.GetName() == "" {
 			if dir == "in" {
-				myConfig := NewHandshake(ch)
-				c.SendMessage(*myConfig)
+				myConfigLink := NewHandshake(ch)
+				c.SendMessage(*myConfigLink)
 			}
 			c.SetName(cfg.GetLogicalName())
 			c.SetShosetType(cfg.GetShosetType())
@@ -88,28 +88,6 @@ func HandleConfig(c *ShosetConn, message msg.Message) error {
 				ch.Link(cfg.Address)
 			}
 		}
-	case "join":
-		newMember := cfg.GetBindAddress() // recupere l'adresse distante
-
-		if dir == "in" {
-			ch.Join(newMember)
-		}
-		thisOne := c.bindAddr
-		cfgNewMember := msg.NewCfgMember(newMember)
-		ch.ConnsJoin.Iterate(
-			func(key string, val *ShosetConn) {
-				if key != newMember && key != thisOne {
-					val.SendMessage(cfgNewMember)
-				}
-			},
-		)
-
-		if dir == "out" {
-		}
-
-	case "member":
-		newMember := cfg.GetBindAddress()
-		ch.Join(newMember)
 	}
 	return nil
 }
@@ -133,13 +111,13 @@ func sendCfgToBrothers(currentConn *ShosetConn) {
 	}
 }
 
-//NewHandshake : Build a config Message
-func NewHandshake(ch *Shoset) *msg.Config {
+//NewHandshake : Build a configLink Message
+func NewHandshake(ch *Shoset) *msg.ConfigLink {
 	return msg.NewHandshake(ch.bindAddr, ch.lName, ch.ShosetType)
 }
 
-//NewCfgOut : Build a config Message
-func NewCfgOut(ch *Shoset) *msg.Config {
+//NewCfgOut : Build a configLink Message
+func NewCfgOut(ch *Shoset) *msg.ConfigLink {
 	var bros []string
 	ch.ConnsByAddr.Iterate(
 		func(key string, val *ShosetConn) {
@@ -152,8 +130,8 @@ func NewCfgOut(ch *Shoset) *msg.Config {
 	return msg.NewConns("out", bros)
 }
 
-//NewCfgIn : Build a config Message
-func NewCfgIn(ch *Shoset) *msg.Config {
+//NewCfgIn : Build a configLink Message
+func NewCfgIn(ch *Shoset) *msg.ConfigLink {
 	var bros []string
 	ch.Brothers.Iterate(
 		func(key string, val bool) {
@@ -161,13 +139,4 @@ func NewCfgIn(ch *Shoset) *msg.Config {
 		},
 	)
 	return msg.NewConns("in", bros)
-}
-
-// SendConfig :
-func SendConfig(ch *Shoset, cfg msg.Message) {
-}
-
-// WaitConfig :
-func WaitConfig(ch *Shoset, replies *msg.Iterator, args map[string]string, timeout int) *msg.Message {
-	return nil
 }
