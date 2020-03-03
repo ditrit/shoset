@@ -9,7 +9,7 @@ import (
 
 func shosetClient(logicalName, ShosetType, address string) {
 	c := net.NewShoset(logicalName, ShosetType)
-	c.Connect(address)
+	c.Link(address)
 
 	go func() {
 		for {
@@ -95,27 +95,27 @@ func shosetTest() {
 
 	b1 := net.NewShoset("b", "c")
 	b1.Bind("localhost:8201")
-	b1.Connect("localhost:8302")
-	b1.Connect("localhost:8301")
-	b1.Connect("localhost:8303")
-	b1.Connect("localhost:8401")
-	b1.Connect("localhost:8402")
+	b1.Link("localhost:8302")
+	b1.Link("localhost:8301")
+	b1.Link("localhost:8303")
+	b1.Link("localhost:8401")
+	b1.Link("localhost:8402")
 
 	a1 := net.NewShoset("a", "c")
 	a1.Bind("localhost:8101")
-	a1.Connect("localhost:8201")
+	a1.Link("localhost:8201")
 
 	b2 := net.NewShoset("b", "c")
 	b2.Bind("localhost:8202")
-	b2.Connect("localhost:8301")
+	b2.Link("localhost:8301")
 
 	b3 := net.NewShoset("b", "c")
 	b3.Bind("localhost:8203")
-	b3.Connect("localhost:8303")
+	b3.Link("localhost:8303")
 
 	a2 := net.NewShoset("a", "c")
 	a2.Bind("localhost:8102")
-	a2.Connect("localhost:8202")
+	a2.Link("localhost:8202")
 
 	time.Sleep(time.Second * time.Duration(1))
 	fmt.Printf("a1 : %s", a1.String())
@@ -154,75 +154,75 @@ func shosetTestEtoile() {
 
 	aga1 := net.NewShoset("aga", "a")
 	aga1.Bind("localhost:8111")
-	aga1.Connect("localhost:8001")
+	aga1.Link("localhost:8001")
 	aga2 := net.NewShoset("aga", "a")
 	aga2.Bind("localhost:8112")
-	aga2.Connect("localhost:8005")
+	aga2.Link("localhost:8005")
 
 	agb1 := net.NewShoset("agb", "a")
 	agb1.Bind("localhost:8121")
-	agb1.Connect("localhost:8002")
+	agb1.Link("localhost:8002")
 	agb2 := net.NewShoset("agb", "a")
 	agb2.Bind("localhost:8122")
-	agb2.Connect("localhost:8003")
+	agb2.Link("localhost:8003")
 
 	time.Sleep(time.Second * time.Duration(2))
 
 	Ca1 := net.NewShoset("Ca", "c")
 	Ca1.Bind("localhost:8211")
-	Ca1.Connect("localhost:8111")
+	Ca1.Link("localhost:8111")
 	Ca2 := net.NewShoset("Ca", "c")
 	Ca2.Bind("localhost:8212")
-	Ca2.Connect("localhost:8111")
+	Ca2.Link("localhost:8111")
 	Ca3 := net.NewShoset("Ca", "c")
 	Ca3.Bind("localhost:8213")
-	Ca3.Connect("localhost:8111")
+	Ca3.Link("localhost:8111")
 
 	Cb1 := net.NewShoset("Cb", "c")
 	Cb1.Bind("localhost:8221")
-	Cb1.Connect("localhost:8112")
+	Cb1.Link("localhost:8112")
 	Cb2 := net.NewShoset("Cb", "c")
 	Cb2.Bind("localhost:8222")
-	Cb2.Connect("localhost:8112")
+	Cb2.Link("localhost:8112")
 
 	Cc1 := net.NewShoset("Cc", "c")
 	Cc1.Bind("localhost:8231")
-	Cc1.Connect("localhost:8111")
+	Cc1.Link("localhost:8111")
 	Cc2 := net.NewShoset("Cc", "c")
 	Cc2.Bind("localhost:8232")
-	Cc2.Connect("localhost:8111")
+	Cc2.Link("localhost:8111")
 
 	Cd1 := net.NewShoset("Cd", "c")
 	Cd1.Bind("localhost:8241")
-	Cd1.Connect("localhost:8111")
+	Cd1.Link("localhost:8111")
 	Cd2 := net.NewShoset("Cd", "c")
 	Cd2.Bind("localhost:8242")
-	Cd2.Connect("localhost:8112")
+	Cd2.Link("localhost:8112")
 
 	Ce1 := net.NewShoset("Ce", "c")
 	Ce1.Bind("localhost:8251")
-	Ce1.Connect("localhost:8122")
+	Ce1.Link("localhost:8122")
 	Ce2 := net.NewShoset("Ce", "c")
 	Ce2.Bind("localhost:8252")
-	Ce2.Connect("localhost:8122")
+	Ce2.Link("localhost:8122")
 
 	Cf1 := net.NewShoset("Cf", "c")
 	Cf1.Bind("localhost:8261")
-	Cf1.Connect("localhost:8121")
+	Cf1.Link("localhost:8121")
 	Cf2 := net.NewShoset("Cg", "c")
 	Cf2.Bind("localhost:8262")
-	Cf2.Connect("localhost:8121")
+	Cf2.Link("localhost:8121")
 
 	Cg1 := net.NewShoset("Cg", "c")
 	Cg1.Bind("localhost:8271")
-	Cg1.Connect("localhost:8121")
+	Cg1.Link("localhost:8121")
 	Cg2 := net.NewShoset("Cg", "c")
 	Cg2.Bind("localhost:8272")
-	Cg2.Connect("localhost:8122")
+	Cg2.Link("localhost:8122")
 
 	Ch1 := net.NewShoset("Ch", "c")
 	Ch1.Bind("localhost:8281")
-	Ch1.Connect("localhost:8111")
+	Ch1.Link("localhost:8111")
 
 	time.Sleep(time.Second * time.Duration(2))
 	fmt.Printf("cl1 : %s", cl2.String())
@@ -269,11 +269,11 @@ func testQueue() {
 	/*	// First let's make 2 sockets talk each other
 		C1 := net.NewShoset("C1", "c")
 		C1.Bind("localhost:8261")
-		C1.Connect("localhost:8262")
+		C1.Link("localhost:8262")
 
 		C2 := net.NewShoset("C2", "cl")
 		C2.Bind("localhost:8262")
-		C2.Connect("localhost:8261")
+		C2.Link("localhost:8261")
 
 		// Let's check for sockets connections
 		time.Sleep(time.Second * time.Duration(1))

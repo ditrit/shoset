@@ -7,12 +7,18 @@ import (
 	"shoset/msg"
 )
 
-// HandleCommand :
-func HandleCommand(c *ShosetConn) error {
+// GetCommand :
+func GetCommand(c *ShosetConn) (msg.Message, error) {
 	var cmd msg.Command
 	err := c.ReadMessage(&cmd)
+	return cmd, err
+}
+
+// HandleCommand :
+func HandleCommand(c *ShosetConn, message msg.Message) error {
+	cmd := message.(msg.Command)
 	c.GetCh().Queue["cmd"].Push(cmd, c.ShosetType, c.bindAddr)
-	return err
+	return nil
 }
 
 // SendCommand :

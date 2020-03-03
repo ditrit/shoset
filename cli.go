@@ -8,6 +8,10 @@ import (
 
 func main() {
 
+	shosetTestEtoile()
+
+	return
+
 	flag.Usage = func() {
 		fmt.Printf("Usage of %s:\n", os.Args[0])
 		fmt.Printf("	tcp [options] name ipaddr:port\n options:\n")

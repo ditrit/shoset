@@ -34,8 +34,8 @@ type Shoset struct {
 	// Dictionnaire des queues de message (par type de message)
 	Queue map[string]*msg.Queue
 
-	// Dictionnaire des fonctions de gestion des messages par (type de message)
-	Handle map[string]func(*ShosetConn) error
+	Get    map[string]func(*ShosetConn) (msg.Message, error)
+	Handle map[string]func(*ShosetConn, msg.Message) error
 	Send   map[string]func(*Shoset, msg.Message)
 	Wait   map[string]func(*Shoset, *msg.Iterator, map[string]string, int) *msg.Message
 
@@ -66,14 +66,26 @@ func NewShoset(lName, ShosetType string) *Shoset {
 	c.NameBrothers = NewMapSafeBool()
 
 	c.Queue = make(map[string]*msg.Queue)
-	c.Handle = make(map[string]func(*ShosetConn) error)
+	c.Get = make(map[string]func(*ShosetConn) (msg.Message, error))
+	c.Handle = make(map[string]func(*ShosetConn, msg.Message) error)
 	c.Send = make(map[string]func(*Shoset, msg.Message))
 	c.Wait = make(map[string]func(*Shoset, *msg.Iterator, map[string]string, int) *msg.Message)
 
-	// Enregistrement des handlers par type de message  (fonctions de gestion, d'envoi et de reception des messages)
-	c.RegisterMessageBehaviors("cfg", HandleConfig, SendConfig, WaitConfig)    // messages de type configuration
-	c.RegisterMessageBehaviors("evt", HandleEvent, SendEvent, WaitEvent)       // messages de type événement
-	c.RegisterMessageBehaviors("cmd", HandleCommand, SendCommand, WaitCommand) // messages de type commande
+	c.Queue["cfg"] = msg.NewQueue()
+	c.Get["cfg"] = GetConfig
+	c.Handle["cfg"] = HandleConfig
+
+	c.Queue["evt"] = msg.NewQueue()
+	c.Get["evt"] = GetEvent
+	c.Handle["evt"] = HandleEvent
+	c.Send["evt"] = SendEvent
+	c.Wait["evt"] = WaitEvent
+
+	c.Queue["cmd"] = msg.NewQueue()
+	c.Get["cmd"] = GetCommand
+	c.Handle["cmd"] = HandleCommand
+	c.Send["cmd"] = SendCommand
+	c.Wait["cmd"] = WaitCommand
 
 	// Configuration TLS
 	cert, err := tls.LoadX509KeyPair(certPath, keyPath)
@@ -90,18 +102,6 @@ func NewShoset(lName, ShosetType string) *Shoset {
 	}
 
 	return c
-}
-
-// RegisterMessageBehaviors :
-func (c *Shoset) RegisterMessageBehaviors(
-	msgType string,
-	handle func(*ShosetConn) error,
-	send func(*Shoset, msg.Message),
-	wait func(*Shoset, *msg.Iterator, map[string]string, int) *msg.Message) {
-	c.Queue[msgType] = msg.NewQueue()
-	c.Handle[msgType] = handle
-	c.Send[msgType] = send
-	c.Wait[msgType] = wait
 }
 
 // GetBindAddr :
@@ -128,8 +128,8 @@ func (c *Shoset) String() string {
 	return descr
 }
 
-//Connect : Connect to another Shoset
-func (c *Shoset) Connect(address string) (*ShosetConn, error) {
+//Link : Link to another Shoset
+func (c *Shoset) Link(address string) (*ShosetConn, error) {
 	conn := new(ShosetConn)
 	conn.ch = c
 	conn.dir = "out"

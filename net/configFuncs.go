@@ -4,12 +4,19 @@ import (
 	"shoset/msg"
 )
 
-// HandleConfig :
-func HandleConfig(c *ShosetConn) error {
+// GetConfig :
+func GetConfig(c *ShosetConn) (msg.Message, error) {
 	var cfg msg.Config
+	err := c.ReadMessage(&cfg)
+	return cfg, err
+}
+
+// HandleConfig :
+func HandleConfig(c *ShosetConn, message msg.Message) error {
+	cfg := message.(msg.Config)
 	ch := c.GetCh()
 	dir := c.GetDir()
-	err := c.ReadMessage(&cfg)
+	//	err := c.ReadMessage(&cfg)
 	switch cfg.GetCommandName() {
 	case "handshake":
 		if c.GetName() == "" {
@@ -55,7 +62,7 @@ func HandleConfig(c *ShosetConn) error {
 		if dir == "out" {
 			for _, bro := range cfg.Conns {
 				if ch.ConnsByAddr.Get(bro) == nil {
-					ch.Connect(bro)
+					ch.Link(bro)
 				}
 			}
 			sendCfgToBrothers(c)
@@ -78,7 +85,7 @@ func HandleConfig(c *ShosetConn) error {
 		if dir == "out" {
 
 			if ch.ConnsByAddr.Get(cfg.Address) == nil {
-				ch.Connect(cfg.Address)
+				ch.Link(cfg.Address)
 			}
 		}
 	case "join":
@@ -104,7 +111,7 @@ func HandleConfig(c *ShosetConn) error {
 		newMember := cfg.GetBindAddress()
 		ch.Join(newMember)
 	}
-	return err
+	return nil
 }
 
 func sendCfgToBrothers(currentConn *ShosetConn) {

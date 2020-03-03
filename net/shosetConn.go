@@ -162,6 +162,7 @@ func (c *ShosetConn) runInConn() {
 	// receive messages
 	for {
 		err := c.receiveMsg()
+		time.Sleep(time.Millisecond * time.Duration(10))
 		if err != nil {
 			return
 		}
@@ -188,11 +189,22 @@ func (c *ShosetConn) receiveMsg() error {
 	}
 	msgType = strings.Trim(msgType, "\n")
 
-	// read message data and handle it
-	fhandle, ok := c.ch.Handle[msgType]
+	// read Message Value
+	fGet, ok := c.ch.Get[msgType]
 	if ok {
-		fhandle(c)
-	} else {
+		msgVal, err := fGet(c)
+		if err == nil {
+			// read message data and handle it
+			fHandle, ok := c.ch.Handle[msgType]
+			if ok {
+				go fHandle(c, msgVal)
+			}
+		} else {
+			c.ch.deleteConn(c.addr)
+			return errors.New("receiveMsg : can not read value of " + msgType)
+		}
+	}
+	if !ok {
 		c.ch.deleteConn(c.addr)
 		return errors.New("receiveMsg : non implemented type of message " + msgType)
 	}

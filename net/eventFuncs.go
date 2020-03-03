@@ -7,12 +7,18 @@ import (
 	"shoset/msg"
 )
 
-// HandleEvent :
-func HandleEvent(c *ShosetConn) error {
-	var evt msg.Event
+// GetEvent :
+func GetEvent(c *ShosetConn) (msg.Message, error) {
+	var evt msg.Config
 	err := c.ReadMessage(&evt)
+	return evt, err
+}
+
+// HandleEvent :
+func HandleEvent(c *ShosetConn, message msg.Message) error {
+	evt := message.(msg.Event)
 	c.GetCh().Queue["evt"].Push(evt, c.ShosetType, c.bindAddr)
-	return err
+	return nil
 }
 
 // SendEventConn :
