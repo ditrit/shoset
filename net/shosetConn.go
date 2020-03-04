@@ -92,7 +92,7 @@ func (c *ShosetConn) runJoinConn() {
 		conn, err := tls.Dial("tcp", c.addr, ch.tlsConfig)
 		defer conn.Close()
 		if err != nil {
-			time.Sleep(time.Millisecond * time.Duration(100))
+			time.Sleep(time.Second * time.Duration(5))
 		} else {
 			c.socket = conn
 			c.rb = msg.NewReader(c.socket)

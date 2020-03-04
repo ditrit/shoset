@@ -140,7 +140,7 @@ func (c *Shoset) Link(address string) (*ShosetConn, error) {
 	conn.socket = new(tls.Conn)
 	conn.rb = new(msg.Reader)
 	conn.wb = new(msg.Writer)
-	ipAddress, err := getIP(address)
+	ipAddress, err := GetIP(address)
 	if err != nil {
 		return nil, err
 	}
@@ -167,7 +167,7 @@ func (c *Shoset) Join(address string) (*ShosetConn, error) {
 	conn.socket = new(tls.Conn)
 	conn.rb = new(msg.Reader)
 	conn.wb = new(msg.Writer)
-	ipAddress, err := getIP(address)
+	ipAddress, err := GetIP(address)
 	if err != nil {
 		return nil, err
 	}
@@ -206,7 +206,7 @@ func (c *Shoset) Bind(address string) error {
 		fmt.Println("TLS configuration not OK (certificate not found / loaded)")
 		return errors.New("TLS configuration not OK (certificate not found / loaded)")
 	}
-	ipAddress, err := getIP(address)
+	ipAddress, err := GetIP(address)
 	if err != nil {
 		return err
 	}

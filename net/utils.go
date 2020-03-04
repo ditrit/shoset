@@ -7,7 +7,8 @@ import (
 	"strings"
 )
 
-func getIP(address string) (string, error) {
+// GetIP :
+func GetIP(address string) (string, error) {
 	parts := strings.Split(address, ":")
 	if len(parts) != 2 {
 		return "", errors.New("address '" + address + "should respect the format hots_name_or_ip:port")
