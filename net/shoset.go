@@ -71,7 +71,7 @@ func NewShoset(lName, ShosetType string) *Shoset {
 	c.Send = make(map[string]func(*Shoset, msg.Message))
 	c.Wait = make(map[string]func(*Shoset, *msg.Iterator, map[string]string, int) *msg.Message)
 
-	c.Queue["cfg"] = msg.NewQueue()
+	c.Queue["cfglink"] = msg.NewQueue()
 	c.Get["cfglink"] = GetConfigLink
 	c.Handle["cfglink"] = HandleConfigLink
 
