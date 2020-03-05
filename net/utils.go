@@ -2,6 +2,7 @@ package net
 
 import (
 	"errors"
+	"fmt"
 	"net"
 	"strconv"
 	"strings"
@@ -40,4 +41,38 @@ func getV4(hostIps []string) string {
 		}
 	}
 	return ""
+}
+
+// IP2ID :
+func IP2ID(ip string) (uint64, bool) {
+	parts := strings.Split(ip, ":")
+	if len(parts) == 2 {
+		nums := strings.Split(parts[0], ".")
+		if len(nums) == 4 {
+			idStr := fmt.Sprintf("%s%s%s%s%s", nums[0], nums[1], nums[2], nums[3], parts[1])
+			id, err := strconv.ParseUint(idStr, 10, 64)
+			if err == nil {
+				return id, true
+			} else {
+				return 0, false
+			}
+		} else {
+			return 0, false
+		}
+	} else {
+		return 0, false
+	}
+}
+
+// DeltaAddress return a new address with same host but with a new port (old one with an offset)
+func DeltaAddress(addr string, portDelta int) (string, bool) {
+	parts := strings.Split(addr, ":")
+	if len(parts) == 2 {
+		port, err := strconv.Atoi(parts[1])
+		if err == nil {
+			return fmt.Sprintf("%s:%d", parts[0], port+portDelta), true
+		}
+		return "", false
+	}
+	return "", false
 }
