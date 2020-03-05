@@ -19,6 +19,8 @@ type MessageHandlers interface {
 
 //Shoset :
 type Shoset struct {
+	Context 	map[string]interface{} //TOTO
+	
 	//	id          string
 	ConnsByAddr  *MapSafeConn    // map[string]*ShosetConn    ensemble des connexions
 	ConnsByName  *MapSafeMapConn // map[string]map[string]*ShosetConn   connexions par nom logique
@@ -54,6 +56,8 @@ var keyPath = "./certs/key.pem"
 func NewShoset(lName, ShosetType string) *Shoset {
 	// Creation
 	c := new(Shoset)
+
+	c.Context = make(map[string]interface{})
 
 	// Initialisation
 	c.lName = lName
