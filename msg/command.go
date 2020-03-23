@@ -5,6 +5,7 @@ type Command struct {
 	MessageBase
 	Target  string
 	Command string
+	Context map[string]interface{}
 }
 
 // NewCommand : Command constructor
@@ -14,6 +15,7 @@ func NewCommand(target string, command string, payload string) *Command {
 	c.InitMessageBase()
 
 	c.Target = target
+	c.Context = make(map[string]interface{})
 	c.Command = command
 	c.Payload = payload
 	return c
@@ -27,3 +29,6 @@ func (c Command) GetTarget() string { return c.Target }
 
 // GetCommand :
 func (c Command) GetCommand() string { return c.Command }
+
+// GetContext :
+func (c Command) GetContext() map[string]interface{} { return c.Context }
