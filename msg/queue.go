@@ -41,13 +41,27 @@ func (q *Queue) Init() {
 	q.iters = make(map[*Iterator]bool)
 }
 
+// Init :
+func (q *Queue) GetByUUID(uuid string) *Cell {
+	q.m.Lock()
+	defer q.m.Unlock()
+	ele := q.dict[uuid]
+	if ele != nil {
+		value := ele.Value.(Cell)
+		return &value
+	}
+	return nil
+}
+
 // Push : insert a new value in the queue except if the UUID is already present and remove after timeout expiration
-func (q *Queue) Push(m Message, RemoteShosetType, RemoteAddress string) {
+func (q *Queue) Push(m Message, RemoteShosetType, RemoteAddress string) bool {
 	fmt.Printf("Push a message!\n")
 
 	// Let's first initialize the Cell with all our data
 	var c Cell
 	c.key = m.GetUUID()
+	fmt.Println("key")
+	fmt.Println(c.key)
 	c.timeout = m.GetTimeout()
 	c.RemoteShosetType = RemoteShosetType
 	c.RemoteAddress = RemoteAddress
@@ -57,7 +71,7 @@ func (q *Queue) Push(m Message, RemoteShosetType, RemoteAddress string) {
 	defer q.m.Unlock()
 	ele := q.dict[c.key]
 	if ele != nil {
-		return
+		return false
 	}
 
 	ele = q.qlist.PushFront(c)
@@ -66,7 +80,7 @@ func (q *Queue) Push(m Message, RemoteShosetType, RemoteAddress string) {
 		time.Sleep(time.Duration(c.timeout) * time.Millisecond)
 		q.remove(c.key)
 	}()
-	return
+	return true
 }
 
 // First :
