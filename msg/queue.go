@@ -42,14 +42,16 @@ func (q *Queue) Init() {
 }
 
 // Init :
-func (q *Queue) GetByUUID(uuid string) *Cell {
-	q.m.Lock()
-	defer q.m.Unlock()
-	ele := q.dict[uuid]
-	if ele != nil {
-		value := ele.Value.(Cell)
-		return &value
+func (q *Queue) GetByUUID(uuid string) *Event {
+	//q.m.Lock()
+	//defer q.m.Unlock()
+	for _, val := range q.dict {
+		value := val.Value.(Cell).m.(Event)
+		if uuid == value.GetReferencesUUID() {
+			return &value
+		}
 	}
+
 	return nil
 }
 

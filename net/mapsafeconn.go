@@ -23,6 +23,20 @@ func (m *MapSafeConn) GetM() map[string]*ShosetConn {
 }
 
 // Get : Get a value from a MapSafeConn
+func (m *MapSafeConn) GetByType(shosetType string) []*ShosetConn {
+
+	var result []*ShosetConn
+	m.Lock()
+	for _, val := range m.m {
+		if val.ShosetType == shosetType {
+			result = append(result, val)
+		}
+	}
+	m.Unlock()
+	return result
+}
+
+// Get : Get a value from a MapSafeConn
 func (m *MapSafeConn) Get(key string) *ShosetConn {
 	m.Lock()
 	defer m.Unlock()
