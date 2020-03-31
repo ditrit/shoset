@@ -42,7 +42,7 @@ func (q *Queue) Init() {
 }
 
 // Init :
-func (q *Queue) GetByUUID(uuid string) *Event {
+func (q *Queue) GetByReferencesUUID(uuid string) *Event {
 	//q.m.Lock()
 	//defer q.m.Unlock()
 	for _, val := range q.dict {
