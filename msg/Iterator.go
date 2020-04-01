@@ -70,3 +70,8 @@ func (i *Iterator) Get() *Cell {
 
 	//return message
 }
+
+// PrintQueue : print la queue
+func (i *Iterator) PrintQueue() {
+	i.queue.Print()
+}
