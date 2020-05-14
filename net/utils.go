@@ -76,3 +76,16 @@ func DeltaAddress(addr string, portDelta int) (string, bool) {
 	}
 	return "", false
 }
+
+// GetByType : Get shoset by type.
+func GetByType(m *MapSafeConn, shosetType string) []*ShosetConn {
+	var result []*ShosetConn
+	//m.Lock()
+	for _, val := range m.GetM() {
+		if val.ShosetType == shosetType {
+			result = append(result, val)
+		}
+	}
+	//m.Unlock()
+	return result
+}
