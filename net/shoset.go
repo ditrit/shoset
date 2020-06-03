@@ -19,8 +19,8 @@ type MessageHandlers interface {
 
 //Shoset :
 type Shoset struct {
-	Context 	map[string]interface{} //TOTO
-	
+	Context map[string]interface{} //TOTO
+
 	//	id          string
 	ConnsByAddr  *MapSafeConn    // map[string]*ShosetConn    ensemble des connexions
 	ConnsByName  *MapSafeMapConn // map[string]map[string]*ShosetConn   connexions par nom logique
@@ -94,6 +94,12 @@ func NewShoset(lName, ShosetType string) *Shoset {
 	c.Handle["cmd"] = HandleCommand
 	c.Send["cmd"] = SendCommand
 	c.Wait["cmd"] = WaitCommand
+
+	c.Queue["config"] = msg.NewQueue()
+	c.Get["config"] = GetConfig
+	c.Handle["config"] = HandleConfig
+	c.Send["config"] = SendConfig
+	c.Wait["config"] = WaitConfig
 
 	// Configuration TLS
 	cert, err := tls.LoadX509KeyPair(certPath, keyPath)
