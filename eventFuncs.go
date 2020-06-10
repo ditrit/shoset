@@ -1,10 +1,10 @@
-package net
+package shoset
 
 import (
 	"fmt"
 	"time"
 
-	"shoset/msg"
+	"github.com/mathieucaroff/shoset/msg"
 )
 
 // GetEvent :

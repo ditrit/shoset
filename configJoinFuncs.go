@@ -1,7 +1,7 @@
-package net
+package shoset
 
 import (
-	"shoset/msg"
+	"github.com/mathieucaroff/shoset/msg"
 )
 
 // GetConfigJoin :

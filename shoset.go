@@ -1,4 +1,4 @@
-package net
+package shoset
 
 import (
 	"crypto/tls"
@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"net"
 
-	"shoset/msg"
+	"github.com/mathieucaroff/shoset/msg"
 )
 
 // MessageHandlers interface
