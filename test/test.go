@@ -264,6 +264,37 @@ func shosetTestEtoile() {
 	<-done
 }
 
+func shosetTestCl1() {
+	done := make(chan bool)
+
+	cl1 := net.NewShoset("cl", "cl")
+	cl1.Bind("localhost:8001")
+
+	for {
+		time.Sleep(time.Second * time.Duration(2))
+		fmt.Printf("cl1 : %s", cl1.String())
+		time.Sleep(time.Second * time.Duration(2))
+	}
+
+	<-done
+}
+
+func shosetTestCl2() {
+	done := make(chan bool)
+
+	cl2 := net.NewShoset("cl", "cl")
+	cl2.Bind("localhost:8002")
+	cl2.Join("localhost:8001")
+
+	for {
+		time.Sleep(time.Second * time.Duration(2))
+		fmt.Printf("cl2 : %s", cl2.String())
+		time.Sleep(time.Second * time.Duration(2))
+	}
+
+	<-done
+}
+
 func testQueue() {
 	done := make(chan bool)
 	/*	// First let's make 2 sockets talk each other
