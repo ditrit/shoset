@@ -76,7 +76,11 @@ func (c *ShosetConn) runOutConn(addr string) {
 				if c.name == "" { // remote logical Name
 					c.SendMessage(*myConfig)
 				}
-				c.receiveMsg()
+				err2 := c.receiveMsg()
+				if err2 != nil {
+					fmt.Println(err2.Error())
+					break
+				}
 			}
 		}
 	}
@@ -87,6 +91,7 @@ func (c *ShosetConn) runJoinConn() {
 	ch := c.GetCh()
 	joinConfig := msg.NewCfgJoin(ch.GetBindAddr())
 	for {
+		fmt.Printf("global *for* starts\n")
 		ch.ConnsJoin.Set(c.addr, c)
 		ch.NameBrothers.Set(c.addr, true)
 		conn, err := tls.Dial("tcp", c.addr, ch.tlsConfig)
@@ -97,13 +102,19 @@ func (c *ShosetConn) runJoinConn() {
 			c.socket = conn
 			c.rb = msg.NewReader(c.socket)
 			c.wb = msg.NewWriter(c.socket)
+			fmt.Printf("no error\n")
 
 			// receive messages
 			for {
+				fmt.Printf("small *for* starts\n")
 				if c.name == "" { // remote logical Name
 					c.SendMessage(*joinConfig)
 				}
-				c.receiveMsg()
+				err2 := c.receiveMsg()
+				if err2 != nil {
+					fmt.Println(err2.Error())
+					break
+				}
 			}
 		}
 	}
