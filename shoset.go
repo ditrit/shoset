@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/mathieucaroff/shoset/msg"
+	"github.com/ditrit/shoset/msg"
 )
 
 // MessageHandlers interface

@@ -10,7 +10,7 @@ import (
 
 	//	uuid "github.com/kjk/betterguid"
 
-	"github.com/mathieucaroff/shoset/msg"
+	"github.com/ditrit/shoset/msg"
 )
 
 // ShosetConn : client connection

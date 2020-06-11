@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/mathieucaroff/shoset"
+	"github.com/ditrit/shoset"
 )
 
 func shosetClient(logicalName, ShosetType, address string) {

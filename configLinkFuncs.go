@@ -1,7 +1,7 @@
 package shoset
 
 import (
-	"github.com/mathieucaroff/shoset/msg"
+	"github.com/ditrit/shoset/msg"
 )
 
 // GetConfigLink :

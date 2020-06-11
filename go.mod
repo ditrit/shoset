@@ -1,4 +1,4 @@
-module github.com/mathieucaroff/shoset
+module github.com/ditrit/shoset
 
 go 1.14
 
