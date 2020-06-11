@@ -1,4 +1,4 @@
-package net
+package shoset
 
 import (
 	"crypto/tls"
@@ -10,7 +10,7 @@ import (
 
 	//	uuid "github.com/kjk/betterguid"
 
-	"shoset/msg"
+	"github.com/ditrit/shoset/msg"
 )
 
 // ShosetConn : client connection

@@ -1,4 +1,4 @@
-package net_test
+package shoset_test
 
 import (
 	"fmt"

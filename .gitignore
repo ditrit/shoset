@@ -4,5 +4,9 @@
 !**/*.dot
 !**/*.svg
 !**/
-!.gitignore
 
+!/.gitignore
+!/go.mod
+!/go.sum
+!/LICENSE
+!/README.md
