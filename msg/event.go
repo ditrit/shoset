@@ -3,9 +3,9 @@ package msg
 // Event : Gandalf event internal
 type Event struct {
 	MessageBase
-	Topic          string
-	Event          string
-	ReferencesUUID string
+	Topic         string
+	Event         string
+	ReferenceUUID string
 }
 
 // NewEvent : Event constructor
@@ -16,8 +16,8 @@ func NewEvent(params map[string]string) *Event {
 	e.Topic = params["topic"]
 	e.Event = params["event"]
 	e.Payload = params["payload"]
-	if val, ok := params["referencesUUID"]; ok {
-		e.ReferencesUUID = val
+	if val, ok := params["referenceUUID"]; ok {
+		e.ReferenceUUID = val
 	}
 	return e
 }
@@ -42,5 +42,5 @@ func (e Event) GetTopic() string { return e.Topic }
 // GetEvent :
 func (e Event) GetEvent() string { return e.Event }
 
-// GetReferencesUUID :
-func (e Event) GetReferencesUUID() string { return e.ReferencesUUID }
+// GetReferenceUUID :
+func (e Event) GetReferenceUUID() string { return e.ReferenceUUID }

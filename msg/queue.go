@@ -47,7 +47,7 @@ func (q *Queue) GetByReferencesUUID(uuid string) *Event {
 	//defer q.m.Unlock()
 	for _, val := range q.dict {
 		value := val.Value.(Cell).m.(Event)
-		if uuid == value.GetReferencesUUID() {
+		if uuid == value.GetReferenceUUID() {
 			return &value
 		}
 	}
