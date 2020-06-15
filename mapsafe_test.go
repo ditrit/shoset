@@ -2,15 +2,16 @@ package shoset_test
 
 import (
 	"fmt"
-	"shoset/net"
 	"strconv"
 	"testing"
 	"time"
+
+	"github.com/ditrit/shoset"
 )
 
 // TestMapSafeCRUD : test MapSafe crud functions
 func TestMapSafeCRUD(t *testing.T) {
-	m := net.NewMapSafe()
+	m := shoset.NewMapSafe()
 	m.Set("a", 23).Set("b", 43).Set("c", 11)
 	fmt.Printf("Initial state : ")
 	m.Iterate(
@@ -36,7 +37,7 @@ func TestMapSafeCRUD(t *testing.T) {
 
 // TestFold : test MapSafe folding using closure
 func TestFold(t *testing.T) {
-	m := net.NewMapSafe()
+	m := shoset.NewMapSafe()
 	m.Set("a", 23).Set("b", 43).Set("c", 11)
 	str := ""
 	m.Iterate(
@@ -49,7 +50,7 @@ func TestFold(t *testing.T) {
 
 // TestConcurrency
 func TestConcurrency(t *testing.T) {
-	m := net.NewMapSafe()
+	m := shoset.NewMapSafe()
 	for i := 0; i < 10; i++ {
 		m.Set(strconv.Itoa(i), i)
 	}
