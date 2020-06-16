@@ -53,15 +53,12 @@ func IP2ID(ip string) (uint64, bool) {
 			id, err := strconv.ParseUint(idStr, 10, 64)
 			if err == nil {
 				return id, true
-			} else {
-				return 0, false
 			}
-		} else {
 			return 0, false
 		}
-	} else {
 		return 0, false
 	}
+	return 0, false
 }
 
 // DeltaAddress return a new address with same host but with a new port (old one with an offset)

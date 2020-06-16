@@ -61,7 +61,7 @@ func (c *ShosetConn) runOutConn(addr string) {
 
 	myConfig := NewHandshake(c.GetCh())
 	for {
-		conn, err := tls.Dial("tcp", c.addr, c.ch.tlsConfig)
+		conn, err := tls.Dial("tcp", c.addr, c.ch.tlsClientConfig)
 		defer conn.Close()
 		if err != nil {
 			time.Sleep(time.Millisecond * time.Duration(100))
@@ -89,7 +89,7 @@ func (c *ShosetConn) runJoinConn() {
 	for {
 		ch.ConnsJoin.Set(c.addr, c)
 		ch.NameBrothers.Set(c.addr, true)
-		conn, err := tls.Dial("tcp", c.addr, ch.tlsConfig)
+		conn, err := tls.Dial("tcp", c.addr, ch.tlsClientConfig)
 		defer conn.Close()
 		if err != nil {
 			time.Sleep(time.Second * time.Duration(5))

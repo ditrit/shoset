@@ -2,8 +2,10 @@ package shoset
 
 import (
 	"crypto/tls"
+	"crypto/x509"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"net"
 
 	"github.com/ditrit/shoset/msg"
@@ -42,8 +44,9 @@ type Shoset struct {
 	Wait   map[string]func(*Shoset, *msg.Iterator, map[string]string, int) *msg.Message
 
 	// configuration TLS
-	tlsConfig   *tls.Config
-	tlsServerOK bool
+	tlsServerConfig *tls.Config
+	tlsClientConfig *tls.Config
+	tlsServerOK     bool
 
 	// synchronisation des goroutines
 	Done chan bool
@@ -51,6 +54,7 @@ type Shoset struct {
 
 var certPath = "./certs/cert.pem"
 var keyPath = "./certs/key.pem"
+var caPath = "./certs/ca.pem"
 
 // NewShoset : constructor
 func NewShoset(lName, ShosetType string) *Shoset {
@@ -104,14 +108,23 @@ func NewShoset(lName, ShosetType string) *Shoset {
 
 	// Configuration TLS
 	cert, err := tls.LoadX509KeyPair(certPath, keyPath)
-	if err != nil { // only client in insecure mode
+	caPEM, err := ioutil.ReadFile(caPath)
+	caCertPool := x509.NewCertPool()
+	ok := caCertPool.AppendCertsFromPEM(caPEM)
+	if err != nil || !ok { // only client in insecure mode
 		fmt.Println("Unable to Load certificate")
-		c.tlsConfig = &tls.Config{InsecureSkipVerify: true}
+		c.tlsServerConfig = &tls.Config{InsecureSkipVerify: true}
+		c.tlsClientConfig = &tls.Config{}
 		c.tlsServerOK = false
 	} else {
-		c.tlsConfig = &tls.Config{
-			Certificates:       []tls.Certificate{cert},
-			InsecureSkipVerify: true,
+		c.tlsServerConfig = &tls.Config{
+			Certificates: []tls.Certificate{cert},
+			ClientCAs:    caCertPool,
+			ClientAuth:   tls.RequireAndVerifyClientCert,
+		}
+		c.tlsClientConfig = &tls.Config{
+			Certificates: []tls.Certificate{cert},
+			RootCAs:      caCertPool,
 		}
 		c.tlsServerOK = true
 	}
@@ -242,7 +255,7 @@ func (c *Shoset) handleBind() error {
 			fmt.Printf("serverShoset accept error: %s", err)
 			break
 		}
-		tlsConn := tls.Server(unencConn, c.tlsConfig)
+		tlsConn := tls.Server(unencConn, c.tlsServerConfig)
 		conn, _ := c.inboudConn(tlsConn)
 		//fmt.Printf("Shoset : accepted from %s", conn.addr)
 		go conn.runInConn()
