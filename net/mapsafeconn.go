@@ -15,14 +15,14 @@ func NewMapSafeConn() *MapSafeConn {
 	return m
 }
 
-// Get : Get Map
+// GetM : Get Map
 func (m *MapSafeConn) GetM() map[string]*ShosetConn {
 	m.Lock()
 	defer m.Unlock()
 	return m.m
 }
 
-// Get : Get a value from a MapSafeConn
+// GetByType : Get a value from a MapSafeConn
 func (m *MapSafeConn) GetByType(shosetType string) []*ShosetConn {
 
 	var result []*ShosetConn
