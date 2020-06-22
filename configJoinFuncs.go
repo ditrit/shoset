@@ -26,9 +26,9 @@ func HandleConfigJoin(c *ShosetConn, message msg.Message) error {
 		thisOne := c.bindAddr
 		cfgNewMember := msg.NewCfgMember(newMember)
 		ch.ConnsJoin.Iterate(
-			func(key string, val *ShosetConn) {
-				if key != newMember && key != thisOne {
-					val.SendMessage(cfgNewMember)
+			func(addr string, conn *ShosetConn) {
+				if addr != newMember && addr != thisOne {
+					conn.SendMessage(cfgNewMember)
 				}
 			},
 		)

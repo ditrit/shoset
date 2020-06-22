@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"time"
 
 	"github.com/ditrit/shoset/msg"
 )
@@ -26,6 +27,7 @@ type Shoset struct {
 	ConnsByName  *MapSafeMapConn // map[string]map[string]*ShosetConn   connexions par nom logique
 	ConnsByType  *MapSafeMapConn // map[string]map[string]*ShosetConn   connexions par type
 	ConnsJoin    *MapSafeConn    // map[string]*ShosetConn    connexions nécessaires au join (non utilisées en dehors du join)
+	ConnsBye     *MapSafeConn    // map[string]*ShosetConn    utilisée uniquement comme liste temporaire des connections pour Bye
 	Brothers     *MapSafeBool    // map[string]bool  "freres" au sens large (ex: toutes les instances de connecteur reliées à un même aggregateur)
 	NameBrothers *MapSafeBool    // map[string]bool  "freres" ayant un même nom logique (ex: instances d'un même connecteur)
 
@@ -55,11 +57,12 @@ var keyPath = "./certs/key.pem"
 // NewShoset : constructor
 func NewShoset(lName, ShosetType string) *Shoset {
 	// Creation
-	c := new(Shoset)
+	sh := new(Shoset)
 
-	c.Context = make(map[string]interface{})
+	sh.Context = make(map[string]interface{})
 
 	// Initialisation
+<<<<<<< HEAD:shoset.go
 	c.lName = lName
 	c.ShosetType = ShosetType
 	c.ConnsByAddr = NewMapSafeConn()
@@ -101,52 +104,99 @@ func NewShoset(lName, ShosetType string) *Shoset {
 	c.Handle["config"] = HandleConfig
 	c.Send["config"] = SendConfig
 	c.Wait["config"] = WaitConfig
+=======
+	sh.lName = lName
+	sh.ShosetType = ShosetType
+	sh.ConnsByAddr = NewMapSafeConn()
+	sh.ConnsByName = NewMapSafeMapConn()
+	sh.ConnsByType = NewMapSafeMapConn()
+	sh.ConnsJoin = NewMapSafeConn()
+	sh.ConnsBye = NewMapSafeConn()
+	sh.Brothers = NewMapSafeBool()
+	sh.NameBrothers = NewMapSafeBool()
+
+	sh.Queue = make(map[string]*msg.Queue)
+	sh.Get = make(map[string]func(*ShosetConn) (msg.Message, error))
+	sh.Handle = make(map[string]func(*ShosetConn, msg.Message) error)
+	sh.Send = make(map[string]func(*Shoset, msg.Message))
+	sh.Wait = make(map[string]func(*Shoset, *msg.Iterator, map[string]string, int) *msg.Message)
+
+	sh.Queue["cfglink"] = msg.NewQueue()
+	sh.Get["cfglink"] = GetConfigLink
+	sh.Handle["cfglink"] = HandleConfigLink
+
+	sh.Queue["cfgjoin"] = msg.NewQueue()
+	sh.Get["cfgjoin"] = GetConfigJoin
+	sh.Handle["cfgjoin"] = HandleConfigJoin
+
+	sh.Queue["cfgbye"] = msg.NewQueue()
+	sh.Get["cfgbye"] = GetConfigBye
+	sh.Handle["cfgbye"] = HandleConfigBye
+
+	sh.Queue["evt"] = msg.NewQueue()
+	sh.Get["evt"] = GetEvent
+	sh.Handle["evt"] = HandleEvent
+	sh.Send["evt"] = SendEvent
+	sh.Wait["evt"] = WaitEvent
+
+	sh.Queue["cmd"] = msg.NewQueue()
+	sh.Get["cmd"] = GetCommand
+	sh.Handle["cmd"] = HandleCommand
+	sh.Send["cmd"] = SendCommand
+	sh.Wait["cmd"] = WaitCommand
+
+	sh.Queue["config"] = msg.NewQueue()
+	sh.Get["config"] = GetConfig
+	sh.Handle["config"] = HandleConfig
+	sh.Send["config"] = SendConfig
+	sh.Wait["config"] = WaitConfig
+>>>>>>> safe shutdown:net/shoset.go
 
 	// Configuration TLS
 	cert, err := tls.LoadX509KeyPair(certPath, keyPath)
 	if err != nil { // only client in insecure mode
 		fmt.Println("Unable to Load certificate")
-		c.tlsConfig = &tls.Config{InsecureSkipVerify: true}
-		c.tlsServerOK = false
+		sh.tlsConfig = &tls.Config{InsecureSkipVerify: true}
+		sh.tlsServerOK = false
 	} else {
-		c.tlsConfig = &tls.Config{
+		sh.tlsConfig = &tls.Config{
 			Certificates:       []tls.Certificate{cert},
 			InsecureSkipVerify: true,
 		}
-		c.tlsServerOK = true
+		sh.tlsServerOK = true
 	}
 
-	return c
+	return sh
 }
 
 // GetBindAddr :
-func (c *Shoset) GetBindAddr() string {
-	return c.bindAddr
+func (sh *Shoset) GetBindAddr() string {
+	return sh.bindAddr
 }
 
 // GetName :
-func (c *Shoset) GetName() string {
-	return c.lName
+func (sh *Shoset) GetName() string {
+	return sh.lName
 }
 
 // GetShosetType :
-func (c *Shoset) GetShosetType() string { return c.ShosetType }
+func (sh *Shoset) GetShosetType() string { return sh.ShosetType }
 
 // String :
-func (c *Shoset) String() string {
-	descr := fmt.Sprintf("Shoset { lName: %s, bindAddr: %s, type: %s, brothers %#v, nameBrothers %#v, joinConns %#v\n", c.lName, c.bindAddr, c.ShosetType, c.Brothers, c.NameBrothers, c.ConnsJoin)
-	c.ConnsByAddr.Iterate(
-		func(key string, val *ShosetConn) {
-			descr = fmt.Sprintf("%s - [%s] %s\n", descr, key, val.String())
+func (sh *Shoset) String() string {
+	descr := fmt.Sprintf("Shoset { lName: %s, bindAddr: %s, type: %s, brothers %#v, nameBrothers %#v, joinConns %#v\n", sh.lName, sh.bindAddr, sh.ShosetType, sh.Brothers, sh.NameBrothers, sh.ConnsJoin)
+	sh.ConnsByAddr.Iterate(
+		func(addr string, conn *ShosetConn) {
+			descr = fmt.Sprintf("%s - [%s] %s\n", descr, addr, conn.String())
 		})
 	descr += "%s}\n"
 	return descr
 }
 
 //Link : Link to another Shoset
-func (c *Shoset) Link(address string) (*ShosetConn, error) {
+func (sh *Shoset) Link(address string) (*ShosetConn, error) {
 	conn := new(ShosetConn)
-	conn.ch = c
+	conn.ch = sh
 	conn.dir = "out"
 	conn.socket = new(tls.Conn)
 	conn.rb = new(msg.Reader)
@@ -162,18 +212,18 @@ func (c *Shoset) Link(address string) (*ShosetConn, error) {
 }
 
 //Join : Join to group of Shosets and duplicate in and out connexions
-func (c *Shoset) Join(address string) (*ShosetConn, error) {
+func (sh *Shoset) Join(address string) (*ShosetConn, error) {
 
-	exists := c.ConnsJoin.Get(address)
+	exists := sh.ConnsJoin.Get(address)
 	if exists != nil {
 		return exists, nil
 	}
-	if address == c.bindAddr {
+	if address == sh.bindAddr {
 		return nil, nil
 	}
 
 	conn := new(ShosetConn)
-	conn.ch = c
+	conn.ch = sh
 	conn.dir = "out"
 	conn.socket = new(tls.Conn)
 	conn.rb = new(msg.Reader)
@@ -189,31 +239,67 @@ func (c *Shoset) Join(address string) (*ShosetConn, error) {
 	return conn, nil
 }
 
-func (c *Shoset) deleteConn(connAddr string) {
-	conn := c.ConnsByAddr.Get(connAddr)
+//SafeShutdown : safely disconnects a connection
+func (sh *Shoset) SafeShutdown() error {
+
+	// add all the connections to the temporary list of connections
+	// and remove said connection from the previous list
+	for connAddr, conn := range sh.ConnsByAddr.m {
+		sh.ConnsBye.m[connAddr] = conn
+		sh.deleteConn(connAddr)
+	}
+	for connAddr, conn := range sh.ConnsJoin.m {
+		sh.ConnsBye.m[connAddr] = conn
+		sh.ConnsJoin.Delete(connAddr)
+	}
+
+	// use the temp list to send out one Bye msg to each connection
+	cfgBye := msg.NewCfgBye(sh.bindAddr)
+	for addr, conn := range sh.ConnsBye.m {
+		if addr != sh.bindAddr {
+			errSend := conn.SendMessage(cfgBye)
+			if errSend != nil {
+				return errSend
+			}
+			go conn.runInConn()
+		}
+	}
+	// wait for acknowledgements
+	for sh.ConnsBye.m != nil {
+		time.Sleep(time.Second * time.Duration(5))
+	}
+
+	// then shutdown
+	//sh.Close()
+
+	return nil
+}
+
+func (sh *Shoset) deleteConn(connAddr string) {
+	conn := sh.ConnsByAddr.Get(connAddr)
 	if conn != nil {
-		c.ConnsByName.Delete(conn.name, connAddr)
-		c.ConnsByType.Delete(conn.ShosetType, connAddr)
-		c.ConnsByAddr.Delete(connAddr)
+		sh.ConnsByName.Delete(conn.name, connAddr)
+		sh.ConnsByType.Delete(conn.ShosetType, connAddr)
+		sh.ConnsByAddr.Delete(connAddr)
 	}
 }
 
 // SetConn :
-func (c *Shoset) SetConn(connAddr, connType string, conn *ShosetConn) {
+func (sh *Shoset) SetConn(connAddr, connType string, conn *ShosetConn) {
 	if conn != nil {
-		c.ConnsByAddr.Set(connAddr, conn)
-		c.ConnsByType.Set(connType, conn.addr, conn)
-		c.ConnsByName.Set(conn.name, conn.addr, conn)
+		sh.ConnsByAddr.Set(connAddr, conn)
+		sh.ConnsByType.Set(connType, conn.addr, conn)
+		sh.ConnsByName.Set(conn.name, conn.addr, conn)
 	}
 }
 
 //Bind : Connect to another Shoset
-func (c *Shoset) Bind(address string) error {
-	if c.bindAddr != "" {
+func (sh *Shoset) Bind(address string) error {
+	if sh.bindAddr != "" {
 		fmt.Println("Shoset already bound")
 		return errors.New("Shoset already bound")
 	}
-	if c.tlsServerOK == false {
+	if sh.tlsServerOK == false {
 		fmt.Println("TLS configuration not OK (certificate not found / loaded)")
 		return errors.New("TLS configuration not OK (certificate not found / loaded)")
 	}
@@ -221,15 +307,15 @@ func (c *Shoset) Bind(address string) error {
 	if err != nil {
 		return err
 	}
-	c.bindAddr = ipAddress
+	sh.bindAddr = ipAddress
 	//fmt.Printf("Bind : handleBind adress %s", ipAddress)
-	go c.handleBind()
+	go sh.handleBind()
 	return nil
 }
 
 // runBindTo : handler for the socket
-func (c *Shoset) handleBind() error {
-	listener, err := net.Listen("tcp", c.bindAddr)
+func (sh *Shoset) handleBind() error {
+	listener, err := net.Listen("tcp", sh.bindAddr)
 	if err != nil {
 		fmt.Println("Failed to bind:", err.Error())
 		return err
@@ -242,8 +328,8 @@ func (c *Shoset) handleBind() error {
 			fmt.Printf("serverShoset accept error: %s", err)
 			break
 		}
-		tlsConn := tls.Server(unencConn, c.tlsConfig)
-		conn, _ := c.inboudConn(tlsConn)
+		tlsConn := tls.Server(unencConn, sh.tlsConfig)
+		conn, _ := sh.inboudConn(tlsConn)
 		//fmt.Printf("Shoset : accepted from %s", conn.addr)
 		go conn.runInConn()
 	}
@@ -251,13 +337,13 @@ func (c *Shoset) handleBind() error {
 }
 
 //inboudConn : Add a new connection from a client
-func (c *Shoset) inboudConn(tlsConn *tls.Conn) (*ShosetConn, error) {
+func (sh *Shoset) inboudConn(tlsConn *tls.Conn) (*ShosetConn, error) {
 	conn := new(ShosetConn)
 	conn.socket = tlsConn
 	conn.dir = "in"
-	conn.ch = c
+	conn.ch = sh
 	conn.addr = tlsConn.RemoteAddr().String()
-	//c.SetConn(conn.addr, conn)
+	//sh.SetConn(conn.addr, conn)
 	conn.rb = new(msg.Reader)
 	conn.wb = new(msg.Writer)
 	return conn, nil

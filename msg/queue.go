@@ -41,7 +41,7 @@ func (q *Queue) Init() {
 	q.iters = make(map[*Iterator]bool)
 }
 
-// Init :
+// GetByReferencesUUID :
 func (q *Queue) GetByReferencesUUID(uuid string) *Event {
 	//q.m.Lock()
 	//defer q.m.Unlock()

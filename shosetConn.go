@@ -74,11 +74,15 @@ func (c *ShosetConn) runOutConn(addr string) {
 			// receive messages
 			for {
 				if c.name == "" { // remote logical Name
-					c.SendMessage(*myConfig)
+					errSend := c.SendMessage(*myConfig)
+					if errSend != nil {
+						fmt.Println(errSend.Error())
+						break
+					}
 				}
-				err2 := c.receiveMsg()
-				if err2 != nil {
-					fmt.Println(err2.Error())
+				errRec := c.receiveMsg()
+				if errRec != nil {
+					fmt.Println(errRec.Error())
 					break
 				}
 			}
@@ -94,25 +98,33 @@ func (c *ShosetConn) runJoinConn() {
 		fmt.Printf("global *for* starts\n")
 		ch.ConnsJoin.Set(c.addr, c)
 		ch.NameBrothers.Set(c.addr, true)
-		conn, err := tls.Dial("tcp", c.addr, ch.tlsConfig)
+		conn, errConn := tls.Dial("tcp", c.addr, ch.tlsConfig)
 		defer conn.Close()
-		if err != nil {
+		if errConn != nil {
 			time.Sleep(time.Second * time.Duration(5))
 		} else {
 			c.socket = conn
 			c.rb = msg.NewReader(c.socket)
 			c.wb = msg.NewWriter(c.socket)
-			fmt.Printf("no error\n")
-
+			c.name = ""
+			fmt.Printf("connection successful\n")
 			// receive messages
 			for {
 				fmt.Printf("small *for* starts\n")
 				if c.name == "" { // remote logical Name
-					c.SendMessage(*joinConfig)
+					// send the join message
+					errSend := c.SendMessage(*joinConfig)
+					// error management
+					if errSend != nil {
+						fmt.Println(errSend.Error())
+						break
+					}
 				}
-				err2 := c.receiveMsg()
-				if err2 != nil {
-					fmt.Println(err2.Error())
+				// receive the message
+				errRec := c.receiveMsg()
+				// error management
+				if errRec != nil {
+					fmt.Println(errRec.Error())
 					break
 				}
 			}
@@ -181,10 +193,10 @@ func (c *ShosetConn) runInConn() {
 }
 
 // SendMessage :
-func (c *ShosetConn) SendMessage(msg msg.Message) {
+func (c *ShosetConn) SendMessage(msg msg.Message) error {
 	//fmt.Printf("     Sending message %s(%s) -> %s(%s) %#v.\n", c.GetCh().GetName(), c.GetCh().GetBindAddr(), c.GetName(), c.addr, msg)
 	c.WriteString(msg.GetMsgType())
-	c.WriteMessage(msg)
+	return c.WriteMessage(msg)
 }
 
 func (c *ShosetConn) receiveMsg() error {
