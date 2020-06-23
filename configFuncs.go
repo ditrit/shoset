@@ -7,6 +7,7 @@ import (
 	"github.com/ditrit/shoset/msg"
 )
 
+//TODO MOVE TO GANDALF
 // GetConfig :
 func GetConfig(c *ShosetConn) (msg.Message, error) {
 	var conf msg.Config

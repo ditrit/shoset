@@ -95,6 +95,7 @@ func NewShoset(lName, ShosetType string) *Shoset {
 	c.Send["cmd"] = SendCommand
 	c.Wait["cmd"] = WaitCommand
 
+	//TODO MOVE TO GANDALF
 	c.Queue["config"] = msg.NewQueue()
 	c.Get["config"] = GetConfig
 	c.Handle["config"] = HandleConfig

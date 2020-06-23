@@ -21,16 +21,15 @@ type Message interface {
 
 // MessageBase base struct for messages
 type MessageBase struct {
-	UUID        string
-	Tenant      string
-	Token       string
-	Timeout     int64
-	Timestamp   int64
-	Payload     string
-	RoutingPath map[string]string
-	Next        string
-	Major       int8
-	Minor       int8
+	UUID      string
+	Tenant    string
+	Token     string
+	Timeout   int64
+	Timestamp int64
+	Payload   string
+	Next      string
+	Major     int8
+	Minor     int8
 }
 
 // InitMessageBase constructor

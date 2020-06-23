@@ -1,5 +1,6 @@
 package msg
 
+//TODO MOVE TO GANDALF
 // Config : gandalf configs
 type Config struct {
 	MessageBase
