@@ -56,10 +56,25 @@ func (c *ShosetConn) WriteMessage(data interface{}) error {
 	return c.wb.WriteMessage(data)
 }
 
+// runInbound : handler for the connection
+func (c *ShosetConn) runInConn() {
+	c.rb = msg.NewReader(c.socket)
+	c.wb = msg.NewWriter(c.socket)
+	defer c.socket.Close()
+	// receive messages
+	for {
+		err := c.receiveMsg()
+		time.Sleep(time.Millisecond * time.Duration(10))
+		if err != nil {
+			return
+		}
+	}
+}
+
 // RunOutConn : handler for the socket
 func (c *ShosetConn) runOutConn(addr string) {
-
-	myConfig := NewHandshake(c.GetCh())
+	ch := c.GetCh()
+	myConfig := NewHandshake(ch)
 	for {
 		conn, err := tls.Dial("tcp", c.addr, c.ch.tlsConfig)
 		defer conn.Close()
@@ -69,17 +84,19 @@ func (c *ShosetConn) runOutConn(addr string) {
 			c.socket = conn
 			c.rb = msg.NewReader(c.socket)
 			c.wb = msg.NewWriter(c.socket)
+			c.name = ch.GetName()
+			c.ShosetType = ch.GetShosetType()
+
 			c.ch.SetConn(addr, c.ShosetType, c)
+			fmt.Printf("connection successful\n")
+
+			errSend := c.SendMessage(*myConfig)
+			if errSend != nil {
+				fmt.Println(errSend.Error())
+			}
 
 			// receive messages
 			for {
-				if c.name == "" { // remote logical Name
-					errSend := c.SendMessage(*myConfig)
-					if errSend != nil {
-						fmt.Println(errSend.Error())
-						break
-					}
-				}
 				errRec := c.receiveMsg()
 				if errRec != nil {
 					fmt.Println(errRec.Error())
@@ -95,7 +112,7 @@ func (c *ShosetConn) runJoinConn() {
 	ch := c.GetCh()
 	joinConfig := msg.NewCfgJoin(ch.GetBindAddr())
 	for {
-		fmt.Printf("global *for* starts\n")
+		fmt.Printf("runJoinConn start connection\n")
 		ch.ConnsJoin.Set(c.addr, c)
 		ch.NameBrothers.Set(c.addr, true)
 		conn, errConn := tls.Dial("tcp", c.addr, ch.tlsConfig)
@@ -110,19 +127,15 @@ func (c *ShosetConn) runJoinConn() {
 			fmt.Printf("connection successful\n")
 			// receive messages
 			for {
-				fmt.Printf("small *for* starts\n")
+				fmt.Printf("receive loop starts\n")
 				if c.name == "" { // remote logical Name
-					// send the join message
 					errSend := c.SendMessage(*joinConfig)
-					// error management
 					if errSend != nil {
 						fmt.Println(errSend.Error())
 						break
 					}
 				}
-				// receive the message
 				errRec := c.receiveMsg()
-				// error management
 				if errRec != nil {
 					fmt.Println(errRec.Error())
 					break
@@ -177,21 +190,6 @@ func (c *ShosetConn) SetBindAddr(bindAddr string) {
 	}
 }
 
-// runInbound : handler for the connection
-func (c *ShosetConn) runInConn() {
-	c.rb = msg.NewReader(c.socket)
-	c.wb = msg.NewWriter(c.socket)
-	defer c.socket.Close()
-	// receive messages
-	for {
-		err := c.receiveMsg()
-		time.Sleep(time.Millisecond * time.Duration(10))
-		if err != nil {
-			return
-		}
-	}
-}
-
 // SendMessage :
 func (c *ShosetConn) SendMessage(msg msg.Message) error {
 	//fmt.Printf("     Sending message %s(%s) -> %s(%s) %#v.\n", c.GetCh().GetName(), c.GetCh().GetBindAddr(), c.GetName(), c.addr, msg)
@@ -199,6 +197,7 @@ func (c *ShosetConn) SendMessage(msg msg.Message) error {
 	return c.WriteMessage(msg)
 }
 
+// receiveMsg
 func (c *ShosetConn) receiveMsg() error {
 	// read message type
 	msgType, err := c.rb.ReadString()

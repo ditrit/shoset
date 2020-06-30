@@ -7,6 +7,7 @@ type ConfigBye struct {
 	MessageBase
 	CommandName string
 	BindAddress string
+	LogicalName string
 }
 
 func (c *ConfigBye) String() string {
@@ -17,10 +18,12 @@ func (c *ConfigBye) String() string {
 }
 
 // NewCfgBye :
-func NewCfgBye(bindAddress string) *ConfigBye {
+func NewCfgBye(bindAddress, lName string) *ConfigBye {
 	c := new(ConfigBye)
 	c.InitMessageBase()
+	c.BindAddress = bindAddress
 	c.CommandName = "bye"
+	c.LogicalName = lName
 	return c
 }
 
@@ -28,7 +31,17 @@ func NewCfgBye(bindAddress string) *ConfigBye {
 func NewCfgByeOk(bindAddress string) *ConfigBye {
 	c := new(ConfigBye)
 	c.InitMessageBase()
+	c.BindAddress = bindAddress
 	c.CommandName = "bye_ok"
+	return c
+}
+
+// NewCfgByeBro :
+func NewCfgByeBro(bindAddress string) *ConfigBye {
+	c := new(ConfigBye)
+	c.InitMessageBase()
+	c.BindAddress = bindAddress
+	c.CommandName = "bye_bro"
 	return c
 }
 

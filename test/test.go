@@ -270,12 +270,12 @@ func shosetTestCl1() {
 	cl1 := net.NewShoset("cl", "cl")
 	cl1.Bind("localhost:8001")
 
-	for i := 0; i < 5; i++ {
+	for i := 0; i < 3; i++ {
 		time.Sleep(time.Second * time.Duration(2))
 		fmt.Printf("cl1 : %s", cl1.String())
 		time.Sleep(time.Second * time.Duration(2))
 	}
-
+	fmt.Printf("shutting down\n")
 	cl1.SafeShutdown()
 
 	<-done

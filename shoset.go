@@ -252,11 +252,13 @@ func (sh *Shoset) SafeShutdown() error {
 		sh.ConnsBye.m[connAddr] = conn
 		sh.ConnsJoin.Delete(connAddr)
 	}
+	fmt.Printf("ConnsBye : %v\n", sh.ConnsBye.m)
 
 	// use the temp list to send out one Bye msg to each connection
-	cfgBye := msg.NewCfgBye(sh.bindAddr)
+	cfgBye := msg.NewCfgBye(sh.bindAddr, sh.lName)
 	for addr, conn := range sh.ConnsBye.m {
 		if addr != sh.bindAddr {
+			fmt.Printf("sending bye msg\n")
 			errSend := conn.SendMessage(cfgBye)
 			if errSend != nil {
 				return errSend
@@ -265,12 +267,14 @@ func (sh *Shoset) SafeShutdown() error {
 		}
 	}
 	// wait for acknowledgements
-	for sh.ConnsBye.m != nil {
+	for len(sh.ConnsBye.m) > 0 {
+		fmt.Printf("wait for list to empty : %v\n", sh.ConnsBye.m)
 		time.Sleep(time.Second * time.Duration(5))
 	}
 
 	// then shutdown
-	//sh.Close()
+	fmt.Printf("ready to be shutdown\n")
+	//sh.socket.Close()
 
 	return nil
 }
