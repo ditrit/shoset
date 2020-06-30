@@ -1,6 +1,13 @@
 package shoset
 
 import (
+	"bytes"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/pem"
 	"errors"
 	"fmt"
 	"net"
@@ -85,4 +92,93 @@ func GetByType(m *MapSafeConn, shosetType string) []*ShosetConn {
 	}
 	//m.Unlock()
 	return result
+}
+
+// CheckCA :
+func CheckCA(cert []byte) bool {
+	block, _ := pem.Decode(cert)
+	if block == nil || block.Type != "CERTIFICATE" {
+		return false
+	}
+	c, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return false
+	}
+	return c.IsCA
+}
+
+// GenPrivKey :
+func GenPrivKey() (key, pub []byte, err error) {
+	priv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		return
+	}
+	privByte, err := x509.MarshalECPrivateKey(priv)
+	if err != nil {
+		return
+	}
+	pubByte, err := x509.MarshalPKIXPublicKey(priv.Public())
+	if err != nil {
+		return
+	}
+	var privBuffer, pubBuffer *bytes.Buffer
+	pem.Encode(privBuffer, &pem.Block{
+		Type:  "PRIVATE KEY",
+		Bytes: privByte,
+	})
+	pem.Encode(pubBuffer, &pem.Block{
+		Type:  "PUBLIC KEY",
+		Bytes: pubByte,
+	})
+	key = privBuffer.Bytes()
+	pub = pubBuffer.Bytes()
+	return
+}
+
+// SignCert :
+func SignCert(cn string, pub, ca, key []byte) (cert []byte, err error) {
+	pubBlock, _ := pem.Decode(pub)
+	if pubBlock == nil || !strings.HasSuffix(pubBlock.Type, "PUBLIC KEY") {
+		err = fmt.Errorf("SignCert : invalid public key")
+		return
+	}
+	caBlock, _ := pem.Decode(ca)
+	if caBlock == nil || caBlock.Type != "CERTIFICATE" {
+		err = fmt.Errorf("SignCert : invalid public key")
+		return
+	}
+	keyBlock, _ := pem.Decode(key)
+	if keyBlock == nil || !strings.HasSuffix(keyBlock.Type, "PRIVATE KEY") {
+		err = fmt.Errorf("SignCert : invalid public key")
+		return
+	}
+
+	pubKey, err := x509.ParsePKIXPublicKey(pubBlock.Bytes)
+	if err != nil {
+		return
+	}
+	caCert, err := x509.ParseCertificate(caBlock.Bytes)
+	if err != nil {
+		return
+	}
+	caKey, err := x509.ParsePKCS8PrivateKey(keyBlock.Bytes)
+	if err != nil {
+		return
+	}
+
+	certTemplate := &x509.Certificate{
+		Issuer:  caCert.Subject,
+		Subject: pkix.Name{CommonName: cn},
+	}
+	certByte, err := x509.CreateCertificate(rand.Reader, certTemplate, caCert, pubKey, caKey)
+	if err != nil {
+		return
+	}
+	var certBuffer *bytes.Buffer
+	pem.Encode(certBuffer, &pem.Block{
+		Type:  "CERTIFICATE",
+		Bytes: certByte,
+	})
+	cert = certBuffer.Bytes()
+	return
 }

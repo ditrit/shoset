@@ -5,8 +5,9 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"log"
 	"net"
+	"time"
 
 	"github.com/ditrit/shoset/msg"
 )
@@ -44,20 +45,17 @@ type Shoset struct {
 	Wait   map[string]func(*Shoset, *msg.Iterator, map[string]string, int) *msg.Message
 
 	// configuration TLS
-	tlsServerConfig *tls.Config
-	tlsClientConfig *tls.Config
-	tlsServerOK     bool
+	certs       map[string][]byte
+	tlsConfig   *tls.Config
+	tlsServerOK bool
+	canSignCert bool
 
 	// synchronisation des goroutines
 	Done chan bool
 }
 
-var certPath = "./certs/cert.pem"
-var keyPath = "./certs/key.pem"
-var caPath = "./certs/ca.pem"
-
 // NewShoset : constructor
-func NewShoset(lName, ShosetType string) *Shoset {
+func NewShoset(lName, ShosetType string, certMap map[string][]byte) *Shoset {
 	// Creation
 	c := new(Shoset)
 
@@ -99,6 +97,8 @@ func NewShoset(lName, ShosetType string) *Shoset {
 	c.Send["cmd"] = SendCommand
 	c.Wait["cmd"] = WaitCommand
 
+	c.Queue["csr"] = msg.NewQueue()
+
 	//TODO MOVE TO GANDALF
 	c.Queue["config"] = msg.NewQueue()
 	c.Get["config"] = GetConfig
@@ -107,27 +107,8 @@ func NewShoset(lName, ShosetType string) *Shoset {
 	c.Wait["config"] = WaitConfig
 
 	// Configuration TLS
-	cert, err := tls.LoadX509KeyPair(certPath, keyPath)
-	caPEM, err := ioutil.ReadFile(caPath)
-	caCertPool := x509.NewCertPool()
-	ok := caCertPool.AppendCertsFromPEM(caPEM)
-	if err != nil || !ok { // only client in insecure mode
-		fmt.Println("Unable to Load certificate")
-		c.tlsServerConfig = &tls.Config{InsecureSkipVerify: true}
-		c.tlsClientConfig = &tls.Config{}
-		c.tlsServerOK = false
-	} else {
-		c.tlsServerConfig = &tls.Config{
-			Certificates: []tls.Certificate{cert},
-			ClientCAs:    caCertPool,
-			ClientAuth:   tls.RequireAndVerifyClientCert,
-		}
-		c.tlsClientConfig = &tls.Config{
-			Certificates: []tls.Certificate{cert},
-			RootCAs:      caCertPool,
-		}
-		c.tlsServerOK = true
-	}
+	c.certs = certMap
+	c.LoadTLSConfig()
 
 	return c
 }
@@ -156,6 +137,53 @@ func (c *Shoset) String() string {
 	return descr
 }
 
+// LoadTLSConfig :
+func (c *Shoset) LoadTLSConfig() {
+	// Check CA
+	caCertPool := x509.NewCertPool()
+	ok := CheckCA(c.certs["ca"]) && caCertPool.AppendCertsFromPEM(c.certs["ca"])
+	if !ok {
+		log.Fatalf("shoset error: valid root (ca) certificate required\n")
+	}
+	// Check CA private key: if given that means the shoset is allowed to sign
+	if c.certs["cakey"] != nil {
+		if _, err := tls.X509KeyPair(c.certs["ca"], c.certs["cakey"]); err != nil {
+			log.Fatalf("shoset error: invalid ca key\n")
+		}
+		c.canSignCert = true
+	}
+	// Default conf : no client check && no server
+	c.tlsConfig = &tls.Config{
+		RootCAs:   caCertPool,
+		ClientCAs: caCertPool,
+	}
+	c.tlsServerOK = false
+	// If there is no cert and/or key, a new private key is generated for the CSR
+	if c.certs["key"] == nil || c.certs["cert"] == nil {
+		key, pub, err := GenPrivKey()
+		if err != nil {
+			log.Fatalf("shoset error: error while generating private key : %v\n", err)
+		}
+		c.certs["key"] = key
+		c.certs["pubkey"] = pub
+		return
+	}
+	// Loading cert-key pair
+	cert, err := tls.X509KeyPair(c.certs["cert"], c.certs["key"])
+	if err != nil || !ok { // only client in insecure mode
+		fmt.Println("Unable to Load certificate")
+		return
+	}
+
+	c.tlsConfig = &tls.Config{
+		Certificates: []tls.Certificate{cert},
+		RootCAs:      caCertPool,
+		ClientCAs:    caCertPool,
+		ClientAuth:   tls.VerifyClientCertIfGiven,
+	}
+	c.tlsServerOK = true
+}
+
 //Link : Link to another Shoset
 func (c *Shoset) Link(address string) (*ShosetConn, error) {
 	conn := new(ShosetConn)
@@ -170,7 +198,11 @@ func (c *Shoset) Link(address string) (*ShosetConn, error) {
 	}
 	conn.addr = ipAddress
 	conn.brothers = make(map[string]bool)
-	go conn.runOutConn(conn.addr)
+	if c.tlsServerOK {
+		go conn.runOutConn(conn.addr)
+	} else {
+		go conn.runOutCSROnly(conn.addr)
+	}
 	return conn, nil
 }
 
@@ -202,7 +234,8 @@ func (c *Shoset) Join(address string) (*ShosetConn, error) {
 	return conn, nil
 }
 
-func (c *Shoset) deleteConn(connAddr string) {
+// DeleteConn :
+func (c *Shoset) DeleteConn(connAddr string) {
 	conn := c.ConnsByAddr.Get(connAddr)
 	if conn != nil {
 		c.ConnsByName.Delete(conn.name, connAddr)
@@ -236,6 +269,13 @@ func (c *Shoset) Bind(address string) error {
 	}
 	c.bindAddr = ipAddress
 	//fmt.Printf("Bind : handleBind adress %s", ipAddress)
+	for {
+		if c.tlsServerOK {
+			fmt.Printf("%s bind starting\n", c.GetName())
+			break
+		}
+		time.Sleep(time.Millisecond * time.Duration(50))
+	}
 	go c.handleBind()
 	return nil
 }
@@ -252,13 +292,17 @@ func (c *Shoset) handleBind() error {
 	for {
 		unencConn, err := listener.Accept()
 		if err != nil {
-			fmt.Printf("serverShoset accept error: %s", err)
+			fmt.Printf("serverShoset accept error: %s\n", err)
 			break
 		}
-		tlsConn := tls.Server(unencConn, c.tlsServerConfig)
+		tlsConn := tls.Server(unencConn, c.tlsConfig)
 		conn, _ := c.inboudConn(tlsConn)
-		//fmt.Printf("Shoset : accepted from %s", conn.addr)
-		go conn.runInConn()
+		//fmt.Printf("Shoset : accepted from %s\n", conn.addr)
+		if len(conn.socket.ConnectionState().PeerCertificates) > 0 {
+			go conn.runInCSROnly()
+		} else {
+			go conn.runInConn()
+		}
 	}
 	return nil
 }

@@ -1,2 +1,4 @@
+github.com/ditrit/gandalf-core v0.0.0-20200626065336-512daee92cb1 h1:C2kV7z33yP3VF6xRm0SrtHLVSJDaG8bV/ibHTCAxXUM=
+github.com/ditrit/gandalf-core v0.0.0-20200626065336-512daee92cb1/go.mod h1:jgzqxz53yauIoxEC1z1fn21lRJpxCTNDDUqdWISG9dg=
 github.com/kjk/betterguid v0.0.0-20170621091430-c442874ba63a h1:b+Gt8sQs//Sl5Dcem5zP9Qc2FgEUAygREa2AAa2Vmcw=
 github.com/kjk/betterguid v0.0.0-20170621091430-c442874ba63a/go.mod h1:uxRAhHE1nl34DpWgfe0CYbNYbCnYplaB6rZH9ReWtUk=

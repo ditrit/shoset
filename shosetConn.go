@@ -61,7 +61,7 @@ func (c *ShosetConn) runOutConn(addr string) {
 
 	myConfig := NewHandshake(c.GetCh())
 	for {
-		conn, err := tls.Dial("tcp", c.addr, c.ch.tlsClientConfig)
+		conn, err := tls.Dial("tcp", c.addr, c.ch.tlsConfig)
 		defer conn.Close()
 		if err != nil {
 			time.Sleep(time.Millisecond * time.Duration(100))
@@ -82,6 +82,29 @@ func (c *ShosetConn) runOutConn(addr string) {
 	}
 }
 
+func (c *ShosetConn) runOutCSROnly(addr string) {
+	csr := msg.NewCertRequest(strings.Split(c.ch.bindAddr, ":")[0], c.ch.bindAddr, c.ch.certs["pubkey"])
+
+	for {
+		conn, err := tls.Dial("tcp", c.addr, c.ch.tlsConfig)
+		defer conn.Close()
+		if err != nil {
+			time.Sleep(time.Millisecond * time.Duration(100))
+		} else {
+			c.socket = conn
+			c.rb = msg.NewReader(c.socket)
+			c.wb = msg.NewWriter(c.socket)
+			c.ch.SetConn(addr, c.ShosetType, c)
+
+			// receive messages
+			for {
+				c.SendMessage(csr)
+				c.receiveCSROnly()
+			}
+		}
+	}
+}
+
 // RunJoinConn : handler for the socket
 func (c *ShosetConn) runJoinConn() {
 	ch := c.GetCh()
@@ -89,7 +112,7 @@ func (c *ShosetConn) runJoinConn() {
 	for {
 		ch.ConnsJoin.Set(c.addr, c)
 		ch.NameBrothers.Set(c.addr, true)
-		conn, err := tls.Dial("tcp", c.addr, ch.tlsClientConfig)
+		conn, err := tls.Dial("tcp", c.addr, ch.tlsConfig)
 		defer conn.Close()
 		if err != nil {
 			time.Sleep(time.Second * time.Duration(5))
@@ -169,6 +192,20 @@ func (c *ShosetConn) runInConn() {
 	}
 }
 
+func (c *ShosetConn) runInCSROnly() {
+	c.rb = msg.NewReader(c.socket)
+	c.wb = msg.NewWriter(c.socket)
+	defer c.socket.Close()
+	// receive messages
+	for {
+		err := c.receiveCSROnly()
+		time.Sleep(time.Millisecond * time.Duration(10))
+		if err != nil {
+			return
+		}
+	}
+}
+
 // SendMessage :
 func (c *ShosetConn) SendMessage(msg msg.Message) {
 	//fmt.Printf("     Sending message %s(%s) -> %s(%s) %#v.\n", c.GetCh().GetName(), c.GetCh().GetBindAddr(), c.GetName(), c.addr, msg)
@@ -181,10 +218,10 @@ func (c *ShosetConn) receiveMsg() error {
 	msgType, err := c.rb.ReadString()
 	switch {
 	case err == io.EOF:
-		c.ch.deleteConn(c.addr)
+		c.ch.DeleteConn(c.addr)
 		return errors.New("receiveMsg : reached EOF - close this connection")
 	case err != nil:
-		c.ch.deleteConn(c.addr)
+		c.ch.DeleteConn(c.addr)
 		return errors.New("receiveMsg : failed to read - close this connection")
 	}
 	msgType = strings.Trim(msgType, "\n")
@@ -200,13 +237,40 @@ func (c *ShosetConn) receiveMsg() error {
 				go fHandle(c, msgVal)
 			}
 		} else {
-			c.ch.deleteConn(c.addr)
+			c.ch.DeleteConn(c.addr)
 			return errors.New("receiveMsg : can not read value of " + msgType)
 		}
 	}
 	if !ok {
-		c.ch.deleteConn(c.addr)
+		c.ch.DeleteConn(c.addr)
 		return errors.New("receiveMsg : non implemented type of message " + msgType)
+	}
+	return nil
+}
+
+func (c *ShosetConn) receiveCSROnly() error {
+	msgType, err := c.rb.ReadString()
+	msgType = strings.Trim(msgType, "\n")
+	switch {
+	case err == io.EOF:
+		c.ch.DeleteConn(c.addr)
+		return errors.New("receiveCSROnly : reached EOF - close this connection")
+	case err != nil:
+		c.ch.DeleteConn(c.addr)
+		return errors.New("receiveCSROnly : failed to read - close this connection")
+	case msgType != "CSR":
+		c.ch.DeleteConn(c.addr)
+		return errors.New("receiveCSROnly : not a CSR - close this connection")
+	}
+
+	// read Message Value
+	msgVal, err := GetCertRequest(c)
+	if err == nil {
+		// read message data and handle it
+		go HandleCertRequest(c, msgVal)
+	} else {
+		c.ch.DeleteConn(c.addr)
+		return errors.New("receiveMsg : can not read value of " + msgType)
 	}
 	return nil
 }
