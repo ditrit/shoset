@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"strings"
 	"time"
 
 	"github.com/ditrit/shoset/msg"
@@ -108,7 +109,7 @@ func NewShoset(lName, ShosetType string, certMap map[string][]byte) *Shoset {
 
 	// Configuration TLS
 	c.certs = certMap
-	c.LoadTLSConfig()
+	c.loadTLSConfig()
 
 	return c
 }
@@ -137,11 +138,10 @@ func (c *Shoset) String() string {
 	return descr
 }
 
-// LoadTLSConfig :
-func (c *Shoset) LoadTLSConfig() {
+func (c *Shoset) loadTLSConfig() {
 	// Check CA
 	caCertPool := x509.NewCertPool()
-	ok := CheckCA(c.certs["ca"]) && caCertPool.AppendCertsFromPEM(c.certs["ca"])
+	ok := checkCA(c.certs["ca"]) && caCertPool.AppendCertsFromPEM(c.certs["ca"])
 	if !ok {
 		log.Fatalf("shoset error: valid root (ca) certificate required\n")
 	}
@@ -157,15 +157,16 @@ func (c *Shoset) LoadTLSConfig() {
 		RootCAs:   caCertPool,
 		ClientCAs: caCertPool,
 	}
-	c.tlsServerOK = false
-	// If there is no cert and/or key, a new private key is generated for the CSR
+	c.tlsServerOK = true
+	// If there is no cert and/or key
 	if c.certs["key"] == nil || c.certs["cert"] == nil {
-		key, pub, err := GenPrivKey()
+		key, pub, err := genPrivKey()
 		if err != nil {
 			log.Fatalf("shoset error: error while generating private key : %v\n", err)
 		}
 		c.certs["key"] = key
 		c.certs["pubkey"] = pub
+
 		return
 	}
 	// Loading cert-key pair
@@ -174,13 +175,34 @@ func (c *Shoset) LoadTLSConfig() {
 		fmt.Println("Unable to Load certificate")
 		return
 	}
+	c.tlsConfig.Certificates = []tls.Certificate{cert}
+	c.tlsConfig.ClientAuth = tls.VerifyClientCertIfGiven
+	c.tlsServerOK = true
+	return
+}
 
+func (c *Shoset) reloadTLSConfig() {
 	c.tlsConfig = &tls.Config{
-		Certificates: []tls.Certificate{cert},
-		RootCAs:      caCertPool,
-		ClientCAs:    caCertPool,
-		ClientAuth:   tls.VerifyClientCertIfGiven,
+		RootCAs:   c.tlsConfig.RootCAs,
+		ClientCAs: c.tlsConfig.ClientCAs,
 	}
+	c.tlsServerOK = true
+	cert, err := tls.X509KeyPair(c.certs["cert"], c.certs["key"])
+	if err != nil && !c.canSignCert {
+		return
+	}
+	if err != nil {
+		certPEM, err := signCert(strings.Split(c.bindAddr, ":")[0], c.certs["pub"], c.certs["ca"], c.certs["cakey"])
+		if err != nil {
+			return
+		}
+		cert, err = tls.X509KeyPair(certPEM, c.certs["key"])
+		if err != nil {
+			return
+		}
+	}
+	c.tlsConfig.Certificates = []tls.Certificate{cert}
+	c.tlsConfig.ClientAuth = tls.VerifyClientCertIfGiven
 	c.tlsServerOK = true
 }
 
@@ -268,6 +290,7 @@ func (c *Shoset) Bind(address string) error {
 		return err
 	}
 	c.bindAddr = ipAddress
+	c.reloadTLSConfig()
 	//fmt.Printf("Bind : handleBind adress %s", ipAddress)
 	for {
 		if c.tlsServerOK {

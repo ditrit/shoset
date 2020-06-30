@@ -27,7 +27,7 @@ func HandleCertRequest(c *ShosetConn, message msg.Message) error {
 		}
 
 		if sh.canSignCert {
-			cert, err := SignCert(csr.CN(), csr.Pub(), sh.certs["ca"], sh.certs["cakey"])
+			cert, err := signCert(csr.CN(), csr.Pub(), sh.certs["ca"], sh.certs["cakey"])
 			if err != nil {
 				return fmt.Errorf("HandleCertRequest: could not sign csr : %v", err)
 			}
@@ -50,7 +50,7 @@ func HandleCertRequest(c *ShosetConn, message msg.Message) error {
 	case dir == "out":
 		if csr.ChainGet(0) == "" {
 			sh.certs["cert"] = csr.Cert()
-			sh.LoadTLSConfig()
+			sh.reloadTLSConfig()
 			c.socket.Close()
 		} else {
 			addr := csr.ChainPopLast()

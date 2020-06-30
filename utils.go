@@ -94,8 +94,7 @@ func GetByType(m *MapSafeConn, shosetType string) []*ShosetConn {
 	return result
 }
 
-// CheckCA :
-func CheckCA(cert []byte) bool {
+func checkCA(cert []byte) bool {
 	block, _ := pem.Decode(cert)
 	if block == nil || block.Type != "CERTIFICATE" {
 		return false
@@ -107,8 +106,7 @@ func CheckCA(cert []byte) bool {
 	return c.IsCA
 }
 
-// GenPrivKey :
-func GenPrivKey() (key, pub []byte, err error) {
+func genPrivKey() (key, pub []byte, err error) {
 	priv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
 		return
@@ -135,8 +133,8 @@ func GenPrivKey() (key, pub []byte, err error) {
 	return
 }
 
-// SignCert :
-func SignCert(cn string, pub, ca, key []byte) (cert []byte, err error) {
+// signCert :
+func signCert(cn string, pub, ca, key []byte) (cert []byte, err error) {
 	pubBlock, _ := pem.Decode(pub)
 	if pubBlock == nil || !strings.HasSuffix(pubBlock.Type, "PUBLIC KEY") {
 		err = fmt.Errorf("SignCert : invalid public key")
