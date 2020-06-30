@@ -99,6 +99,8 @@ func NewShoset(lName, ShosetType string, certMap map[string][]byte) *Shoset {
 	c.Wait["cmd"] = WaitCommand
 
 	c.Queue["csr"] = msg.NewQueue()
+	c.Get["csr"] = GetCertRequest
+	c.Handle["csr"] = HandleCertRequest
 
 	//TODO MOVE TO GANDALF
 	c.Queue["config"] = msg.NewQueue()
