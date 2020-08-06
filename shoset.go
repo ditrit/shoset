@@ -62,49 +62,6 @@ func NewShoset(lName, ShosetType string) *Shoset {
 	sh.Context = make(map[string]interface{})
 
 	// Initialisation
-<<<<<<< HEAD:shoset.go
-	c.lName = lName
-	c.ShosetType = ShosetType
-	c.ConnsByAddr = NewMapSafeConn()
-	c.ConnsByName = NewMapSafeMapConn()
-	c.ConnsByType = NewMapSafeMapConn()
-	c.ConnsJoin = NewMapSafeConn()
-	c.Brothers = NewMapSafeBool()
-	c.NameBrothers = NewMapSafeBool()
-
-	c.Queue = make(map[string]*msg.Queue)
-	c.Get = make(map[string]func(*ShosetConn) (msg.Message, error))
-	c.Handle = make(map[string]func(*ShosetConn, msg.Message) error)
-	c.Send = make(map[string]func(*Shoset, msg.Message))
-	c.Wait = make(map[string]func(*Shoset, *msg.Iterator, map[string]string, int) *msg.Message)
-
-	c.Queue["cfglink"] = msg.NewQueue()
-	c.Get["cfglink"] = GetConfigLink
-	c.Handle["cfglink"] = HandleConfigLink
-
-	c.Queue["cfgjoin"] = msg.NewQueue()
-	c.Get["cfgjoin"] = GetConfigJoin
-	c.Handle["cfgjoin"] = HandleConfigJoin
-
-	c.Queue["evt"] = msg.NewQueue()
-	c.Get["evt"] = GetEvent
-	c.Handle["evt"] = HandleEvent
-	c.Send["evt"] = SendEvent
-	c.Wait["evt"] = WaitEvent
-
-	c.Queue["cmd"] = msg.NewQueue()
-	c.Get["cmd"] = GetCommand
-	c.Handle["cmd"] = HandleCommand
-	c.Send["cmd"] = SendCommand
-	c.Wait["cmd"] = WaitCommand
-
-	//TODO MOVE TO GANDALF
-	c.Queue["config"] = msg.NewQueue()
-	c.Get["config"] = GetConfig
-	c.Handle["config"] = HandleConfig
-	c.Send["config"] = SendConfig
-	c.Wait["config"] = WaitConfig
-=======
 	sh.lName = lName
 	sh.ShosetType = ShosetType
 	sh.ConnsByAddr = NewMapSafeConn()
@@ -144,13 +101,12 @@ func NewShoset(lName, ShosetType string) *Shoset {
 	sh.Handle["cmd"] = HandleCommand
 	sh.Send["cmd"] = SendCommand
 	sh.Wait["cmd"] = WaitCommand
-
+	//TODO MOVE TO GANDALF
 	sh.Queue["config"] = msg.NewQueue()
 	sh.Get["config"] = GetConfig
 	sh.Handle["config"] = HandleConfig
 	sh.Send["config"] = SendConfig
 	sh.Wait["config"] = WaitConfig
->>>>>>> safe shutdown:net/shoset.go
 
 	// Configuration TLS
 	cert, err := tls.LoadX509KeyPair(certPath, keyPath)
