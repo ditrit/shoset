@@ -28,7 +28,7 @@ type ShosetConn struct {
 }
 
 func (c *ShosetConn) String() string {
-	return fmt.Sprintf("ShosetConn{ way: %s, lName: %s, Type: %s, addr(bindAddr): %s(%s)", c.dir, c.name, c.ShosetType, c.addr, c.bindAddr)
+	return fmt.Sprintf("ShosetConn{ way: %s, lName: %s, Type: %s, addr(bindAddr): %s(%s) }", c.dir, c.name, c.ShosetType, c.addr, c.bindAddr)
 }
 
 // ReadString :
@@ -210,7 +210,6 @@ func (c *ShosetConn) receiveMsg() error {
 		return errors.New("receiveMsg : failed to read - close this connection")
 	}
 	msgType = strings.Trim(msgType, "\n")
-
 	// read Message Value
 	fGet, ok := c.ch.Get[msgType]
 	if ok {

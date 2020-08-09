@@ -140,12 +140,15 @@ func (sh *Shoset) GetShosetType() string { return sh.ShosetType }
 
 // String :
 func (sh *Shoset) String() string {
-	descr := fmt.Sprintf("Shoset { lName: %s, bindAddr: %s, type: %s, brothers %#v, nameBrothers %#v, joinConns %#v\n", sh.lName, sh.bindAddr, sh.ShosetType, sh.Brothers, sh.NameBrothers, sh.ConnsJoin)
-	sh.ConnsByAddr.Iterate(
-		func(addr string, conn *ShosetConn) {
-			descr = fmt.Sprintf("%s - [%s] %s\n", descr, addr, conn.String())
-		})
-	descr += "%s}\n"
+	// descr := fmt.Sprintf("Shoset { lName: %s,\nbindAddr: %s,\ntype: %s,\nbrothers %#v,\nNameBrothers %#v, joinConns\n%#v\n", sh.lName, sh.bindAddr, sh.ShosetType, sh.Brothers, sh.NameBrothers, sh.ConnsJoin)
+	// sh.ConnsByAddr.Iterate(
+	// 	func(addr string, conn *ShosetConn) {
+	// 		descr = fmt.Sprintf("%s - [%s] %s\n", descr, addr, conn.String())
+	// 	})
+	// descr += "%s}\n"
+	descr := fmt.Sprintf("Shoset { \nlName: %s,\nShosetType: %s,\nbinAddr: %s,\n", sh.lName, sh.ShosetType, sh.bindAddr)
+	// descr += fmt.Sprintf("ConnsByAddr: %#v,\nConnsByName: %#v,\nConnsByType: %#v,\n", sh.ConnsByAddr, sh.ConnsByName, sh.ConnsByType)
+	// descr += fmt.Sprintf("ConnsJoin %#v,\nConnsBye%#v,\nBrothers%#v,\nNameBrothers%#v\n}", sh.ConnsJoin, sh.ConnsJoin, sh.Brothers, sh.NameBrothers)
 	return descr
 }
 
@@ -198,23 +201,27 @@ func (sh *Shoset) Join(address string) (*ShosetConn, error) {
 //SafeShutdown : safely disconnects a connection
 func (sh *Shoset) SafeShutdown() error {
 
-	// add all the connections to the temporary list of connections
+	// add all the connections (Join and Link) to the temporary list of connections
 	// and remove said connection from the previous list
+	fmt.Printf("____1____ConnsBye : \n%v\n", sh.ConnsBye.m)
 	for connAddr, conn := range sh.ConnsByAddr.m {
 		sh.ConnsBye.m[connAddr] = conn
 		sh.deleteConn(connAddr)
 	}
-	for connAddr, conn := range sh.ConnsJoin.m {
-		sh.ConnsBye.m[connAddr] = conn
-		sh.ConnsJoin.Delete(connAddr)
-	}
-	fmt.Printf("ConnsBye : %v\n", sh.ConnsBye.m)
+	fmt.Printf("____2____ConnsBye : \n%v\n", sh.ConnsBye.m)
+	// for connAddr, conn := range sh.ConnsJoin.m {
+	// 	//Apprently this delete the ConnsJoin too early
+	// 	// and create pointers issues on shutdown....
+	// 	sh.ConnsBye.m[connAddr] = conn
+	// 	sh.ConnsJoin.Delete(connAddr)
+	// }
+	// fmt.Printf("____3____ConnsBye : \n%v\n", sh.ConnsBye.m)
 
 	// use the temp list to send out one Bye msg to each connection
 	cfgBye := msg.NewCfgBye(sh.bindAddr, sh.lName)
 	for addr, conn := range sh.ConnsBye.m {
 		if addr != sh.bindAddr {
-			fmt.Printf("sending bye msg\n")
+			fmt.Printf("======> sending bye msg to %v  (%v)\n", addr, conn)
 			errSend := conn.SendMessage(cfgBye)
 			if errSend != nil {
 				return errSend

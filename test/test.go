@@ -225,52 +225,62 @@ func shosetTestEtoile() {
 	Ch1.Link("localhost:8111")
 
 	time.Sleep(time.Second * time.Duration(2))
-	fmt.Printf("cl1 : %s", cl2.String())
-	fmt.Printf("cl2 : %s", cl2.String())
-	fmt.Printf("cl3 : %s", cl3.String())
-	fmt.Printf("cl4 : %s", cl4.String())
-	fmt.Printf("cl5 : %s", cl5.String())
+	// fmt.Printf("cl1 : %s", cl2.String())
+	// fmt.Printf("cl2 : %s", cl2.String())
+	// fmt.Printf("cl3 : %s", cl3.String())
+	// fmt.Printf("cl4 : %s", cl4.String())
+	// fmt.Printf("cl5 : %s", cl5.String())
 
-	fmt.Printf("aga1 : %s", aga1.String())
-	fmt.Printf("aga2 : %s", aga2.String())
+	// fmt.Printf("aga1 : %s", aga1.String())
+	// fmt.Printf("aga2 : %s", aga2.String())
 
-	fmt.Printf("agb1 : %s", agb1.String())
-	fmt.Printf("agb2 : %s", agb2.String())
+	// fmt.Printf("agb1 : %s", agb1.String())
+	// fmt.Printf("agb2 : %s", agb2.String())
 
-	fmt.Printf("Ca1 : %s", Ca1.String())
-	fmt.Printf("Ca2 : %s", Ca2.String())
-	fmt.Printf("Ca3 : %s", Ca3.String())
+	// fmt.Printf("Ca1 : %s", Ca1.String())
+	// fmt.Printf("Ca2 : %s", Ca2.String())
+	// fmt.Printf("Ca3 : %s", Ca3.String())
 
-	fmt.Printf("Cb1 : %s", Cb1.String())
-	fmt.Printf("Cb2 : %s", Cb2.String())
+	// fmt.Printf("Cb1 : %s", Cb1.String())
+	// fmt.Printf("Cb2 : %s", Cb2.String())
 
-	fmt.Printf("Cc1 : %s", Cc1.String())
-	fmt.Printf("Cc2 : %s", Cc2.String())
+	// fmt.Printf("Cc1 : %s", Cc1.String())
+	// fmt.Printf("Cc2 : %s", Cc2.String())
 
-	fmt.Printf("Cd1 : %s", Cd1.String())
-	fmt.Printf("Cd2 : %s", Cd2.String())
+	// fmt.Printf("Cd1 : %s", Cd1.String())
+	// fmt.Printf("Cd2 : %s", Cd2.String())
 
-	fmt.Printf("Ce1 : %s", Ce1.String())
-	fmt.Printf("Ce2 : %s", Ce2.String())
+	// fmt.Printf("Ce1 : %s", Ce1.String())
+	// fmt.Printf("Ce2 : %s", Ce2.String())
 
-	fmt.Printf("Cf1 : %s", Cf1.String())
-	fmt.Printf("Cf2 : %s", Cf2.String())
+	// fmt.Printf("Cf1 : %s", Cf1.String())
+	// fmt.Printf("Cf2 : %s", Cf2.String())
 
-	fmt.Printf("Cg1 : %s", Cg1.String())
-	fmt.Printf("Cg2 : %s", Cg2.String())
+	// fmt.Printf("Cg1 : %s", Cg1.String())
+	// fmt.Printf("Cg2 : %s", Cg2.String())
 
-	fmt.Printf("Ch1 : %s", Ch1.String())
+	// fmt.Printf("Ch1 : %s", Ch1.String())
 
+	for i := 0; i < 10; i++ {
+		time.Sleep(time.Second * time.Duration(2))
+		// fmt.Printf("cl1 : %s", cl1.String())
+		time.Sleep(time.Second * time.Duration(2))
+	}
+	//fmt.Printf("cl1 : %s\n", cl1.String())
+	//fmt.Printf("aga2 : %s\n", aga2.String())
+	fmt.Printf("***********shutting down Ch1\n")
+	fmt.Printf("Ch1 : %s\n", Ch1.String())
+	Ch1.SafeShutdown()
 	<-done
 }
 
+/*
 func shosetTestCl1() {
-	done := make(chan bool)
-
-	cl1 := net.NewShoset("cl", "cl")
-	cl1.Bind("localhost:8001")
-
-	for i := 0; i < 3; i++ {
+	done := make(chan bool)	for i := 0; i < 3; i++ {
+		time.Sleep(time.Second * time.Duration(2))
+		fmt.Printf("cl1 : %s", cl1.String())
+		time.Sleep(time.Second * time.Duration(2))
+	}
 		time.Sleep(time.Second * time.Duration(2))
 		fmt.Printf("cl1 : %s", cl1.String())
 		time.Sleep(time.Second * time.Duration(2))
@@ -280,7 +290,9 @@ func shosetTestCl1() {
 
 	<-done
 }
+*/
 
+/*
 func shosetTestCl2() {
 	done := make(chan bool)
 
@@ -296,7 +308,7 @@ func shosetTestCl2() {
 
 	<-done
 }
-
+*/
 func testQueue() {
 	done := make(chan bool)
 	/*	// First let's make 2 sockets talk each other
