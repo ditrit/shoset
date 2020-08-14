@@ -259,7 +259,7 @@ func shosetTestEtoile() {
 	// fmt.Printf("Cg1 : %s", Cg1.String())
 	// fmt.Printf("Cg2 : %s", Cg2.String())
 
-	// fmt.Printf("Ch1 : %s", Ch1.String())
+	fmt.Printf("cl1 : %s", cl1.String())
 
 	for i := 0; i < 10; i++ {
 		time.Sleep(time.Second * time.Duration(2))
@@ -269,8 +269,8 @@ func shosetTestEtoile() {
 	//fmt.Printf("cl1 : %s\n", cl1.String())
 	//fmt.Printf("aga2 : %s\n", aga2.String())
 	fmt.Printf("***********shutting down Ch1\n")
-	fmt.Printf("Ch1 : %s\n", Ch1.String())
-	Ch1.SafeShutdown()
+	fmt.Printf("cl1 : %s\n", Ch1.String())
+	cl1.SafeShutdown()
 	<-done
 }
 

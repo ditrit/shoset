@@ -84,8 +84,6 @@ func (c *ShosetConn) runOutConn(addr string) {
 			c.socket = conn
 			c.rb = msg.NewReader(c.socket)
 			c.wb = msg.NewWriter(c.socket)
-			c.name = ch.GetName()
-			c.ShosetType = ch.GetShosetType()
 
 			c.ch.SetConn(addr, c.ShosetType, c)
 			fmt.Printf("connection successful\n")
@@ -212,6 +210,7 @@ func (c *ShosetConn) receiveMsg() error {
 	msgType = strings.Trim(msgType, "\n")
 	// read Message Value
 	fGet, ok := c.ch.Get[msgType]
+	fmt.Printf("message type : %v\n", msgType)
 	if ok {
 		msgVal, err := fGet(c)
 		if err == nil {

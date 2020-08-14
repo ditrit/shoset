@@ -6,6 +6,27 @@ import (
 	"github.com/ditrit/shoset/msg"
 )
 
+/*
+	Addendum explicatif :
+	Il est probablement intéressant de comparer l'état du projet à ce moment et avec la
+	dernière contribution de Marie-Hélène ; mes quelques modifications sont suppposées être
+	des corrections de bug, mais cela peut également être du à une mésinterpétation de ma part
+	du fonctionnnement du code
+	J'ai également fait un git rebase de cette branche avec Master afin que son architecture
+	etc... soit à jour
+
+	Les deux plus gros changements sont la liste utilisée dans le cas du bye (ConnsByAddr
+	au lieu de ConnsJoin, qui faisait notemment planter le programme avec les clusters) et
+	une autre petit modification sur l'enregistrement de nouvelles ShosetConn qui enregistrait
+	le nom local au lieu du nom distant
+
+	Actuellement, le problème principal que j'ai identifié est la réponse au bye (bye_ok donc)
+	qui semble se perdre, avec la shoset voulant partir qui attend indéfiniment le bye_ok
+	A noter que en lançant plusieurs fois le test, il est arrivé dans certains cas qu'un bye_ok
+	arrive effectivement à bout et que la shoset sur le départ raccourcice effectivement la liste
+	des connections en attente
+*/
+
 // GetConfigBye :
 func GetConfigBye(c *ShosetConn) (msg.Message, error) {
 	var cfg msg.ConfigBye
@@ -17,60 +38,43 @@ func GetConfigBye(c *ShosetConn) (msg.Message, error) {
 func HandleConfigBye(c *ShosetConn, message msg.Message) error {
 	cfg := message.(msg.ConfigBye)
 	msgSource := cfg.GetBindAddress()
-	fmt.Printf("msgSource : %v\n", msgSource)
 	ch := c.GetCh()
-	fmt.Printf("$$$$$$$$$$$ You're in shoset : %v\n", ch.lName)
-	// fmt.Printf("%v : %s",ch.lName, ch.String())
 	fmt.Println(cfg.GetCommandName())
 	switch cfg.GetCommandName() {
 	case "bye":
-		// Does not work for aggregator as they don't have ConnsJoin
-
-		for connAddr, conn := range ch.ConnsByAddr.m {
-			fmt.Printf("%v : %v\n", connAddr, conn)
-		}
-
 		// received by instances connected to the shutting down
 		// from the instance that is shutting down
 
 		// remove connection from lists
-		// fmt.Printf("ConnsByAddr : %v\n", ch.ConnsByAddr.m)
-		fmt.Printf("========msgSource : %v\n", msgSource)
-		// fmt.Printf("========ch.ConnsByAddr.m[msgSource]: %v\n", ch.ConnsByAddr.m)
-		// for addr, coon := range ch.ConnsByAddr.m {
-		// 	fmt.Printf("%v  :  %v\n", addr, coon)
-		// }
-		conn, err := ch.ConnsByAddr.m[msgSource]
-		fmt.Printf("status: %v\n", err)
-		// fmt.Printf("conn : %s\n", conn.String())
-		defer ch.deleteConn(msgSource)
-		// // send RemoveBro to the brothers of the shutting down
-		// msgRemoveBro := msg.NewCfgByeBro(msgSource)
-		// fmt.Printf("cfg.LogicalName : %v\n", cfg.LogicalName)
-		// fmt.Printf("ConnsByName : %v\n", ch.ConnsByName.m)
-		// brothers := ch.ConnsByName.m[cfg.LogicalName]
-		// fmt.Printf("brothers : %v\n", brothers.m)
-		// if len(brothers.m) > 0 {
-		// 	for _, conn := range brothers.m {
-		// 		conn.SendMessage(msgRemoveBro)
-		// 	}
-		// }
-		// send ack
+		conn := ch.ConnsByAddr.m[msgSource]
 
-		//Trying to fix the test
-		//fmt.Printf("conn : %s\n", conn.String())
+		//
+		defer ch.deleteConn(msgSource)
+
+		/*
+			The nex block was already comented out
+			// // send RemoveBro to the brothers of the shutting down
+			// msgRemoveBro := msg.NewCfgByeBro(msgSource)
+			// fmt.Printf("cfg.LogicalName : %v\n", cfg.LogicalName)
+			// fmt.Printf("ConnsByName : %v\n", ch.ConnsByName.m)
+			// brothers := ch.ConnsByName.m[cfg.LogicalName]
+			// fmt.Printf("brothers : %v\n", brothers.m)
+			// if len(brothers.m) > 0 {
+			// 	for _, conn := range brothers.m {
+			// 		conn.SendMessage(msgRemoveBro)
+			// 	}
+			// }
+			// send ack
+
+		*/
 
 		cfgByeOk := msg.NewCfgByeOk(ch.GetBindAddr())
-		fmt.Printf("=======> sending bye ok from socket %v to socket %v\n", ch.lName, c.name)
 		conn.SendMessage(cfgByeOk)
 
 	case "bye_ok":
 		// received by the instance that is shutting down,
 		// from the instances that received the Bye msg
-		fmt.Printf("&&&&&& Receiver bye_ok from %v %v %v\n", c.name, c.bindAddr, c.addr)
 		ch.ConnsBye.Delete(msgSource)
-		fmt.Printf("ConnsBye after removing %v : %v\n", msgSource, ch.ConnsBye.m)
-		fmt.Printf("closing socket\n")
 		c.socket.Close()
 	case "bye_bro":
 		// received by brothers of the instance that is shutting down,

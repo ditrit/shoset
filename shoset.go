@@ -140,13 +140,13 @@ func (sh *Shoset) GetShosetType() string { return sh.ShosetType }
 
 // String :
 func (sh *Shoset) String() string {
-	// descr := fmt.Sprintf("Shoset { lName: %s,\nbindAddr: %s,\ntype: %s,\nbrothers %#v,\nNameBrothers %#v, joinConns\n%#v\n", sh.lName, sh.bindAddr, sh.ShosetType, sh.Brothers, sh.NameBrothers, sh.ConnsJoin)
-	// sh.ConnsByAddr.Iterate(
-	// 	func(addr string, conn *ShosetConn) {
-	// 		descr = fmt.Sprintf("%s - [%s] %s\n", descr, addr, conn.String())
-	// 	})
-	// descr += "%s}\n"
-	descr := fmt.Sprintf("Shoset { \nlName: %s,\nShosetType: %s,\nbinAddr: %s,\n", sh.lName, sh.ShosetType, sh.bindAddr)
+	descr := fmt.Sprintf("Shoset { lName: %s,\nbindAddr: %s,\ntype: %s,\nbrothers %#v,\nNameBrothers %#v, joinConns\n%#v\n", sh.lName, sh.bindAddr, sh.ShosetType, sh.Brothers, sh.NameBrothers, sh.ConnsJoin)
+	sh.ConnsByAddr.Iterate(
+		func(addr string, conn *ShosetConn) {
+			descr = fmt.Sprintf("%s - [%s] %s\n", descr, addr, conn.String())
+		})
+	descr += "}\n"
+	// descr := fmt.Sprintf("Shoset { \nlName: %s,\nShosetType: %s,\nbinAddr: %s,\n", sh.lName, sh.ShosetType, sh.bindAddr)
 	// descr += fmt.Sprintf("ConnsByAddr: %#v,\nConnsByName: %#v,\nConnsByType: %#v,\n", sh.ConnsByAddr, sh.ConnsByName, sh.ConnsByType)
 	// descr += fmt.Sprintf("ConnsJoin %#v,\nConnsBye%#v,\nBrothers%#v,\nNameBrothers%#v\n}", sh.ConnsJoin, sh.ConnsJoin, sh.Brothers, sh.NameBrothers)
 	return descr
