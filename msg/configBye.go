@@ -53,3 +53,6 @@ func (c ConfigBye) GetBindAddress() string { return c.BindAddress }
 
 // GetCommandName :
 func (c ConfigBye) GetCommandName() string { return c.CommandName }
+
+// GetLogicalName :
+func (c ConfigBye) GetLogicalName() string { return c.LogicalName }

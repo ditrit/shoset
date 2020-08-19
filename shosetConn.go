@@ -38,6 +38,7 @@ func (c *ShosetConn) ReadString() (string, error) {
 
 // ReadMessage :
 func (c *ShosetConn) ReadMessage(data interface{}) error {
+	fmt.Printf("readmessage shosetconn 1\n")
 	return c.rb.ReadMessage(data)
 }
 
@@ -110,7 +111,7 @@ func (c *ShosetConn) runJoinConn() {
 	ch := c.GetCh()
 	joinConfig := msg.NewCfgJoin(ch.GetBindAddr())
 	for {
-		fmt.Printf("runJoinConn start connection\n")
+		fmt.Printf("runJoinConn start connection on %s\n", ch.bindAddr)
 		ch.ConnsJoin.Set(c.addr, c)
 		ch.NameBrothers.Set(c.addr, true)
 		conn, errConn := tls.Dial("tcp", c.addr, ch.tlsConfig)
@@ -210,13 +211,16 @@ func (c *ShosetConn) receiveMsg() error {
 	msgType = strings.Trim(msgType, "\n")
 	// read Message Value
 	fGet, ok := c.ch.Get[msgType]
-	fmt.Printf("message type : %v\n", msgType)
+	fmt.Printf("message type : %v, sent by %v\n", msgType, c.bindAddr)
 	if ok {
+		fmt.Printf(" ok\n")
 		msgVal, err := fGet(c)
+		fmt.Printf(" - err : %v\n", err)
 		if err == nil {
 			// read message data and handle it
 			fHandle, ok := c.ch.Handle[msgType]
 			if ok {
+				fmt.Printf("  before handle\n")
 				go fHandle(c, msgVal)
 			}
 		} else {

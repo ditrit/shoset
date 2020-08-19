@@ -25,17 +25,27 @@ import (
 	A noter que en lançant plusieurs fois le test, il est arrivé dans certains cas qu'un bye_ok
 	arrive effectivement à bout et que la shoset sur le départ raccourcice effectivement la liste
 	des connections en attente
+
+	Ajout : La shoset partante reçoit tous les bye_ok, mais elle n'arrive à lire que ceux qui
+	viennent d'autres cluster et pas ceux des agrégateurs.
+	Bloquages au niveau de :
+	(file 		> function 		> lines)
+	reader.go 	> ReadMessage()	> Lock() & Decode()
 */
 
 // GetConfigBye :
 func GetConfigBye(c *ShosetConn) (msg.Message, error) {
+	fmt.Printf("Get cfgbye 1\n")
 	var cfg msg.ConfigBye
+	fmt.Printf("Get cfgbye 2\n")
 	err := c.ReadMessage(&cfg)
+	fmt.Printf("Get cfgbye 3\n")
 	return cfg, err
 }
 
 // HandleConfigBye :
 func HandleConfigBye(c *ShosetConn, message msg.Message) error {
+	fmt.Printf("    Handle config bye\n")
 	cfg := message.(msg.ConfigBye)
 	msgSource := cfg.GetBindAddress()
 	ch := c.GetCh()
@@ -44,12 +54,13 @@ func HandleConfigBye(c *ShosetConn, message msg.Message) error {
 	case "bye":
 		// received by instances connected to the shutting down
 		// from the instance that is shutting down
-
-		// remove connection from lists
 		conn := ch.ConnsByAddr.m[msgSource]
-
-		//
+		if conn == nil {
+			conn = ch.ConnsJoin.m[msgSource]
+		}
+		// remove connection from lists at the end
 		defer ch.deleteConn(msgSource)
+		defer ch.ConnsJoin.Delete(msgSource)
 
 		/*
 			The nex block was already comented out
@@ -67,13 +78,14 @@ func HandleConfigBye(c *ShosetConn, message msg.Message) error {
 			// send ack
 
 		*/
-
+		fmt.Printf("Sending Bye Ok from %v to %v\n", ch.bindAddr, msgSource)
 		cfgByeOk := msg.NewCfgByeOk(ch.GetBindAddr())
 		conn.SendMessage(cfgByeOk)
-
+		// remove addr from lists done by defer
 	case "bye_ok":
 		// received by the instance that is shutting down,
 		// from the instances that received the Bye msg
+		fmt.Printf("shoset %v received Bye Ok \n", ch.bindAddr)
 		ch.ConnsBye.Delete(msgSource)
 		c.socket.Close()
 	case "bye_bro":

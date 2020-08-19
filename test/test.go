@@ -143,11 +143,9 @@ func shosetTestEtoile() {
 	cl3 := shoset.NewShoset("cl", "cl")
 	cl3.Bind("localhost:8003")
 	cl3.Join("localhost:8002")
-
 	cl4 := shoset.NewShoset("cl", "cl")
 	cl4.Bind("localhost:8004")
 	cl4.Join("localhost:8001")
-
 	cl5 := shoset.NewShoset("cl", "cl")
 	cl5.Bind("localhost:8005")
 	cl5.Join("localhost:8001")
@@ -225,7 +223,7 @@ func shosetTestEtoile() {
 	Ch1.Link("localhost:8111")
 
 	time.Sleep(time.Second * time.Duration(2))
-	// fmt.Printf("cl1 : %s", cl2.String())
+	// fmt.Printf("cl1 : %s", cl1.String())
 	// fmt.Printf("cl2 : %s", cl2.String())
 	// fmt.Printf("cl3 : %s", cl3.String())
 	// fmt.Printf("cl4 : %s", cl4.String())
@@ -260,37 +258,101 @@ func shosetTestEtoile() {
 	// fmt.Printf("Cg2 : %s", Cg2.String())
 
 	fmt.Printf("cl1 : %s", cl1.String())
-
-	for i := 0; i < 10; i++ {
-		time.Sleep(time.Second * time.Duration(2))
-		// fmt.Printf("cl1 : %s", cl1.String())
-		time.Sleep(time.Second * time.Duration(2))
-	}
+	time.Sleep(time.Second * time.Duration(10))
+	// for i := 0; i < 10; i++ {
+	// 	time.Sleep(time.Second * time.Duration(2))
+	// 	// fmt.Printf("cl1 : %s", cl1.String())
+	// 	time.Sleep(time.Second * time.Duration(2))
+	// }
 	//fmt.Printf("cl1 : %s\n", cl1.String())
 	//fmt.Printf("aga2 : %s\n", aga2.String())
-	fmt.Printf("***********shutting down Ch1\n")
-	fmt.Printf("cl1 : %s\n", Ch1.String())
+	fmt.Printf("***********shutting down cl1\n")
+	fmt.Printf("cl1 : %s\n", cl1.String())
 	cl1.SafeShutdown()
 	<-done
 }
 
-/*
-func shosetTestCl1() {
-	done := make(chan bool)	for i := 0; i < 3; i++ {
-		time.Sleep(time.Second * time.Duration(2))
-		fmt.Printf("cl1 : %s", cl1.String())
-		time.Sleep(time.Second * time.Duration(2))
-	}
-		time.Sleep(time.Second * time.Duration(2))
-		fmt.Printf("cl1 : %s", cl1.String())
-		time.Sleep(time.Second * time.Duration(2))
-	}
-	fmt.Printf("shutting down\n")
-	cl1.SafeShutdown()
+func shosetTestShutdown() {
+	done := make(chan bool)
 
+	cl1 := shoset.NewShoset("cl", "cl")
+	cl1.Bind("localhost:8001")
+	time.Sleep(time.Second * time.Duration(5))
+	cl2 := shoset.NewShoset("cl", "cl")
+	cl2.Bind("localhost:8002")
+	cl2.Join("localhost:8001")
+	time.Sleep(time.Second * time.Duration(2))
+	// cl3 := shoset.NewShoset("cl", "cl")
+	// cl3.Bind("localhost:8003")
+	// cl3.Join("localhost:8002")
+	// time.Sleep(time.Second * time.Duration(2))
+
+	aga1 := shoset.NewShoset("aga", "a")
+	aga1.Bind("localhost:8111")
+	aga1.Link("localhost:8001")
+	time.Sleep(time.Second * time.Duration(2))
+	// aga2 := shoset.NewShoset("aga", "a")
+	// aga2.Bind("localhost:8112")
+	// aga2.Link("localhost:8003")
+	// time.Sleep(time.Second * time.Duration(2))
+
+	// agb1 := shoset.NewShoset("agb", "a")
+	// agb1.Bind("localhost:8121")
+	// agb1.Link("localhost:8002")
+	// time.Sleep(time.Second * time.Duration(2))
+	// agb2 := shoset.NewShoset("agb", "a")
+	// agb2.Bind("localhost:8122")
+	// agb2.Link("localhost:8003")
+	// time.Sleep(time.Second * time.Duration(2))
+
+	// Ca1 := shoset.NewShoset("Ca", "c")
+	// Ca1.Bind("localhost:8211")
+	// Ca1.Link("localhost:8111")
+	// time.Sleep(time.Second * time.Duration(2))
+	// Ca2 := shoset.NewShoset("Ca", "c")
+	// Ca2.Bind("localhost:8212")
+	// Ca2.Link("localhost:8111")
+	// time.Sleep(time.Second * time.Duration(2))
+	// Ca3 := shoset.NewShoset("Ca", "c")
+	// Ca3.Bind("localhost:8213")
+	// Ca3.Link("localhost:8111")
+	// time.Sleep(time.Second * time.Duration(2))
+
+	// Cb1 := shoset.NewShoset("Cb", "c")
+	// Cb1.Bind("localhost:8221")
+	// Cb1.Link("localhost:8112")
+	// time.Sleep(time.Second * time.Duration(2))
+	// Cb2 := shoset.NewShoset("Cb", "c")
+	// Cb2.Bind("localhost:8222")
+	// Cb2.Link("localhost:8112")
+	// time.Sleep(time.Second * time.Duration(2))
+
+	// Cc1 := shoset.NewShoset("Cc", "c")
+	// Cc1.Bind("localhost:8231")
+	// Cc1.Link("localhost:8121")
+	// time.Sleep(time.Second * time.Duration(2))
+	// Cc2 := shoset.NewShoset("Cc", "c")
+	// Cc2.Bind("localhost:8232")
+	// Cc2.Link("localhost:8121")
+	// time.Sleep(time.Second * time.Duration(2))
+
+	// fmt.Printf("cl1 : %s", cl1.String())
+	// fmt.Printf("cl2 : %s", cl2.String())
+	// fmt.Printf("cl3 : %s", cl3.String())
+	time.Sleep(time.Second * time.Duration(5))
+	// for i := 0; i < 10; i++ {
+	// 	time.Sleep(time.Second * time.Duration(2))
+	// 	// fmt.Printf("cl1 : %s", cl1.String())
+	// 	time.Sleep(time.Second * time.Duration(2))
+	// }
+	fmt.Printf("cl1 : %s\n", cl1.String())
+	//fmt.Printf("aga1 : %s\n", aga1.String())
+	fmt.Printf("***********shutting down cl1\n")
+	fmt.Printf("cl1 : %s\n", cl1.String())
+	fmt.Printf("cl1 ConnsByAddr: %v\n", cl1.ConnsByAddr)
+	cl1.SafeShutdown()
 	<-done
 }
-*/
 
 /*
 func shosetTestCl2() {
@@ -344,6 +406,6 @@ func main() {
 	// fmt.Println("Running shosetTest")
 	// shosetTest()
 
-	fmt.Println("Running shosetTestEtoile")
-	shosetTestEtoile()
+	fmt.Println("Running shosetTestShutdown")
+	shosetTestShutdown()
 }

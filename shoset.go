@@ -140,7 +140,7 @@ func (sh *Shoset) GetShosetType() string { return sh.ShosetType }
 
 // String :
 func (sh *Shoset) String() string {
-	descr := fmt.Sprintf("Shoset { lName: %s,\nbindAddr: %s,\ntype: %s,\nbrothers %#v,\nNameBrothers %#v, joinConns\n%#v\n", sh.lName, sh.bindAddr, sh.ShosetType, sh.Brothers, sh.NameBrothers, sh.ConnsJoin)
+	descr := fmt.Sprintf("Shoset { lName: %s,\nbindAddr: %s,\ntype: %s,\nbrothers: %v,\nnameBrothers: %v, \njoinConns: %v\n", sh.lName, sh.bindAddr, sh.ShosetType, sh.Brothers, sh.NameBrothers, sh.ConnsJoin)
 	sh.ConnsByAddr.Iterate(
 		func(addr string, conn *ShosetConn) {
 			descr = fmt.Sprintf("%s - [%s] %s\n", descr, addr, conn.String())
@@ -202,20 +202,15 @@ func (sh *Shoset) Join(address string) (*ShosetConn, error) {
 func (sh *Shoset) SafeShutdown() error {
 
 	// add all the connections (Join and Link) to the temporary list of connections
-	// and remove said connection from the previous list
 	fmt.Printf("____1____ConnsBye : \n%v\n", sh.ConnsBye.m)
 	for connAddr, conn := range sh.ConnsByAddr.m {
 		sh.ConnsBye.m[connAddr] = conn
-		sh.deleteConn(connAddr)
 	}
 	fmt.Printf("____2____ConnsBye : \n%v\n", sh.ConnsBye.m)
-	// for connAddr, conn := range sh.ConnsJoin.m {
-	// 	//Apprently this delete the ConnsJoin too early
-	// 	// and create pointers issues on shutdown....
-	// 	sh.ConnsBye.m[connAddr] = conn
-	// 	sh.ConnsJoin.Delete(connAddr)
-	// }
-	// fmt.Printf("____3____ConnsBye : \n%v\n", sh.ConnsBye.m)
+	for connAddr, conn := range sh.ConnsJoin.m {
+		sh.ConnsBye.m[connAddr] = conn
+	}
+	fmt.Printf("____3____ConnsBye : \n%v\n", sh.ConnsBye.m)
 
 	// use the temp list to send out one Bye msg to each connection
 	cfgBye := msg.NewCfgBye(sh.bindAddr, sh.lName)
@@ -231,7 +226,7 @@ func (sh *Shoset) SafeShutdown() error {
 	}
 	// wait for acknowledgements
 	for len(sh.ConnsBye.m) > 0 {
-		fmt.Printf("wait for list to empty : %v\n", sh.ConnsBye.m)
+		fmt.Printf("wait for list to empty (%v) : %v\n", len(sh.ConnsBye.m), sh.ConnsBye.m)
 		time.Sleep(time.Second * time.Duration(5))
 	}
 
@@ -275,7 +270,7 @@ func (sh *Shoset) Bind(address string) error {
 		return err
 	}
 	sh.bindAddr = ipAddress
-	//fmt.Printf("Bind : handleBind adress %s", ipAddress)
+	fmt.Printf("Bind : handleBind adress %s\n", ipAddress)
 	go sh.handleBind()
 	return nil
 }
