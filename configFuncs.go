@@ -8,6 +8,7 @@ import (
 )
 
 //TODO MOVE TO GANDALF
+
 // GetConfig :
 func GetConfig(c *ShosetConn) (msg.Message, error) {
 	var conf msg.Config
@@ -26,8 +27,9 @@ func HandleConfig(c *ShosetConn, message msg.Message) error {
 func SendConfig(c *Shoset, cmd msg.Message) {
 	fmt.Print("Sending Config.\n")
 	c.ConnsByAddr.Iterate(
-		func(key string, conn *ShosetConn) {
+		func(key string, conn *ShosetConn) error {
 			conn.SendMessage(cmd)
+			return nil
 		},
 	)
 }

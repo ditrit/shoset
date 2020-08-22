@@ -34,8 +34,9 @@ func HandleConfigLink(c *ShosetConn, message msg.Message) error {
 			ch.SetConn(c.GetBindAddr(), c.GetShosetType(), c)
 			if ch.NameBrothers.Len() > 0 {
 				ch.NameBrothers.Iterate(
-					func(bro string, val bool) {
+					func(bro string, val bool) error {
 						c.SendMessage(msg.NewConnectTo(bro))
+						return nil
 					},
 				)
 			}
@@ -52,8 +53,9 @@ func HandleConfigLink(c *ShosetConn, message msg.Message) error {
 			//???? pas d'envoi depuis ou vers conn ????
 			cfgIn := NewCfgIn(ch)
 			ch.ConnsByAddr.Iterate(
-				func(key string, conn *ShosetConn) {
+				func(key string, conn *ShosetConn) error {
 					c.SendMessage(cfgIn)
+					return nil
 				},
 			)
 			sendCfgToBrothers(c)
@@ -71,11 +73,12 @@ func HandleConfigLink(c *ShosetConn, message msg.Message) error {
 		for _, addr := range cfg.GetConns() {
 			if !ch.NameBrothers.Get(addr) {
 				ch.ConnsByAddr.Iterate(
-					func(key string, val *ShosetConn) {
+					func(key string, val *ShosetConn) error {
 						conn := val
 						if conn.GetDir() == "in" {
 							conn.SendMessage(msg.NewConnectTo(addr))
 						}
+						return nil
 					},
 				)
 				ch.NameBrothers.Set(addr, true)
@@ -99,11 +102,12 @@ func sendCfgToBrothers(currentConn *ShosetConn) {
 	cfgNameBrothers := msg.NewNameBrothers([]string{currentAddr})
 	oldNameBrothers := []string{}
 	ch.ConnsByName.Iterate(currentName,
-		func(key string, conn *ShosetConn) {
+		func(key string, conn *ShosetConn) error {
 			if conn.GetDir() == "in" && conn.bindAddr != currentAddr {
 				conn.SendMessage(cfgNameBrothers)
 				oldNameBrothers = append(oldNameBrothers, conn.bindAddr)
 			}
+			return nil
 		},
 	)
 	if len(oldNameBrothers) > 0 {
@@ -120,11 +124,12 @@ func NewHandshake(ch *Shoset) *msg.ConfigLink {
 func NewCfgOut(ch *Shoset) *msg.ConfigLink {
 	var bros []string
 	ch.ConnsByAddr.Iterate(
-		func(key string, val *ShosetConn) {
+		func(key string, val *ShosetConn) error {
 			conn := val
 			if conn.dir == "out" {
 				bros = append(bros, conn.addr)
 			}
+			return nil
 		},
 	)
 	return msg.NewConns("out", bros)
@@ -134,8 +139,9 @@ func NewCfgOut(ch *Shoset) *msg.ConfigLink {
 func NewCfgIn(ch *Shoset) *msg.ConfigLink {
 	var bros []string
 	ch.Brothers.Iterate(
-		func(key string, val bool) {
+		func(key string, val bool) error {
 			bros = append(bros, key)
+			return nil
 		},
 	)
 	return msg.NewConns("in", bros)

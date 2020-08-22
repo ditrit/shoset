@@ -142,8 +142,9 @@ func (sh *Shoset) GetShosetType() string { return sh.ShosetType }
 func (sh *Shoset) String() string {
 	descr := fmt.Sprintf("Shoset { lName: %s,\nbindAddr: %s,\ntype: %s,\nbrothers: %v,\nnameBrothers: %v, \njoinConns: %v\n", sh.lName, sh.bindAddr, sh.ShosetType, sh.Brothers, sh.NameBrothers, sh.ConnsJoin)
 	sh.ConnsByAddr.Iterate(
-		func(addr string, conn *ShosetConn) {
+		func(addr string, conn *ShosetConn) error {
 			descr = fmt.Sprintf("%s - [%s] %s\n", descr, addr, conn.String())
+			return nil
 		})
 	descr += "}\n"
 	// descr := fmt.Sprintf("Shoset { \nlName: %s,\nShosetType: %s,\nbinAddr: %s,\n", sh.lName, sh.ShosetType, sh.bindAddr)
@@ -202,31 +203,54 @@ func (sh *Shoset) Join(address string) (*ShosetConn, error) {
 func (sh *Shoset) SafeShutdown() error {
 
 	// add all the connections (Join and Link) to the temporary list of connections
-	fmt.Printf("____1____ConnsBye : \n%v\n", sh.ConnsBye.m)
-	for connAddr, conn := range sh.ConnsByAddr.m {
-		sh.ConnsBye.m[connAddr] = conn
-	}
-	fmt.Printf("____2____ConnsBye : \n%v\n", sh.ConnsBye.m)
-	for connAddr, conn := range sh.ConnsJoin.m {
-		sh.ConnsBye.m[connAddr] = conn
-	}
-	fmt.Printf("____3____ConnsBye : \n%v\n", sh.ConnsBye.m)
+
+	fmt.Printf("____1____ConnsBye : \n%s\n", sh.ConnsBye.String())
+	sh.ConnsByAddr.Iterate(
+		func(connAddr string, conn *ShosetConn) error {
+			sh.ConnsBye.Set(connAddr, conn)
+			return nil
+		})
+
+	//for connAddr, conn := range sh.ConnsByAddr.m {
+	//	sh.ConnsBye.m[connAddr] = conn
+	//
+	fmt.Printf("____2____ConnsBye : \n%s\n", sh.ConnsBye.String())
+	sh.ConnsJoin.Iterate(
+		func(connAddr string, conn *ShosetConn) error {
+			sh.ConnsBye.Set(connAddr, conn)
+			return nil
+		})
+	//for connAddr, conn := range sh.ConnsJoin.m {
+	//	sh.ConnsBye.m[connAddr] = conn
+	//}
+	fmt.Printf("____3____ConnsBye : \n%s\n", sh.ConnsBye.String())
 
 	// use the temp list to send out one Bye msg to each connection
 	cfgBye := msg.NewCfgBye(sh.bindAddr, sh.lName)
-	for addr, conn := range sh.ConnsBye.m {
-		if addr != sh.bindAddr {
-			fmt.Printf("======> sending bye msg to %v  (%v)\n", addr, conn)
-			errSend := conn.SendMessage(cfgBye)
-			if errSend != nil {
-				return errSend
+	sh.ConnsBye.Iterate(
+		func(connAddr string, conn *ShosetConn) error {
+			if connAddr != sh.bindAddr {
+				fmt.Printf("======> sending bye msg to %v  (%v)\n", connAddr, conn)
+				return conn.SendMessage(cfgBye)
+				//go conn.runInConn()
 			}
-			go conn.runInConn()
-		}
-	}
+			return nil
+		})
+
+	//for addr, conn := range sh.ConnsBye.m {
+	//	if addr != sh.bindAddr {
+	//		fmt.Printf("======> sending bye msg to %v  (%v)\n", addr, conn)
+	//		errSend := conn.SendMessage(cfgBye)
+	//		if errSend != nil {
+	//			return errSend
+	//		}
+	//		go conn.runInConn()
+	//	}
+	//}
+
 	// wait for acknowledgements
-	for len(sh.ConnsBye.m) > 0 {
-		fmt.Printf("wait for list to empty (%v) : %v\n", len(sh.ConnsBye.m), sh.ConnsBye.m)
+	for sh.ConnsBye.Len() > 0 {
+		fmt.Printf("wait for list to empty (%d) : %s\n", sh.ConnsBye.Len(), sh.ConnsBye.String())
 		time.Sleep(time.Second * time.Duration(5))
 	}
 

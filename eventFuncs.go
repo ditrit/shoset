@@ -33,8 +33,9 @@ func SendEventConn(c *ShosetConn, evt interface{}) {
 func SendEvent(c *Shoset, evt msg.Message) {
 	fmt.Print("Sending event.\n")
 	c.ConnsByAddr.Iterate(
-		func(key string, conn *ShosetConn) {
+		func(key string, conn *ShosetConn) error {
 			conn.SendMessage(evt)
+			return nil
 		},
 	)
 }

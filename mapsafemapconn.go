@@ -1,6 +1,9 @@
 package shoset
 
-import "sync"
+import (
+	"fmt"
+	"sync"
+)
 
 // MapSafeMapConn : simple key map safe for goroutines...
 type MapSafeMapConn struct {
@@ -46,16 +49,32 @@ func (m *MapSafeMapConn) Delete(lname, key string) {
 }
 
 // Iterate : iterate through MapSafeMapConn Values using a function
-func (m *MapSafeMapConn) Iterate(lname string, iter func(string, *ShosetConn)) {
+func (m *MapSafeMapConn) Iterate(lname string, iter func(string, *ShosetConn) error) error {
 	m.Lock()
+	defer m.Unlock()
 	mapConn := m.m[lname]
 	if mapConn != nil {
-		mapConn.Iterate(iter)
+		return mapConn.Iterate(iter)
 	}
-	m.Unlock()
+	return nil
 }
 
 // Len : return length of the map
 func (m *MapSafeMapConn) Len() int {
 	return len(m.m)
+}
+
+func (m *MapSafeMapConn) String() string {
+	deb := true
+	result := "{"
+	m.Lock()
+	for key, val := range m.m {
+		if !deb {
+			result += ","
+		}
+		result += fmt.Sprintf(" %s:%s", key, val.String())
+	}
+	m.Unlock()
+	result += "} \n"
+	return result
 }

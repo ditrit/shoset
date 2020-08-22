@@ -15,22 +15,25 @@ func TestMapSafeCRUD(t *testing.T) {
 	m.Set("a", 23).Set("b", 43).Set("c", 11)
 	fmt.Printf("Initial state : ")
 	m.Iterate(
-		func(key string, val interface{}) {
+		func(key string, val interface{}) error {
 			fmt.Printf(" - %s: %d\n", key, val.(int))
+			return nil
 		},
 	)
 	m.Set("a", 454433)
 	fmt.Printf("After update : ")
 	m.Iterate(
-		func(key string, val interface{}) {
+		func(key string, val interface{}) error {
 			fmt.Printf(" - %s: %d\n", key, val.(int))
+			return nil
 		},
 	)
 	m.Delete("b")
 	fmt.Printf("After delete : ")
 	m.Iterate(
-		func(key string, val interface{}) {
+		func(key string, val interface{}) error {
 			fmt.Printf(" - %s: %d\n", key, val.(int))
+			return nil
 		},
 	)
 }
@@ -41,9 +44,10 @@ func TestFold(t *testing.T) {
 	m.Set("a", 23).Set("b", 43).Set("c", 11)
 	str := ""
 	m.Iterate(
-		func(key string, val interface{}) {
+		func(key string, val interface{}) error {
 			str = fmt.Sprintf("%s, %d", str, val.(int))
 			fmt.Printf(" - %s: %d\n", key, val.(int))
+			return nil
 		})
 	fmt.Printf("strValue : %s\n", str)
 }
@@ -56,9 +60,10 @@ func TestConcurrency(t *testing.T) {
 	}
 	fmt.Printf("test Concurrency\n")
 	go m.Iterate(
-		func(key string, val interface{}) {
+		func(key string, val interface{}) error {
 			time.Sleep(time.Millisecond * time.Duration(10))
 			fmt.Printf("%s, %d\n", key, val.(int))
+			return nil
 		})
 	time.Sleep(time.Millisecond * time.Duration(20))
 	fmt.Printf("after Iterate\n")
@@ -66,8 +71,9 @@ func TestConcurrency(t *testing.T) {
 	m.Set("b", 102)
 	fmt.Printf("after Set\n")
 	m.Iterate(
-		func(key string, val interface{}) {
+		func(key string, val interface{}) error {
 			fmt.Printf("%s, %d\n", key, val.(int))
+			return nil
 		})
 
 }
