@@ -15,6 +15,7 @@ type Message interface {
 	GetTimestamp() int64
 	GetTimeout() int64
 	GetPayload() string
+	GetVersion() float64
 	GetMajor() int8
 	GetMinor() int8
 }
@@ -28,6 +29,7 @@ type MessageBase struct {
 	Timestamp int64
 	Payload   string
 	Next      string
+	Version   float64
 	Major     int8
 	Minor     int8
 }
@@ -37,6 +39,7 @@ func (m *MessageBase) InitMessageBase() {
 	m.UUID = uuid.New()
 	m.Timestamp = time.Now().Unix()
 	m.Timeout = 1000
+	m.Version = 1.0
 	m.Major = 1
 	m.Minor = 0
 }
@@ -69,6 +72,11 @@ func (m MessageBase) GetTimeout() int64 {
 // GetPayload accessor
 func (m MessageBase) GetPayload() string {
 	return m.Payload
+}
+
+// GetVersion accessor
+func (m MessageBase) GetVersion() float64 {
+	return m.Version
 }
 
 // GetMajor accessor
