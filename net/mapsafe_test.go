@@ -1,11 +1,11 @@
 package net_test
 
 import (
-	"fmt"
-	"shoset/net"
-	"strconv"
+	"fmt""
 	"testing"
 	"time"
+
+	"github.com/ditrit/shoset"
 )
 
 // TestMapSafeCRUD : test MapSafe crud functions
