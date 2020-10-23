@@ -15,7 +15,7 @@ type Message interface {
 	GetTimestamp() int64
 	GetTimeout() int64
 	GetPayload() string
-	GetVersion() float64
+	GetVersion() float32
 	GetMajor() int8
 	GetMinor() int8
 }
@@ -29,7 +29,7 @@ type MessageBase struct {
 	Timestamp int64
 	Payload   string
 	Next      string
-	Version   float64
+	Version   float32
 	Major     int8
 	Minor     int8
 }
@@ -75,7 +75,7 @@ func (m MessageBase) GetPayload() string {
 }
 
 // GetVersion accessor
-func (m MessageBase) GetVersion() float64 {
+func (m MessageBase) GetVersion() float32 {
 	return m.Version
 }
 
