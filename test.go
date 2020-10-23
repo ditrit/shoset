@@ -2,8 +2,9 @@ package main
 
 import (
 	"fmt"
-	"shoset/net"
 	"time"
+
+	net "github.com/ditrit/shoset"
 )
 
 func shosetClient(logicalName, ShosetType, address string) {
