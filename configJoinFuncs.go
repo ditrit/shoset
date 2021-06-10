@@ -34,6 +34,7 @@ func HandleConfigJoin(c *ShosetConn, message msg.Message) error {
 		)
 
 		if dir == "out" {
+			;
 		}
 
 	case "member":

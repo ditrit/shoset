@@ -1,4 +1,4 @@
-package main
+package main // tests run in the main package
 
 import (
 	"fmt"
@@ -295,10 +295,28 @@ func testQueue() {
 	*/<-done
 }
 
+func testJoin() {
+	done := make(chan bool)
+
+	cl1 := shoset.NewShoset("cl", "cl")
+	cl1.Bind("localhost:8001") //we take the port 8001 for our first socket
+
+	cl2 := shoset.NewShoset("cl", "cl")
+	cl2.Bind("localhost:8002") //we take the port 8002 for our first socket
+	cl2.Join("localhost:8001") // we join it to our first socket
+
+	time.Sleep(time.Second * time.Duration(2))
+
+	fmt.Println("\ncl1 : ", cl1.String())
+	fmt.Println("\ncl2 : ", cl2.String())
+
+	<-done
+}
+
 func main() {
 	// fmt.Println("Running shosetTest")
 	// shosetTest()
 
-	fmt.Println("Running shosetTestEtoile")
-	shosetTestEtoile()
+	fmt.Println("Running testJoin")
+	testJoin()
 }

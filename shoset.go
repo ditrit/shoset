@@ -34,8 +34,7 @@ type Shoset struct {
 	bindAddr   string // Adresse sur laquelle la shoset est bindée
 
 	// Dictionnaire des queues de message (par type de message)
-	Queue map[string]*msg.Queue
-
+	Queue  map[string]*msg.Queue
 	Get    map[string]func(*ShosetConn) (msg.Message, error)
 	Handle map[string]func(*ShosetConn, msg.Message) error
 	Send   map[string]func(*Shoset, msg.Message)
@@ -49,14 +48,10 @@ type Shoset struct {
 	Done chan bool
 }
 
-var certPath = "./certs/cert.pem"
-var keyPath = "./certs/key.pem"
-
 // NewShoset : constructor
 func NewShoset(lName, ShosetType string) *Shoset {
 	// Creation
 	c := new(Shoset)
-
 	c.Context = make(map[string]interface{})
 
 	// Initialisation
@@ -103,7 +98,7 @@ func NewShoset(lName, ShosetType string) *Shoset {
 	c.Wait["config"] = WaitConfig
 
 	// Configuration TLS
-	cert, err := tls.LoadX509KeyPair(certPath, keyPath)
+	cert, err := tls.LoadX509KeyPair("./certs/cert.pem", "./certs/key.pem")
 	if err != nil { // only client in insecure mode
 		fmt.Println("Unable to Load certificate")
 		c.tlsConfig = &tls.Config{InsecureSkipVerify: true}
@@ -115,31 +110,33 @@ func NewShoset(lName, ShosetType string) *Shoset {
 		}
 		c.tlsServerOK = true
 	}
-
 	return c
 }
 
 // GetBindAddr :
-func (c *Shoset) GetBindAddr() string {
+func (c Shoset) GetBindAddr() string {
 	return c.bindAddr
 }
 
 // GetName :
-func (c *Shoset) GetName() string {
+func (c Shoset) GetName() string {
 	return c.lName
 }
 
 // GetShosetType :
-func (c *Shoset) GetShosetType() string { return c.ShosetType }
+func (c Shoset) GetShosetType() string {
+	return c.ShosetType
+}
 
 // String :
-func (c *Shoset) String() string {
-	descr := fmt.Sprintf("Shoset { lName: %s, bindAddr: %s, type: %s, brothers %#v, nameBrothers %#v, joinConns %#v\n", c.lName, c.bindAddr, c.ShosetType, c.Brothers, c.NameBrothers, c.ConnsJoin)
+func (c Shoset) String() string {
+	//descr := fmt.Sprintf("Shoset { lName: %s, bindAddr: %s, type: %s, brothers %#v, nameBrothers %#v, joinConns %#v\n", c.lName, c.bindAddr, c.ShosetType, c.Brothers, c.NameBrothers, c.ConnsJoin)
+	descr := fmt.Sprintf("Shoset - lName: %s,\n\t\tbindAddr : %s,\n\t\ttype : %s,\n\t\tjoinConns : %#v\n", c.lName, c.bindAddr, c.ShosetType, c.ConnsJoin)
 	c.ConnsByAddr.Iterate(
 		func(key string, val *ShosetConn) {
 			descr = fmt.Sprintf("%s - [%s] %s\n", descr, key, val.String())
 		})
-	descr += "%s}\n"
+	//descr += "%s}\n"
 	return descr
 }
 
@@ -213,7 +210,7 @@ func (c *Shoset) Bind(address string) error {
 		fmt.Println("Shoset already bound")
 		return errors.New("Shoset already bound")
 	}
-	if c.tlsServerOK == false {
+	if !c.tlsServerOK {
 		fmt.Println("TLS configuration not OK (certificate not found / loaded)")
 		return errors.New("TLS configuration not OK (certificate not found / loaded)")
 	}
