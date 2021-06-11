@@ -19,8 +19,6 @@ type MessageHandlers interface {
 
 //Shoset :
 type Shoset struct {
-	Context map[string]interface{} //TOTO
-
 	//	id          string
 	ConnsByAddr  *MapSafeConn    // map[string]*ShosetConn    ensemble des connexions
 	ConnsByName  *MapSafeMapConn // map[string]map[string]*ShosetConn   connexions par nom logique
@@ -48,87 +46,77 @@ type Shoset struct {
 	Done chan bool
 }
 
-// NewShoset : constructor
+/*           Accessors            */
+func (c Shoset) GetBindAddr() string   { return c.bindAddr }
+func (c Shoset) GetName() string       { return c.lName }
+func (c Shoset) GetShosetType() string { return c.ShosetType }
+
+/*       Constructor     */
 func NewShoset(lName, ShosetType string) *Shoset {
 	// Creation
-	c := new(Shoset)
-	c.Context = make(map[string]interface{})
+	shoset := Shoset{}
 
 	// Initialisation
-	c.lName = lName
-	c.ShosetType = ShosetType
-	c.ConnsByAddr = NewMapSafeConn()
-	c.ConnsByName = NewMapSafeMapConn()
-	c.ConnsByType = NewMapSafeMapConn()
-	c.ConnsJoin = NewMapSafeConn()
-	c.Brothers = NewMapSafeBool()
-	c.NameBrothers = NewMapSafeBool()
+	shoset.lName = lName
+	shoset.ShosetType = ShosetType
+	shoset.ConnsByAddr = NewMapSafeConn()
+	shoset.ConnsByName = NewMapSafeMapConn()
+	shoset.ConnsByType = NewMapSafeMapConn()
+	shoset.ConnsJoin = NewMapSafeConn()
+	shoset.Brothers = NewMapSafeBool()
+	shoset.NameBrothers = NewMapSafeBool()
 
-	c.Queue = make(map[string]*msg.Queue)
-	c.Get = make(map[string]func(*ShosetConn) (msg.Message, error))
-	c.Handle = make(map[string]func(*ShosetConn, msg.Message) error)
-	c.Send = make(map[string]func(*Shoset, msg.Message))
-	c.Wait = make(map[string]func(*Shoset, *msg.Iterator, map[string]string, int) *msg.Message)
+	// Dictionnaire des queues de message (par type de message)
+	shoset.Queue = make(map[string]*msg.Queue)
+	shoset.Get = make(map[string]func(*ShosetConn) (msg.Message, error))
+	shoset.Handle = make(map[string]func(*ShosetConn, msg.Message) error)
+	shoset.Send = make(map[string]func(*Shoset, msg.Message))
+	shoset.Wait = make(map[string]func(*Shoset, *msg.Iterator, map[string]string, int) *msg.Message)
 
-	c.Queue["cfglink"] = msg.NewQueue()
-	c.Get["cfglink"] = GetConfigLink
-	c.Handle["cfglink"] = HandleConfigLink
+	shoset.Queue["cfglink"] = msg.NewQueue()
+	shoset.Get["cfglink"] = GetConfigLink
+	shoset.Handle["cfglink"] = HandleConfigLink
 
-	c.Queue["cfgjoin"] = msg.NewQueue()
-	c.Get["cfgjoin"] = GetConfigJoin
-	c.Handle["cfgjoin"] = HandleConfigJoin
+	shoset.Queue["cfgjoin"] = msg.NewQueue()
+	shoset.Get["cfgjoin"] = GetConfigJoin
+	shoset.Handle["cfgjoin"] = HandleConfigJoin
 
-	c.Queue["evt"] = msg.NewQueue()
-	c.Get["evt"] = GetEvent
-	c.Handle["evt"] = HandleEvent
-	c.Send["evt"] = SendEvent
-	c.Wait["evt"] = WaitEvent
+	shoset.Queue["evt"] = msg.NewQueue()
+	shoset.Get["evt"] = GetEvent
+	shoset.Handle["evt"] = HandleEvent
+	shoset.Send["evt"] = SendEvent
+	shoset.Wait["evt"] = WaitEvent
 
-	c.Queue["cmd"] = msg.NewQueue()
-	c.Get["cmd"] = GetCommand
-	c.Handle["cmd"] = HandleCommand
-	c.Send["cmd"] = SendCommand
-	c.Wait["cmd"] = WaitCommand
+	shoset.Queue["cmd"] = msg.NewQueue()
+	shoset.Get["cmd"] = GetCommand
+	shoset.Handle["cmd"] = HandleCommand
+	shoset.Send["cmd"] = SendCommand
+	shoset.Wait["cmd"] = WaitCommand
 
 	//TODO MOVE TO GANDALF
-	c.Queue["config"] = msg.NewQueue()
-	c.Get["config"] = GetConfig
-	c.Handle["config"] = HandleConfig
-	c.Send["config"] = SendConfig
-	c.Wait["config"] = WaitConfig
+	shoset.Queue["config"] = msg.NewQueue()
+	shoset.Get["config"] = GetConfig
+	shoset.Handle["config"] = HandleConfig
+	shoset.Send["config"] = SendConfig
+	shoset.Wait["config"] = WaitConfig
 
-	// Configuration TLS
-	cert, err := tls.LoadX509KeyPair("./certs/cert.pem", "./certs/key.pem")
+	// Configuration TLS //////////////////////////////////// à améliorer
+	cert, err := tls.LoadX509KeyPair("./certs/cert.pem", "./certs/key.pem") 
 	if err != nil { // only client in insecure mode
 		fmt.Println("Unable to Load certificate")
-		c.tlsConfig = &tls.Config{InsecureSkipVerify: true}
-		c.tlsServerOK = false
+		shoset.tlsConfig = &tls.Config{InsecureSkipVerify: true}
+		shoset.tlsServerOK = false
 	} else {
-		c.tlsConfig = &tls.Config{
+		shoset.tlsConfig = &tls.Config{
 			Certificates:       []tls.Certificate{cert},
 			InsecureSkipVerify: true,
 		}
-		c.tlsServerOK = true
+		shoset.tlsServerOK = true
 	}
-	return c
+	return &shoset
 }
 
-// GetBindAddr :
-func (c Shoset) GetBindAddr() string {
-	return c.bindAddr
-}
-
-// GetName :
-func (c Shoset) GetName() string {
-	return c.lName
-}
-
-// GetShosetType :
-func (c Shoset) GetShosetType() string {
-	return c.ShosetType
-}
-
-// String :
+// Display with fmt - override the print of the object
 func (c Shoset) String() string {
 	//descr := fmt.Sprintf("Shoset { lName: %s, bindAddr: %s, type: %s, brothers %#v, nameBrothers %#v, joinConns %#v\n", c.lName, c.bindAddr, c.ShosetType, c.Brothers, c.NameBrothers, c.ConnsJoin)
 	descr := fmt.Sprintf("Shoset - lName: %s,\n\t\tbindAddr : %s,\n\t\ttype : %s,\n\t\tjoinConns : %#v\n", c.lName, c.bindAddr, c.ShosetType, c.ConnsJoin)
@@ -165,7 +153,7 @@ func (c *Shoset) Join(address string) (*ShosetConn, error) {
 	if exists != nil {
 		return exists, nil
 	}
-	if address == c.bindAddr {
+	if address == c.bindAddr { // join itself
 		return nil, nil
 	}
 
