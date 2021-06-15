@@ -1,6 +1,7 @@
 package shoset
 
 import "sync"
+// import "fmt"
 
 // MapSafeConn : simple key map safe for goroutines...
 type MapSafeConn struct {
@@ -40,6 +41,7 @@ func (m *MapSafeConn) GetByType(shosetType string) []*ShosetConn {
 func (m *MapSafeConn) Get(key string) *ShosetConn {
 	m.Lock()
 	defer m.Unlock()
+	// fmt.Println(m.m[key])
 	return m.m[key]
 }
 

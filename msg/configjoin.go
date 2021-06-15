@@ -22,6 +22,7 @@ func NewCfgJoin(bindAddress string) *ConfigJoin {
 	c.InitMessageBase()
 	c.CommandName = "join"
 	c.BindAddress = bindAddress
+	// ajout nom logique et type de message afin de rajouter dans le protocole de join une condition vérifiant le même type et même nom logique pour établier un join
 	return c
 }
 

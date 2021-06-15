@@ -73,7 +73,7 @@ func (c *ShosetConn) runOutConn(addr string) {
 
 			// receive messages
 			for {
-				if c.name == "" { // remote logical Name
+				if c.name == "" { // remote logical Name // sale problem than runJoinConn()
 					c.SendMessage(*myConfig)
 				}
 				c.receiveMsg()
@@ -87,8 +87,8 @@ func (c *ShosetConn) runJoinConn() {
 	ch := c.GetCh()
 	joinConfig := msg.NewCfgJoin(ch.GetBindAddr())
 	for {
-		ch.ConnsJoin.Set(c.addr, c)
-		ch.NameBrothers.Set(c.addr, true)
+		ch.ConnsJoin.Set(c.addr, c) // a déplacer une fois
+		ch.NameBrothers.Set(c.addr, true)// les connexions établies (fin de fonction)
 		conn, err := tls.Dial("tcp", c.addr, ch.tlsConfig)
 		defer conn.Close()
 		if err != nil {
@@ -100,10 +100,11 @@ func (c *ShosetConn) runJoinConn() {
 
 			// receive messages
 			for {
-				if c.name == "" { // remote logical Name
-					c.SendMessage(*joinConfig)
+				c.SendMessage(*joinConfig)
+				err := c.receiveMsg()
+				if err != nil { // socket might be disconnected
+					break
 				}
-				c.receiveMsg()
 			}
 		}
 	}
@@ -178,7 +179,10 @@ func (c *ShosetConn) SendMessage(msg msg.Message) {
 
 func (c *ShosetConn) receiveMsg() error {
 	// read message type
+	fmt.Println("Enter receive msg##########")
+	fmt.Println("Lecture message type ##########")
 	msgType, err := c.rb.ReadString()
+	fmt.Println("err = ", err)
 	switch {
 	case err == io.EOF:
 		c.ch.deleteConn(c.addr)
@@ -187,26 +191,35 @@ func (c *ShosetConn) receiveMsg() error {
 		c.ch.deleteConn(c.addr)
 		return errors.New("receiveMsg : failed to read - close this connection")
 	}
+	fmt.Println("message type okkkkk ##########")
 	msgType = strings.Trim(msgType, "\n")
+	fmt.Println("Message type == ", msgType)
 
 	// read Message Value
 	fGet, ok := c.ch.Get[msgType]
+	fmt.Println("Fget reçu ##########")
 	if ok {
+		fmt.Println("lecture msgVal ##########")
 		msgVal, err := fGet(c)
 		if err == nil {
 			// read message data and handle it
+			fmt.Println("lecture fhandle ##########")
 			fHandle, ok := c.ch.Handle[msgType]
 			if ok {
+				fmt.Println("lcmt fhandle ##########")
 				go fHandle(c, msgVal)
 			}
 		} else {
+			fmt.Println("err lecture msgVal ##########")
 			c.ch.deleteConn(c.addr)
 			return errors.New("receiveMsg : can not read value of " + msgType)
 		}
 	}
 	if !ok {
+		fmt.Println("err msgType ##########")
 		c.ch.deleteConn(c.addr)
 		return errors.New("receiveMsg : non implemented type of message " + msgType)
 	}
+	fmt.Println("END receiveMsg ##########")
 	return nil
 }

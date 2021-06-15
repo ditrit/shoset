@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"os"
 
 	"github.com/ditrit/shoset/msg"
 )
@@ -51,8 +52,26 @@ func (c Shoset) GetBindAddr() string   { return c.bindAddr }
 func (c Shoset) GetName() string       { return c.lName }
 func (c Shoset) GetShosetType() string { return c.ShosetType }
 
+//terminal
+// var certPath = "./certs/cert.pem"
+// var keyPath = "./certs/key.pem"
+
+//debugger
+var certPath = "../certs/cert.pem"
+var keyPath = "../certs/key.pem"
+
+// returns bool whether the given file or directory exists
+func CertsCheck(path string) bool {
+	_, err := os.Stat(keyPath)
+	if os.IsNotExist(err) {
+		fmt.Println("File does not exist.")
+		return false
+	}
+	return true
+}
+
 /*       Constructor     */
-func NewShoset(lName, ShosetType string) *Shoset {
+func NewShoset(lName, ShosetType string) *Shoset { //l
 	// Creation
 	shoset := Shoset{}
 
@@ -101,17 +120,23 @@ func NewShoset(lName, ShosetType string) *Shoset {
 	shoset.Wait["config"] = WaitConfig
 
 	// Configuration TLS //////////////////////////////////// à améliorer
-	cert, err := tls.LoadX509KeyPair("./certs/cert.pem", "./certs/key.pem") 
-	if err != nil { // only client in insecure mode
-		fmt.Println("Unable to Load certificate")
-		shoset.tlsConfig = &tls.Config{InsecureSkipVerify: true}
-		shoset.tlsServerOK = false
-	} else {
-		shoset.tlsConfig = &tls.Config{
-			Certificates:       []tls.Certificate{cert},
-			InsecureSkipVerify: true,
+	if CertsCheck(certPath) && CertsCheck(keyPath) {
+		cert, err := tls.LoadX509KeyPair(certPath, keyPath)
+		if err != nil { // only client in insecure mode
+			fmt.Println("! Unable to Load certificate !")
+			shoset.tlsConfig = &tls.Config{InsecureSkipVerify: true}
+			shoset.tlsServerOK = false
+		} else {
+			shoset.tlsConfig = &tls.Config{
+				Certificates:       []tls.Certificate{cert},
+				InsecureSkipVerify: true,
+			}
+			shoset.tlsServerOK = true
+			fmt.Println("... Certificate loaded")
 		}
-		shoset.tlsServerOK = true
+	} else {
+		fmt.Println("! Unable to Load certificate !")
+		shoset.tlsServerOK = false
 	}
 	return &shoset
 }
@@ -148,16 +173,19 @@ func (c *Shoset) Link(address string) (*ShosetConn, error) {
 
 //Join : Join to group of Shosets and duplicate in and out connexions
 func (c *Shoset) Join(address string) (*ShosetConn, error) {
-
 	exists := c.ConnsJoin.Get(address)
 	if exists != nil {
+		fmt.Println("~~~~~~~~~~~~~~~exists != nil~~~~~~~~~~~~~~")
 		return exists, nil
 	}
-	if address == c.bindAddr { // join itself
+	if address == c.bindAddr {
+		fmt.Println("~~~~~~~~~~~~~~~address == c.bindAddr~~~~~~~~~~~~~~")
 		return nil, nil
 	}
-
+	fmt.Println("~~~~~~~~~~~~~~~Initialisation new address...~~~~~~~~~~~~~~")
+	fmt.Println(c.bindAddr)
 	conn := new(ShosetConn)
+	// Initialisation attributs ShosetConn
 	conn.ch = c
 	conn.dir = "out"
 	conn.socket = new(tls.Conn)
@@ -170,6 +198,7 @@ func (c *Shoset) Join(address string) (*ShosetConn, error) {
 	conn.addr = ipAddress
 	conn.bindAddr = ipAddress
 	conn.brothers = make(map[string]bool)
+
 	go conn.runJoinConn()
 	return conn, nil
 }
@@ -206,6 +235,7 @@ func (c *Shoset) Bind(address string) error {
 	if err != nil {
 		return err
 	}
+	fmt.Println("TLS configuration OK")
 	c.bindAddr = ipAddress
 	//fmt.Printf("Bind : handleBind adress %s", ipAddress)
 	go c.handleBind()

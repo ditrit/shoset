@@ -2,6 +2,8 @@ package main // tests run in the main package
 
 import (
 	"fmt"
+
+	// "os"
 	"time"
 
 	"github.com/ditrit/shoset"
@@ -298,25 +300,51 @@ func testQueue() {
 func testJoin() {
 	done := make(chan bool)
 
+	cl2 := shoset.NewShoset("cl", "cl") // always "cl" "cl" for gandalf
+	cl2.Bind("localhost:8002")          //we take the port 8002 for our first socket
+	cl2.Join("localhost:8001")          // we join it to our first socket
+
+	cl3 := shoset.NewShoset("cl", "cl")
+	cl3.Bind("localhost:8003")
+	cl3.Join("localhost:8001")
+	cl3.Join("localhost:8002")
+
+	for {
+		time.Sleep(time.Second * time.Duration(1))
+		fmt.Println("\ncl : ", cl2)
+	}
+
+	<-done
+}
+
+func simpleSocket() {
+	done := make(chan bool)
+
 	cl1 := shoset.NewShoset("cl", "cl")
 	cl1.Bind("localhost:8001") //we take the port 8001 for our first socket
+	for {
+		fmt.Println("\ncl : ", cl1)
+		time.Sleep(time.Second * time.Duration(1))
 
-	cl2 := shoset.NewShoset("cl", "cl")
-	cl2.Bind("localhost:8002") //we take the port 8002 for our first socket
-	cl2.Join("localhost:8001") // we join it to our first socket
-
-	time.Sleep(time.Second * time.Duration(2))
-
-	fmt.Println("\ncl1 : ", cl1.String())
-	fmt.Println("\ncl2 : ", cl2.String())
+	}
 
 	<-done
 }
 
 func main() {
-	// fmt.Println("Running shosetTest")
-	// shosetTest()
+	//terminal
+	// arg := os.Args[1]
+	// if arg == "1" {
+	// 	fmt.Println("Running testJoin")
+	// 	testJoin()
+	// } else if arg == "2" {
+	// 	fmt.Println("Running simpleSocket")
+	// 	simpleSocket()
+	// } else {
+	// 	fmt.Println("You must specify one parameter")
+	// }
 
-	fmt.Println("Running testJoin")
+	//debugger
 	testJoin()
+
 }
