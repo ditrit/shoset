@@ -53,12 +53,12 @@ func (c Shoset) GetName() string       { return c.lName }
 func (c Shoset) GetShosetType() string { return c.ShosetType }
 
 //terminal
-// var certPath = "./certs/cert.pem"
-// var keyPath = "./certs/key.pem"
+var certPath = "./certs/cert.pem"
+var keyPath = "./certs/key.pem"
 
 //debugger
-var certPath = "../certs/cert.pem"
-var keyPath = "../certs/key.pem"
+// var certPath = "../certs/cert.pem"
+// var keyPath = "../certs/key.pem"
 
 // returns bool whether the given file or directory exists
 func CertsCheck(path string) bool {
@@ -132,7 +132,6 @@ func NewShoset(lName, ShosetType string) *Shoset { //l
 				InsecureSkipVerify: true,
 			}
 			shoset.tlsServerOK = true
-			fmt.Println("... Certificate loaded")
 		}
 	} else {
 		fmt.Println("! Unable to Load certificate !")
@@ -175,30 +174,12 @@ func (c *Shoset) Link(address string) (*ShosetConn, error) {
 func (c *Shoset) Join(address string) (*ShosetConn, error) {
 	exists := c.ConnsJoin.Get(address)
 	if exists != nil {
-		fmt.Println("~~~~~~~~~~~~~~~exists != nil~~~~~~~~~~~~~~")
 		return exists, nil
 	}
 	if address == c.bindAddr {
-		fmt.Println("~~~~~~~~~~~~~~~address == c.bindAddr~~~~~~~~~~~~~~")
 		return nil, nil
 	}
-	fmt.Println("~~~~~~~~~~~~~~~Initialisation new address...~~~~~~~~~~~~~~")
-	fmt.Println(c.bindAddr)
-	conn := new(ShosetConn)
-	// Initialisation attributs ShosetConn
-	conn.ch = c
-	conn.dir = "out"
-	conn.socket = new(tls.Conn)
-	conn.rb = new(msg.Reader)
-	conn.wb = new(msg.Writer)
-	ipAddress, err := GetIP(address)
-	if err != nil {
-		return nil, err
-	}
-	conn.addr = ipAddress
-	conn.bindAddr = ipAddress
-	conn.brothers = make(map[string]bool)
-
+	conn, _ := NewShosetConn(c, address)
 	go conn.runJoinConn()
 	return conn, nil
 }
@@ -235,7 +216,6 @@ func (c *Shoset) Bind(address string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Println("TLS configuration OK")
 	c.bindAddr = ipAddress
 	//fmt.Printf("Bind : handleBind adress %s", ipAddress)
 	go c.handleBind()

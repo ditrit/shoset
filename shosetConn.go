@@ -27,6 +27,25 @@ type ShosetConn struct {
 	wb         *msg.Writer
 }
 
+func NewShosetConn(c *Shoset, address string) (*ShosetConn, error) { //l
+	// Creation
+	conn := ShosetConn{}
+	// Initialisation attributs ShosetConn
+	conn.ch = c
+	conn.dir = "out"
+	conn.socket = new(tls.Conn)
+	conn.rb = new(msg.Reader)
+	conn.wb = new(msg.Writer)
+	ipAddress, err := GetIP(address)
+	if err != nil {
+		return nil, err
+	}
+	conn.addr = ipAddress
+	conn.bindAddr = ipAddress
+	conn.brothers = make(map[string]bool)
+	return &conn, nil
+}
+
 func (c *ShosetConn) String() string {
 	return fmt.Sprintf("ShosetConn{ way: %s, lName: %s, Type: %s, addr(bindAddr): %s(%s)", c.dir, c.name, c.ShosetType, c.addr, c.bindAddr)
 }
@@ -87,12 +106,12 @@ func (c *ShosetConn) runJoinConn() {
 	ch := c.GetCh()
 	joinConfig := msg.NewCfgJoin(ch.GetBindAddr())
 	for {
-		ch.ConnsJoin.Set(c.addr, c) // a déplacer une fois
-		ch.NameBrothers.Set(c.addr, true)// les connexions établies (fin de fonction)
+		ch.ConnsJoin.Set(c.addr, c)       // à déplacer une fois
+		ch.NameBrothers.Set(c.addr, true) // les connexions établies (fin de fonction)
 		conn, err := tls.Dial("tcp", c.addr, ch.tlsConfig)
 		defer conn.Close()
 		if err != nil {
-			time.Sleep(time.Second * time.Duration(5))
+			time.Sleep(time.Second * time.Duration(1))
 		} else {
 			c.socket = conn
 			c.rb = msg.NewReader(c.socket)
@@ -179,10 +198,7 @@ func (c *ShosetConn) SendMessage(msg msg.Message) {
 
 func (c *ShosetConn) receiveMsg() error {
 	// read message type
-	fmt.Println("Enter receive msg##########")
-	fmt.Println("Lecture message type ##########")
 	msgType, err := c.rb.ReadString()
-	fmt.Println("err = ", err)
 	switch {
 	case err == io.EOF:
 		c.ch.deleteConn(c.addr)
@@ -191,35 +207,26 @@ func (c *ShosetConn) receiveMsg() error {
 		c.ch.deleteConn(c.addr)
 		return errors.New("receiveMsg : failed to read - close this connection")
 	}
-	fmt.Println("message type okkkkk ##########")
 	msgType = strings.Trim(msgType, "\n")
-	fmt.Println("Message type == ", msgType)
 
 	// read Message Value
 	fGet, ok := c.ch.Get[msgType]
-	fmt.Println("Fget reçu ##########")
 	if ok {
-		fmt.Println("lecture msgVal ##########")
 		msgVal, err := fGet(c)
 		if err == nil {
 			// read message data and handle it
-			fmt.Println("lecture fhandle ##########")
 			fHandle, ok := c.ch.Handle[msgType]
 			if ok {
-				fmt.Println("lcmt fhandle ##########")
 				go fHandle(c, msgVal)
 			}
 		} else {
-			fmt.Println("err lecture msgVal ##########")
 			c.ch.deleteConn(c.addr)
 			return errors.New("receiveMsg : can not read value of " + msgType)
 		}
 	}
 	if !ok {
-		fmt.Println("err msgType ##########")
 		c.ch.deleteConn(c.addr)
 		return errors.New("receiveMsg : non implemented type of message " + msgType)
 	}
-	fmt.Println("END receiveMsg ##########")
 	return nil
 }
