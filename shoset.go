@@ -11,12 +11,12 @@ import (
 )
 
 //terminal
-// var certPath = "./certs/cert.pem"
-// var keyPath = "./certs/key.pem"
+var certPath = "./certs/cert.pem"
+var keyPath = "./certs/key.pem"
 
 //debugger
-var certPath = "../certs/cert.pem"
-var keyPath = "../certs/key.pem"
+// var certPath = "../certs/cert.pem"
+// var keyPath = "../certs/key.pem"
 
 // returns bool whether the given file or directory exists
 func CertsCheck(path string) bool {

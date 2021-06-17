@@ -3,7 +3,6 @@ package main // tests run in the main package
 import (
 	"fmt"
 
-	// "os"
 	"time"
 
 	"github.com/ditrit/shoset"
@@ -302,8 +301,8 @@ func testJoin() {
 
 	cl2 := shoset.NewShoset("cl", "cl") // always "cl" "cl" for gandalf
 	fmt.Println("\ncl : ", cl2)
-	cl2.Bind("localhost:8002")          //we take the port 8002 for our first socket
-	cl2.Join("localhost:8001")          // we join it to our first socket
+	cl2.Bind("localhost:8002") //we take the port 8002 for our first socket
+	cl2.Join("localhost:8001") // we join it to our first socket
 
 	cl3 := shoset.NewShoset("cl", "cl")
 	cl3.Bind("localhost:8003")
@@ -346,6 +345,8 @@ func main() {
 	// }
 
 	//debugger
-	testJoin()
+	// testJoin()
+
+	shosetTestEtoile()
 
 }
