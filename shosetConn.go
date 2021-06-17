@@ -27,12 +27,49 @@ type ShosetConn struct {
 	wb         *msg.Writer
 }
 
-func NewShosetConn(c *Shoset, address string) (*ShosetConn, error) { //l
+// GetDir :
+func (c *ShosetConn) GetDir() string { return c.dir }
+
+// GetCh :
+func (c *ShosetConn) GetCh() *Shoset { return c.ch }
+
+// GetName : // remote logical Name
+func (c *ShosetConn) GetName() string { return c.name }
+
+// GetShosetType : // remote ShosetTypeName
+func (c *ShosetConn) GetShosetType() string { return c.ShosetType }
+
+// GetBindAddr :
+func (c *ShosetConn) GetBindAddr() string { return c.bindAddr }
+
+// SetName : // remote logical Name
+func (c *ShosetConn) SetName(lName string) { // remote logical Name
+	if lName != "" {
+		c.name = lName // remote logical Name
+		c.GetCh().ConnsByName.Set(c.name, c.addr, c)
+	}
+}
+
+// SetShosetType : // remote ShosetType
+func (c *ShosetConn) SetShosetType(ShosetType string) {
+	if ShosetType != "" {
+		c.ShosetType = ShosetType
+	}
+}
+
+// SetBindAddr :
+func (c *ShosetConn) SetBindAddr(bindAddr string) {
+	if bindAddr != "" {
+		c.bindAddr = bindAddr
+	}
+}
+
+func NewShosetConn(c *Shoset, address string, dir string) (*ShosetConn, error) { //l
 	// Creation
 	conn := ShosetConn{}
 	// Initialisation attributs ShosetConn
 	conn.ch = c
-	conn.dir = "out"
+	conn.dir = dir
 	conn.socket = new(tls.Conn)
 	conn.rb = new(msg.Reader)
 	conn.wb = new(msg.Writer)
@@ -77,7 +114,6 @@ func (c *ShosetConn) WriteMessage(data interface{}) error {
 
 // RunOutConn : handler for the socket
 func (c *ShosetConn) runOutConn(addr string) {
-
 	myConfig := NewHandshake(c.GetCh())
 	for {
 		conn, err := tls.Dial("tcp", c.addr, c.ch.tlsConfig)
@@ -92,7 +128,7 @@ func (c *ShosetConn) runOutConn(addr string) {
 
 			// receive messages
 			for {
-				if c.name == "" { // remote logical Name // sale problem than runJoinConn()
+				if c.name == "" { // remote logical Name // same problem than runJoinConn()
 					c.SendMessage(*myConfig)
 				}
 				c.receiveMsg()
@@ -104,18 +140,19 @@ func (c *ShosetConn) runOutConn(addr string) {
 // RunJoinConn : handler for the socket
 func (c *ShosetConn) runJoinConn() {
 	ch := c.GetCh()
-	joinConfig := msg.NewCfgJoin(ch.GetBindAddr())
+	joinConfig := msg.NewCfgJoin(ch.GetBindAddr(), ch.GetName(), ch.GetShosetType())
 	for {
 		ch.ConnsJoin.Set(c.addr, c)       // à déplacer une fois
 		ch.NameBrothers.Set(c.addr, true) // les connexions établies (fin de fonction)
 		conn, err := tls.Dial("tcp", c.addr, ch.tlsConfig)
-		defer conn.Close()
+		
 		if err != nil {
 			time.Sleep(time.Second * time.Duration(1))
 		} else {
 			c.socket = conn
 			c.rb = msg.NewReader(c.socket)
 			c.wb = msg.NewWriter(c.socket)
+			defer conn.Close()
 
 			// receive messages
 			for {
@@ -126,51 +163,6 @@ func (c *ShosetConn) runJoinConn() {
 				}
 			}
 		}
-	}
-}
-
-// GetDir :
-func (c *ShosetConn) GetDir() string {
-	return c.dir
-}
-
-// GetCh :
-func (c *ShosetConn) GetCh() *Shoset {
-	return c.ch
-}
-
-// GetName : // remote logical Name
-func (c *ShosetConn) GetName() string { // remote logical Name
-	return c.name // remote logical Name
-}
-
-// GetShosetType : // remote ShosetTypeName
-func (c *ShosetConn) GetShosetType() string { return c.ShosetType }
-
-// GetBindAddr :
-func (c *ShosetConn) GetBindAddr() string {
-	return c.bindAddr
-}
-
-// SetName : // remote logical Name
-func (c *ShosetConn) SetName(lName string) { // remote logical Name
-	if lName != "" {
-		c.name = lName // remote logical Name
-		c.GetCh().ConnsByName.Set(c.name, c.addr, c)
-	}
-}
-
-// SetShosetType : // remote ShosetType
-func (c *ShosetConn) SetShosetType(ShosetType string) {
-	if ShosetType != "" {
-		c.ShosetType = ShosetType
-	}
-}
-
-// SetBindAddr :
-func (c *ShosetConn) SetBindAddr(bindAddr string) {
-	if bindAddr != "" {
-		c.bindAddr = bindAddr
 	}
 }
 

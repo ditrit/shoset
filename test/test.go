@@ -3,7 +3,7 @@ package main // tests run in the main package
 import (
 	"fmt"
 
-	"os"
+	// "os"
 	"time"
 
 	"github.com/ditrit/shoset"
@@ -301,6 +301,7 @@ func testJoin() {
 	done := make(chan bool)
 
 	cl2 := shoset.NewShoset("cl", "cl") // always "cl" "cl" for gandalf
+	fmt.Println("\ncl : ", cl2)
 	cl2.Bind("localhost:8002")          //we take the port 8002 for our first socket
 	cl2.Join("localhost:8001")          // we join it to our first socket
 
@@ -333,18 +334,18 @@ func simpleSocket() {
 
 func main() {
 	//terminal
-	arg := os.Args[1]
-	if arg == "1" {
-		fmt.Println("Running testJoin")
-		testJoin()
-	} else if arg == "2" {
-		fmt.Println("Running simpleSocket")
-		simpleSocket()
-	} else {
-		fmt.Println("You must specify one parameter")
-	}
+	// arg := os.Args[1]
+	// if arg == "1" {
+	// 	fmt.Println("Running testJoin")
+	// 	testJoin()
+	// } else if arg == "2" {
+	// 	fmt.Println("Running simpleSocket")
+	// 	simpleSocket()
+	// } else {
+	// 	fmt.Println("You must specify one parameter")
+	// }
 
 	//debugger
-	// testJoin()
+	testJoin()
 
 }

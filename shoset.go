@@ -10,6 +10,24 @@ import (
 	"github.com/ditrit/shoset/msg"
 )
 
+//terminal
+// var certPath = "./certs/cert.pem"
+// var keyPath = "./certs/key.pem"
+
+//debugger
+var certPath = "../certs/cert.pem"
+var keyPath = "../certs/key.pem"
+
+// returns bool whether the given file or directory exists
+func CertsCheck(path string) bool {
+	_, err := os.Stat(keyPath)
+	if os.IsNotExist(err) {
+		fmt.Println("File does not exist.")
+		return false
+	}
+	return true
+}
+
 // MessageHandlers interface
 type MessageHandlers interface {
 	Handle(*ShosetConn) error
@@ -51,24 +69,6 @@ type Shoset struct {
 func (c Shoset) GetBindAddr() string   { return c.bindAddr }
 func (c Shoset) GetName() string       { return c.lName }
 func (c Shoset) GetShosetType() string { return c.ShosetType }
-
-//terminal
-var certPath = "./certs/cert.pem"
-var keyPath = "./certs/key.pem"
-
-//debugger
-// var certPath = "../certs/cert.pem"
-// var keyPath = "../certs/key.pem"
-
-// returns bool whether the given file or directory exists
-func CertsCheck(path string) bool {
-	_, err := os.Stat(keyPath)
-	if os.IsNotExist(err) {
-		fmt.Println("File does not exist.")
-		return false
-	}
-	return true
-}
 
 /*       Constructor     */
 func NewShoset(lName, ShosetType string) *Shoset { //l
@@ -142,30 +142,17 @@ func NewShoset(lName, ShosetType string) *Shoset { //l
 
 // Display with fmt - override the print of the object
 func (c Shoset) String() string {
-	//descr := fmt.Sprintf("Shoset { lName: %s, bindAddr: %s, type: %s, brothers %#v, nameBrothers %#v, joinConns %#v\n", c.lName, c.bindAddr, c.ShosetType, c.Brothers, c.NameBrothers, c.ConnsJoin)
 	descr := fmt.Sprintf("Shoset - lName: %s,\n\t\tbindAddr : %s,\n\t\ttype : %s,\n\t\tjoinConns : %#v\n", c.lName, c.bindAddr, c.ShosetType, c.ConnsJoin)
 	c.ConnsByAddr.Iterate(
 		func(key string, val *ShosetConn) {
 			descr = fmt.Sprintf("%s - [%s] %s\n", descr, key, val.String())
 		})
-	//descr += "%s}\n"
 	return descr
 }
 
 //Link : Link to another Shoset
 func (c *Shoset) Link(address string) (*ShosetConn, error) {
-	conn := new(ShosetConn)
-	conn.ch = c
-	conn.dir = "out"
-	conn.socket = new(tls.Conn)
-	conn.rb = new(msg.Reader)
-	conn.wb = new(msg.Writer)
-	ipAddress, err := GetIP(address)
-	if err != nil {
-		return nil, err
-	}
-	conn.addr = ipAddress
-	conn.brothers = make(map[string]bool)
+	conn, _ := NewShosetConn(c, address, "out")
 	go conn.runOutConn(conn.addr)
 	return conn, nil
 }
@@ -179,7 +166,7 @@ func (c *Shoset) Join(address string) (*ShosetConn, error) {
 	if address == c.bindAddr {
 		return nil, nil
 	}
-	conn, _ := NewShosetConn(c, address)
+	conn, _ := NewShosetConn(c, address, "out")
 	go conn.runJoinConn()
 	return conn, nil
 }
@@ -204,28 +191,27 @@ func (c *Shoset) SetConn(connAddr, connType string, conn *ShosetConn) {
 
 //Bind : Connect to another Shoset
 func (c *Shoset) Bind(address string) error {
-	if c.bindAddr != "" {
+	if c.bindAddr != "" { //socket already bounded to a port (already passed this Bind function once)
 		fmt.Println("Shoset already bound")
 		return errors.New("Shoset already bound")
 	}
-	if !c.tlsServerOK {
+	if !c.tlsServerOK { // TLS configuration not ok (security problem)
 		fmt.Println("TLS configuration not OK (certificate not found / loaded)")
 		return errors.New("TLS configuration not OK (certificate not found / loaded)")
 	}
-	ipAddress, err := GetIP(address)
-	if err != nil {
+	ipAddress, err := GetIP(address) // parse the address from function parameter to get the IP
+	if err != nil {                  // check if IP is ok
 		return err
 	}
-	c.bindAddr = ipAddress
-	//fmt.Printf("Bind : handleBind adress %s", ipAddress)
+	c.bindAddr = ipAddress // bound to the port
 	go c.handleBind()
 	return nil
 }
 
 // runBindTo : handler for the socket
 func (c *Shoset) handleBind() error {
-	listener, err := net.Listen("tcp", c.bindAddr)
-	if err != nil {
+	listener, err := net.Listen("tcp", c.bindAddr) //open a net listener
+	if err != nil {                                // check if listener is ok
 		fmt.Println("Failed to bind:", err.Error())
 		return err
 	}
@@ -237,23 +223,18 @@ func (c *Shoset) handleBind() error {
 			fmt.Printf("serverShoset accept error: %s", err)
 			break
 		}
-		tlsConn := tls.Server(unencConn, c.tlsConfig)
-		conn, _ := c.inboudConn(tlsConn)
-		//fmt.Printf("Shoset : accepted from %s", conn.addr)
+		tlsConn := tls.Server(unencConn, c.tlsConfig) // create the securised connection
+		conn, _ := c.inBoundConn(tlsConn)
 		go conn.runInConn()
 	}
 	return nil
 }
 
-//inboudConn : Add a new connection from a client
-func (c *Shoset) inboudConn(tlsConn *tls.Conn) (*ShosetConn, error) {
-	conn := new(ShosetConn)
-	conn.socket = tlsConn
-	conn.dir = "in"
-	conn.ch = c
-	conn.addr = tlsConn.RemoteAddr().String()
+//inBoundConn : Add a new connection from a client
+func (c *Shoset) inBoundConn(tlsConn *tls.Conn) (*ShosetConn, error) {
+	address := tlsConn.RemoteAddr().String()
 	//c.SetConn(conn.addr, conn)
-	conn.rb = new(msg.Reader)
-	conn.wb = new(msg.Writer)
+	conn, _ := NewShosetConn(c, address, "in")
+	conn.socket = tlsConn //we override socket attribut with our new value
 	return conn, nil
 }

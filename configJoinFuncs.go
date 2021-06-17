@@ -24,7 +24,7 @@ func HandleConfigJoin(c *ShosetConn, message msg.Message) error {
 			ch.Join(newMember)
 		}
 		thisOne := c.bindAddr
-		cfgNewMember := msg.NewCfgMember(newMember)
+		cfgNewMember := msg.NewCfgMember(newMember, ch.GetName(), ch.GetShosetType())
 		ch.ConnsJoin.Iterate(
 			func(key string, val *ShosetConn) {
 				if key != newMember && key != thisOne {
@@ -34,7 +34,7 @@ func HandleConfigJoin(c *ShosetConn, message msg.Message) error {
 		)
 
 		if dir == "out" {
-			;
+
 		}
 
 	case "member":
