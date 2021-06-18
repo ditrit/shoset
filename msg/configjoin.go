@@ -7,7 +7,7 @@ type ConfigJoin struct {
 	MessageBase
 	CommandName string
 	BindAddress string
-	Lname        string
+	Lname       string
 	ShosetType  string
 }
 

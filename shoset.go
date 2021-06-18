@@ -150,24 +150,74 @@ func (c Shoset) String() string {
 	return descr
 }
 
-//Link : Link to another Shoset
-func (c *Shoset) Link(address string) (*ShosetConn, error) {
-	conn, _ := NewShosetConn(c, address, "out")
-	go conn.runOutConn(conn.addr)
+//Bind : Connect to another Shoset
+func (c *Shoset) Bind(address string) error {
+	if c.bindAddr != "" { //socket already bounded to a port (already passed this Bind function once)
+		fmt.Println("Shoset already bound")
+		return errors.New("Shoset already bound")
+	}
+	if !c.tlsServerOK { // TLS configuration not ok (security problem)
+		fmt.Println("TLS configuration not OK (certificate not found / loaded)")
+		return errors.New("TLS configuration not OK (certificate not found / loaded)")
+	}
+	ipAddress, err := GetIP(address) // parse the address from function parameter to get the IP
+	if err != nil {                  // check if IP is ok
+		return err
+	}
+	c.bindAddr = ipAddress // bound to the port
+	go c.handleBind()      // process runInconn()
+	return nil
+}
+
+// runBindTo : handler for the socket
+func (c *Shoset) handleBind() error {
+	listener, err := net.Listen("tcp", c.bindAddr) //open a net listener
+	if err != nil {                                // check if listener is ok
+		fmt.Println("Failed to bind:", err.Error())
+		return err
+	}
+	defer listener.Close()
+
+	for {
+		unencConn, err := listener.Accept()
+		if err != nil {
+			fmt.Printf("serverShoset accept error: %s", err)
+			break
+		}
+		tlsConn := tls.Server(unencConn, c.tlsConfig) // create the securised connection protocol
+		conn, _ := c.inBoundConn(tlsConn)             // create the securised connection
+		go conn.runInConn()
+	}
+	return nil
+}
+
+//inBoundConn : Add a new connection from a client
+func (c *Shoset) inBoundConn(tlsConn *tls.Conn) (*ShosetConn, error) {
+	address := tlsConn.RemoteAddr().String()
+	//c.SetConn(conn.addr, conn)
+	conn, _ := NewShosetConn(c, address, "in")
+	conn.socket = tlsConn //we override socket attribut with our securised protocol
 	return conn, nil
 }
 
 //Join : Join to group of Shosets and duplicate in and out connexions
 func (c *Shoset) Join(address string) (*ShosetConn, error) {
-	exists := c.ConnsJoin.Get(address) // verifier si un join n'existe pas deja
-	if exists != nil {
+	exists := c.ConnsJoin.Get(address) // check if address already in the map
+	if exists != nil {                 //connection already established for this socket
 		return exists, nil
 	}
-	if address == c.bindAddr {
+	if address == c.bindAddr { // connection impossible with itself
 		return nil, nil
 	}
+	conn, _ := NewShosetConn(c, address, "out") // we create a new connection
+	go conn.runJoinConn()                       // we let the connection to other socket process run in background
+	return conn, nil
+}
+
+//Link : Link to another Shoset
+func (c *Shoset) Link(address string) (*ShosetConn, error) {
 	conn, _ := NewShosetConn(c, address, "out")
-	go conn.runJoinConn()
+	go conn.runOutConn(conn.addr)
 	return conn, nil
 }
 
@@ -187,54 +237,4 @@ func (c *Shoset) SetConn(connAddr, connType string, conn *ShosetConn) {
 		c.ConnsByType.Set(connType, conn.addr, conn)
 		c.ConnsByName.Set(conn.name, conn.addr, conn)
 	}
-}
-
-//Bind : Connect to another Shoset
-func (c *Shoset) Bind(address string) error {
-	if c.bindAddr != "" { //socket already bounded to a port (already passed this Bind function once)
-		fmt.Println("Shoset already bound")
-		return errors.New("Shoset already bound")
-	}
-	if !c.tlsServerOK { // TLS configuration not ok (security problem)
-		fmt.Println("TLS configuration not OK (certificate not found / loaded)")
-		return errors.New("TLS configuration not OK (certificate not found / loaded)")
-	}
-	ipAddress, err := GetIP(address) // parse the address from function parameter to get the IP
-	if err != nil {                  // check if IP is ok
-		return err
-	}
-	c.bindAddr = ipAddress // bound to the port
-	go c.handleBind()
-	return nil
-}
-
-// runBindTo : handler for the socket
-func (c *Shoset) handleBind() error {
-	listener, err := net.Listen("tcp", c.bindAddr) //open a net listener
-	if err != nil {                                // check if listener is ok
-		fmt.Println("Failed to bind:", err.Error())
-		return err
-	}
-	defer listener.Close()
-
-	for {
-		unencConn, err := listener.Accept()
-		if err != nil {
-			fmt.Printf("serverShoset accept error: %s", err)
-			break
-		}
-		tlsConn := tls.Server(unencConn, c.tlsConfig) // create the securised connection
-		conn, _ := c.inBoundConn(tlsConn)
-		go conn.runInConn()
-	}
-	return nil
-}
-
-//inBoundConn : Add a new connection from a client
-func (c *Shoset) inBoundConn(tlsConn *tls.Conn) (*ShosetConn, error) {
-	address := tlsConn.RemoteAddr().String()
-	//c.SetConn(conn.addr, conn)
-	conn, _ := NewShosetConn(c, address, "in")
-	conn.socket = tlsConn //we override socket attribut with our new value
-	return conn, nil
 }

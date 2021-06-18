@@ -2,7 +2,7 @@ package main // tests run in the main package
 
 import (
 	"fmt"
-	"os"
+	// "os"
 
 	"time"
 
@@ -323,6 +323,7 @@ func simpleSocket() {
 
 	cl1 := shoset.NewShoset("cl", "cl")
 	cl1.Bind("localhost:8001") //we take the port 8001 for our first socket
+
 	for {
 		fmt.Println("\ncl : ", cl1)
 		time.Sleep(time.Second * time.Duration(1))
@@ -332,19 +333,39 @@ func simpleSocket() {
 	<-done
 }
 
-func main() {
-	//terminal
-	arg := os.Args[1]
-	if arg == "1" {
-		fmt.Println("Running testJoin")
-		testJoin()
-	} else if arg == "2" {
-		fmt.Println("Running simpleSocket")
-		simpleSocket()
-	} else {
-		fmt.Println("You must specify one parameter")
+func debugger() {
+	done := make(chan bool)
+
+	cl4 := shoset.NewShoset("cl", "cl")
+	cl4.Bind("localhost:8004")
+	cl5 := shoset.NewShoset("cl", "cl")
+	cl5.Bind("localhost:8005")
+	cl5.Join("localhost:8004")
+
+	for {
+		fmt.Println("\ncl : ", cl4)
+		fmt.Println("\ncl : ", cl4)
+		fmt.Println("\n\n")
+		time.Sleep(time.Second * time.Duration(2))
+
 	}
 
+	<-done
+}
+
+func main() {
+	//terminal
+	// arg := os.Args[1]
+	// if arg == "1" {
+	// 	fmt.Println("Running testJoin")
+	// 	testJoin()
+	// } else if arg == "2" {
+	// 	fmt.Println("Running simpleSocket")
+	// 	simpleSocket()
+	// } else {
+	// 	fmt.Println("You must specify one parameter")
+	// }
+
 	//debugger
-	// testJoin()
+	debugger()
 }

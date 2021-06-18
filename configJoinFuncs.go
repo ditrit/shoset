@@ -1,6 +1,8 @@
 package shoset
 
 import (
+	"fmt"
+
 	"github.com/ditrit/shoset/msg"
 )
 
@@ -13,22 +15,27 @@ func GetConfigJoin(c *ShosetConn) (msg.Message, error) {
 
 // HandleConfigJoin :
 func HandleConfigJoin(c *ShosetConn, message msg.Message) error {
-	cfg := message.(msg.ConfigJoin)
+	// fmt.Printf("########### enter handleconfigjion")
+	cfg := message.(msg.ConfigJoin) // compute config from message
 	ch := c.GetCh()
 	dir := c.GetDir()
 	switch cfg.GetCommandName() {
 	case "join":
-		newMember := cfg.GetBindAddress() // recupere l'adresse distante
+		newMember := cfg.GetBindAddress() // compute
 
-		if dir == "in" { // je suis une chaussette et je recois une demande join - je veux me joiner a toi
+		if dir == "in" { // a socket wants to join this one
+			// fmt.Printf("########### a socket wants to join this one")
 			if ch.GetName() == cfg.GetName() && ch.GetShosetType() == cfg.GetShosetType() {
+				// fmt.Printf("\n###########  same type")
 				ch.ConnsJoin.Set(c.addr, c)
 				ch.NameBrothers.Set(c.addr, true)
 				ch.Join(newMember)
 				configOk := msg.NewCfgJoinOk()
 				c.SendMessage(configOk)
 			} else {
+				fmt.Printf("error : Invalid connection for join - not the same type/name")
 				c.SetIsValid(false)
+				//
 			}
 		}
 		thisOne := c.bindAddr
@@ -41,8 +48,8 @@ func HandleConfigJoin(c *ShosetConn, message msg.Message) error {
 			},
 		)
 
-		if dir == "out" {
-		}
+		// if dir == "out" {
+		// }
 
 	case "ok":
 		ch.ConnsJoin.Set(c.addr, c)
