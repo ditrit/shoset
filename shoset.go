@@ -159,7 +159,7 @@ func (c *Shoset) Link(address string) (*ShosetConn, error) {
 
 //Join : Join to group of Shosets and duplicate in and out connexions
 func (c *Shoset) Join(address string) (*ShosetConn, error) {
-	exists := c.ConnsJoin.Get(address)
+	exists := c.ConnsJoin.Get(address) // verifier si un join n'existe pas deja
 	if exists != nil {
 		return exists, nil
 	}

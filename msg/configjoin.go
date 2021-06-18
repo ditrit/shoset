@@ -7,7 +7,7 @@ type ConfigJoin struct {
 	MessageBase
 	CommandName string
 	BindAddress string
-	name        string
+	Lname        string
 	ShosetType  string
 }
 
@@ -21,29 +21,35 @@ func (c ConfigJoin) GetBindAddress() string { return c.BindAddress }
 func (c ConfigJoin) GetCommandName() string { return c.CommandName }
 
 // GetName :
-func (c ConfigJoin) GetName() string { return c.name }
+func (c ConfigJoin) GetName() string { return c.Lname }
 
 // GetShosetType :
 func (c ConfigJoin) GetShosetType() string { return c.ShosetType }
 
 // NewCfgJoin :
-func NewCfgJoin(bindAddress string, name string, ShosetType string) *ConfigJoin {
+func NewCfgJoin(bindAddress, Lname, ShosetType string) *ConfigJoin {
 	c := new(ConfigJoin)
 	c.InitMessageBase()
 	c.CommandName = "join"
 	c.BindAddress = bindAddress
-	c.name = name
+	c.Lname = Lname
 	c.ShosetType = ShosetType
 	return c
 }
 
+func NewCfgJoinOk() *ConfigJoin {
+	c := new(ConfigJoin)
+	c.CommandName = "ok"
+	return c
+}
+
 // NewCfgMember :
-func NewCfgMember(bindAddress string, name string, ShosetType string) *ConfigJoin {
+func NewCfgMember(bindAddress, Lname, ShosetType string) *ConfigJoin {
 	c := new(ConfigJoin)
 	c.InitMessageBase()
 	c.CommandName = "member"
 	c.BindAddress = bindAddress
-	c.name = name
+	c.Lname = Lname
 	c.ShosetType = ShosetType
 	return c
 }

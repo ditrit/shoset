@@ -25,6 +25,7 @@ type ShosetConn struct {
 	ch         *Shoset
 	rb         *msg.Reader
 	wb         *msg.Writer
+	isValid    bool
 }
 
 // GetDir :
@@ -64,6 +65,10 @@ func (c *ShosetConn) SetBindAddr(bindAddr string) {
 	}
 }
 
+func (c *ShosetConn) SetIsValid(state bool) {
+	c.isValid = state
+}
+
 func NewShosetConn(c *Shoset, address string, dir string) (*ShosetConn, error) { //l
 	// Creation
 	conn := ShosetConn{}
@@ -80,6 +85,7 @@ func NewShosetConn(c *Shoset, address string, dir string) (*ShosetConn, error) {
 	conn.addr = ipAddress
 	conn.bindAddr = ipAddress
 	conn.brothers = make(map[string]bool)
+	conn.isValid = true
 	return &conn, nil
 }
 
@@ -142,10 +148,14 @@ func (c *ShosetConn) runJoinConn() {
 	ch := c.GetCh()
 	joinConfig := msg.NewCfgJoin(ch.GetBindAddr(), ch.GetName(), ch.GetShosetType())
 	for {
-		ch.ConnsJoin.Set(c.addr, c)       // à déplacer une fois
-		ch.NameBrothers.Set(c.addr, true) // les connexions établies (fin de fonction)
+		if !c.isValid {
+			fmt.Println("Error : Invalid connection for join")
+			break
+		}
+		// 	ch.ConnsJoin.Set(c.addr, c)       // à déplacer une fois
+		// 	ch.NameBrothers.Set(c.addr, true) // les connexions établies (fin de fonction)
 		conn, err := tls.Dial("tcp", c.addr, ch.tlsConfig)
-		
+
 		if err != nil {
 			time.Sleep(time.Second * time.Duration(1))
 		} else {
@@ -156,7 +166,9 @@ func (c *ShosetConn) runJoinConn() {
 
 			// receive messages
 			for {
-				c.SendMessage(*joinConfig)
+				if ch.ConnsJoin.Get(c.GetBindAddr()) != nil {
+					c.SendMessage(*joinConfig)
+				}
 				err := c.receiveMsg()
 				if err != nil { // socket might be disconnected
 					break
@@ -189,6 +201,10 @@ func (c *ShosetConn) SendMessage(msg msg.Message) {
 }
 
 func (c *ShosetConn) receiveMsg() error {
+	if !c.isValid {
+		c.ch.deleteConn(c.addr)
+		return errors.New("invalid connection")
+	}
 	// read message type
 	msgType, err := c.rb.ReadString()
 	switch {
@@ -209,7 +225,7 @@ func (c *ShosetConn) receiveMsg() error {
 			// read message data and handle it
 			fHandle, ok := c.ch.Handle[msgType]
 			if ok {
-				go fHandle(c, msgVal)
+				go fHandle(c, msgVal) //HandleConfigJoin()
 			}
 		} else {
 			c.ch.deleteConn(c.addr)

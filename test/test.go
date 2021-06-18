@@ -2,6 +2,7 @@ package main // tests run in the main package
 
 import (
 	"fmt"
+	"os"
 
 	"time"
 
@@ -333,20 +334,17 @@ func simpleSocket() {
 
 func main() {
 	//terminal
-	// arg := os.Args[1]
-	// if arg == "1" {
-	// 	fmt.Println("Running testJoin")
-	// 	testJoin()
-	// } else if arg == "2" {
-	// 	fmt.Println("Running simpleSocket")
-	// 	simpleSocket()
-	// } else {
-	// 	fmt.Println("You must specify one parameter")
-	// }
+	arg := os.Args[1]
+	if arg == "1" {
+		fmt.Println("Running testJoin")
+		testJoin()
+	} else if arg == "2" {
+		fmt.Println("Running simpleSocket")
+		simpleSocket()
+	} else {
+		fmt.Println("You must specify one parameter")
+	}
 
 	//debugger
 	// testJoin()
-
-	shosetTestEtoile()
-
 }
