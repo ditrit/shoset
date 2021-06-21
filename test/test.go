@@ -336,7 +336,7 @@ func simpleSocket() {
 func debugger() {
 	done := make(chan bool)
 
-	cl4 := shoset.NewShoset("cl", "cl")
+	cl4 := shoset.NewShoset("cl2", "cl")
 	cl4.Bind("localhost:8004")
 	cl5 := shoset.NewShoset("cl", "cl")
 	cl5.Bind("localhost:8005")
@@ -344,7 +344,7 @@ func debugger() {
 
 	for {
 		fmt.Println("\ncl : ", cl4)
-		fmt.Println("\ncl : ", cl4)
+		fmt.Println("\ncl : ", cl5)
 		fmt.Println("\n\n")
 		time.Sleep(time.Second * time.Duration(2))
 

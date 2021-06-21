@@ -1,6 +1,9 @@
 package shoset
 
-import "sync"
+import (
+	"sync"
+)
+
 // import "fmt"
 
 // MapSafeConn : simple key map safe for goroutines...
@@ -47,6 +50,7 @@ func (m *MapSafeConn) Get(key string) *ShosetConn {
 
 // Set : assign a value to a MapSafeConn
 func (m *MapSafeConn) Set(key string, value *ShosetConn) *MapSafeConn {
+	// fmt.Println(key)
 	m.Lock()
 	m.m[key] = value
 	m.Unlock()

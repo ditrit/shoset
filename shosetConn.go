@@ -43,6 +43,8 @@ func (c *ShosetConn) GetShosetType() string { return c.ShosetType }
 // GetBindAddr :
 func (c *ShosetConn) GetBindAddr() string { return c.bindAddr }
 
+func (c *ShosetConn) GetIsValid() bool { return c.isValid }
+
 // SetName : // remote logical Name
 func (c *ShosetConn) SetName(lName string) { // remote logical Name
 	if lName != "" {
@@ -120,6 +122,7 @@ func (c *ShosetConn) WriteMessage(data interface{}) error {
 
 // RunOutConn : handler for the socket, for Link()
 func (c *ShosetConn) runOutConn(addr string) {
+	fmt.Println("Entering runoutconn \n")
 	myConfig := NewHandshake(c.GetCh())
 	for {
 		conn, err := tls.Dial("tcp", c.addr, c.ch.tlsConfig)
@@ -145,12 +148,14 @@ func (c *ShosetConn) runOutConn(addr string) {
 
 // RunJoinConn : handler for the socket, for Join()
 func (c *ShosetConn) runJoinConn() {
-	// fmt.Printf("########### enter runjoinconn")
-	ch := c.GetCh()                                                                  // socket from socketConn
-	joinConfig := msg.NewCfgJoin(ch.GetBindAddr(), ch.GetName(), ch.GetShosetType()) //we create a new message config
+	fmt.Printf("########### enter runjoinconn\n")
+	ch := c.GetCh()
+	// fmt.Println(ch.GetBindAddr())                                                        // socket from socketConn
+	joinConfig := msg.NewCfg(ch.GetBindAddr(), ch.GetName(), ch.GetShosetType(), "join") //we create a new message config
 	for {
+		fmt.Println("in for loop from runjoinconn")
 		if !c.isValid { // sockets are not from the same type or don't have the same name
-			fmt.Println("error : Invalid connection for join - not the same type/name")
+			fmt.Println("c is not valid")
 			break
 		}
 		// 	ch.ConnsJoin.Set(c.addr, c)       // à déplacer une fois
@@ -169,6 +174,7 @@ func (c *ShosetConn) runJoinConn() {
 
 			// receive messages
 			for {
+				// fmt.Println("~~~~", ch.ConnsJoin.Get(c.GetBindAddr()))
 				// fmt.Printf("\n########### enter receive message loop")
 				if ch.ConnsJoin.Get(c.GetBindAddr()) == nil { ///////////////////////////////////////////////////////////////// problem here with != : doesn't enter if - fixed with ==
 					// fmt.Printf("\n########### can send message")
@@ -176,12 +182,10 @@ func (c *ShosetConn) runJoinConn() {
 				}
 				// fmt.Printf("\n########### can receive message")
 				err := c.receiveMsg()
+				fmt.Println(c.GetIsValid(), " - after message received - in runjoinconn")
+				time.Sleep(time.Second * time.Duration(1))
 				if err != nil {
-					if err == io.EOF {
-						fmt.Println("receiveMsg : reached EOF - close this connection")
-					} else {
-						fmt.Println("receiveMsg : failed to read - close this connection")
-					}
+					fmt.Println("error detected in receiving msg")
 					break
 				}
 			}
@@ -213,25 +217,25 @@ func (c *ShosetConn) SendMessage(msg msg.Message) {
 }
 
 func (c *ShosetConn) receiveMsg() error {
-	// fmt.Printf("\n########### enter receive message")
+	fmt.Printf("\n########### enter receive message\n")
 	if !c.isValid {
 		c.ch.deleteConn(c.addr)
-		fmt.Printf("error : Invalid connection for join - not the same type/name")
 		return errors.New("error : Invalid connection for join - not the same type/name")
 	}
+	// fmt.Println("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
 	// fmt.Printf("\n########### receiveMsg : gonna read message")
 	// read message type
 	msgType, err := c.rb.ReadString() /////////////////////////////////////////////////////////////// problem here : doesn't exit RedaString() - fixed by changing sth in runJoinConn()
 	// fmt.Printf("\n########### receiveMsg : message read")
 	switch {
 	case err == io.EOF:
-		fmt.Printf("\n########### receiveMsg : reached EOF - close this connection")
+		fmt.Println("\n########### receiveMsg : reached EOF - close this connection")
 		c.ch.deleteConn(c.addr)
 		return errors.New("receiveMsg : reached EOF - close this connection")
-	case err != nil:
-		fmt.Printf("\n########### receiveMsg : failed to read - close this connection")
+	case err != nil && err != io.EOF:
+		fmt.Println("\n########### receiveMsg : failed to read - close this connection")
 		c.ch.deleteConn(c.addr)
-		return errors.New("receiveMsg : failed to read - close this connection")
+		return errors.New("error : receiveMsg : failed to read - close this connection")
 	}
 	msgType = strings.Trim(msgType, "\n")
 	// fmt.Printf("\n########### receiveMsg : no err")
@@ -248,14 +252,15 @@ func (c *ShosetConn) receiveMsg() error {
 			}
 		} else {
 			c.ch.deleteConn(c.addr)
-			fmt.Printf("receiveMsg : can not read value of " + msgType)
+			fmt.Println("receiveMsg : can not read value of " + msgType)
 			return errors.New("receiveMsg : can not read value of " + msgType)
 		}
 	}
 	if !ok {
 		c.ch.deleteConn(c.addr)
-		fmt.Printf("receiveMsg : non implemented type of message " + msgType)
+		fmt.Println("receiveMsg : non implemented type of message " + msgType)
 		return errors.New("receiveMsg : non implemented type of message " + msgType)
 	}
+	fmt.Println(c.GetIsValid(), " - after receivemsg")
 	return nil
 }

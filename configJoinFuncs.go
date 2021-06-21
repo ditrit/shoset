@@ -1,6 +1,7 @@
 package shoset
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/ditrit/shoset/msg"
@@ -15,7 +16,7 @@ func GetConfigJoin(c *ShosetConn) (msg.Message, error) {
 
 // HandleConfigJoin :
 func HandleConfigJoin(c *ShosetConn, message msg.Message) error {
-	// fmt.Printf("########### enter handleconfigjion")
+	// fmt.Printf("########### enter handleconfigjoin\n")
 	cfg := message.(msg.ConfigJoin) // compute config from message
 	ch := c.GetCh()
 	dir := c.GetDir()
@@ -27,19 +28,22 @@ func HandleConfigJoin(c *ShosetConn, message msg.Message) error {
 			// fmt.Printf("########### a socket wants to join this one")
 			if ch.GetName() == cfg.GetName() && ch.GetShosetType() == cfg.GetShosetType() {
 				// fmt.Printf("\n###########  same type")
-				ch.ConnsJoin.Set(c.addr, c)
-				ch.NameBrothers.Set(c.addr, true)
+				fmt.Println("in : ", c.addr, cfg.GetBindAddress())
+				ch.ConnsJoin.Set(cfg.GetBindAddress(), c)
+				ch.NameBrothers.Set(cfg.GetBindAddress(), true)
 				ch.Join(newMember)
-				configOk := msg.NewCfgJoinOk()
+				configOk := msg.NewCfg(newMember, ch.GetName(), ch.GetShosetType(), "ok")
 				c.SendMessage(configOk)
 			} else {
-				fmt.Printf("error : Invalid connection for join - not the same type/name")
+				fmt.Println("Invalid connection for join - not the same type/name")
 				c.SetIsValid(false)
+				fmt.Println(c.GetIsValid(), " - after handleconfigjoin")
+				return errors.New("error : Invalid connection for join - not the same type/name")
 				//
 			}
 		}
 		thisOne := c.bindAddr
-		cfgNewMember := msg.NewCfgMember(newMember, ch.GetName(), ch.GetShosetType())
+		cfgNewMember := msg.NewCfg(newMember, ch.GetName(), ch.GetShosetType(), "member")
 		ch.ConnsJoin.Iterate(
 			func(key string, val *ShosetConn) {
 				if key != newMember && key != thisOne {
@@ -52,7 +56,8 @@ func HandleConfigJoin(c *ShosetConn, message msg.Message) error {
 		// }
 
 	case "ok":
-		ch.ConnsJoin.Set(c.addr, c)
+		fmt.Println("ok : ", c.addr)
+		ch.ConnsJoin.Set(c.addr, c) //////////////// need to find remote address because here we take the address of the tcp protocol which is random
 		ch.NameBrothers.Set(c.addr, true)
 
 	case "member":

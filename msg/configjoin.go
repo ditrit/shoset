@@ -26,28 +26,11 @@ func (c ConfigJoin) GetName() string { return c.Lname }
 // GetShosetType :
 func (c ConfigJoin) GetShosetType() string { return c.ShosetType }
 
-// NewCfgJoin :
-func NewCfgJoin(bindAddress, Lname, ShosetType string) *ConfigJoin {
+ // join/ok/member
+func NewCfg(bindAddress, Lname, ShosetType, commandName string) *ConfigJoin {
 	c := new(ConfigJoin)
 	c.InitMessageBase()
-	c.CommandName = "join"
-	c.BindAddress = bindAddress
-	c.Lname = Lname
-	c.ShosetType = ShosetType
-	return c
-}
-
-func NewCfgJoinOk() *ConfigJoin {
-	c := new(ConfigJoin)
-	c.CommandName = "ok"
-	return c
-}
-
-// NewCfgMember :
-func NewCfgMember(bindAddress, Lname, ShosetType string) *ConfigJoin {
-	c := new(ConfigJoin)
-	c.InitMessageBase()
-	c.CommandName = "member"
+	c.CommandName = commandName
 	c.BindAddress = bindAddress
 	c.Lname = Lname
 	c.ShosetType = ShosetType
