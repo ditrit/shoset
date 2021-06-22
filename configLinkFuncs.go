@@ -27,11 +27,11 @@ func HandleConfigLink(c *ShosetConn, message msg.Message) error {
 			c.SetName(cfg.GetLogicalName())
 			c.SetShosetType(cfg.GetShosetType())
 		}
-		if c.GetBindAddr() == "" {
-			c.SetBindAddr(cfg.GetBindAddress())
+		if c.GetLocalAddress() == "" {
+			c.SetLocalAddress(cfg.GetBindAddress())
 		}
 		if dir == "in" {
-			ch.SetConn(c.GetBindAddr(), c.GetShosetType(), c)
+			ch.SetConn(c.GetLocalAddress(), c.GetShosetType(), c)
 			if ch.NameBrothers.Len() > 0 {
 				ch.NameBrothers.Iterate(
 					func(bro string, val bool) {
@@ -94,15 +94,15 @@ func HandleConfigLink(c *ShosetConn, message msg.Message) error {
 
 func sendCfgToBrothers(currentConn *ShosetConn) {
 	ch := currentConn.GetCh()
-	currentAddr := currentConn.GetBindAddr()
+	currentAddr := currentConn.GetRemoteAddress()
 	currentName := currentConn.GetName()
 	cfgNameBrothers := msg.NewNameBrothers([]string{currentAddr})
 	oldNameBrothers := []string{}
 	ch.ConnsByName.Iterate(currentName,
 		func(key string, conn *ShosetConn) {
-			if conn.GetDir() == "in" && conn.bindAddr != currentAddr {
+			if conn.GetDir() == "in" && conn.GetLocalAddress() != currentAddr {
 				conn.SendMessage(cfgNameBrothers)
-				oldNameBrothers = append(oldNameBrothers, conn.bindAddr)
+				oldNameBrothers = append(oldNameBrothers, conn.GetLocalAddress())
 			}
 		},
 	)
@@ -113,7 +113,7 @@ func sendCfgToBrothers(currentConn *ShosetConn) {
 
 //NewHandshake : Build a configLink Message
 func NewHandshake(ch *Shoset) *msg.ConfigLink {
-	return msg.NewHandshake(ch.bindAddr, ch.lName, ch.ShosetType)
+	return msg.NewHandshake(ch.bindAddress, ch.lName, ch.ShosetType)
 }
 
 //NewCfgOut : Build a configLink Message
@@ -123,7 +123,7 @@ func NewCfgOut(ch *Shoset) *msg.ConfigLink {
 		func(key string, val *ShosetConn) {
 			conn := val
 			if conn.dir == "out" {
-				bros = append(bros, conn.addr)
+				bros = append(bros, conn.remoteAddr)
 			}
 		},
 	)

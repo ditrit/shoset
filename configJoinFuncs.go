@@ -2,7 +2,7 @@ package shoset
 
 import (
 	"errors"
-	"fmt"
+	// "fmt"
 
 	"github.com/ditrit/shoset/msg"
 )
@@ -20,32 +20,33 @@ func HandleConfigJoin(c *ShosetConn, message msg.Message) error {
 	cfg := message.(msg.ConfigJoin) // compute config from message
 	ch := c.GetCh()
 	dir := c.GetDir()
+	remoteAddress := cfg.GetAddress()
 	switch cfg.GetCommandName() {
 	case "join":
-		newMember := cfg.GetBindAddress() // compute
-
 		if dir == "in" { // a socket wants to join this one
 			// fmt.Printf("########### a socket wants to join this one")
 			if ch.GetName() == cfg.GetName() && ch.GetShosetType() == cfg.GetShosetType() {
 				// fmt.Printf("\n###########  same type")
-				fmt.Println("in : ", c.addr, cfg.GetBindAddress())
-				ch.ConnsJoin.Set(cfg.GetBindAddress(), c)
-				ch.NameBrothers.Set(cfg.GetBindAddress(), true)
-				ch.Join(newMember)
-				configOk := msg.NewCfg(newMember, ch.GetName(), ch.GetShosetType(), "ok")
+				// fmt.Println("in : ", remoteAddress)
+				ch.ConnsJoin.Set(remoteAddress, c)
+				ch.NameBrothers.Set(remoteAddress, true)
+				// ch.Join(remoteAddress)
+				configOk := msg.NewCfg(remoteAddress, ch.GetName(), ch.GetShosetType(), "ok")
 				c.SendMessage(configOk)
 			} else {
-				fmt.Println("Invalid connection for join - not the same type/name")
+				// fmt.Println("Invalid connection for join - not the same type/name")
 				c.SetIsValid(false) //////////////////////
-				fmt.Println(c.GetIsValid(), " - after handleconfigjoin")
+				configNotOk := msg.NewCfg(remoteAddress, ch.GetName(), ch.GetShosetType(), "notok")
+				c.SendMessage(configNotOk)
+				// fmt.Println(c.GetIsValid(), " - after handleconfigjoin")
 				return errors.New("error : Invalid connection for join - not the same type/name")
 			}
 		}
-		thisOne := c.bindAddr
-		cfgNewMember := msg.NewCfg(newMember, ch.GetName(), ch.GetShosetType(), "member")
+		thisOne := c.GetLocalAddress()
+		cfgNewMember := msg.NewCfg(remoteAddress, ch.GetName(), ch.GetShosetType(), "member")
 		ch.ConnsJoin.Iterate(
 			func(key string, val *ShosetConn) {
-				if key != newMember && key != thisOne {
+				if key != remoteAddress && key != thisOne {
 					val.SendMessage(cfgNewMember) //tell to the other member that there is a new member to join
 				}
 			},
@@ -55,13 +56,18 @@ func HandleConfigJoin(c *ShosetConn, message msg.Message) error {
 		// }
 
 	case "ok":
-		fmt.Println("ok : ", c.addr)
-		ch.ConnsJoin.Set(c.addr, c) //////////////// need to find remote address because here we take the address of the tcp protocol which is random
-		ch.NameBrothers.Set(c.addr, true)
+		// fmt.Println("ok : ", c.remoteAddr)
+		ch.ConnsJoin.Set(c.remoteAddr, c) //////////////// need to find remote address because here we take the address of the tcp protocol which is random
+		// fmt.Println("received ok", c.GetLocalAddress())
+		ch.NameBrothers.Set(c.remoteAddr, true)
+
+	case "notok":
+		// fmt.Println("received notok", c.GetLocalAddress())
+		c.SetIsValid(false)
+		return errors.New("error : connection not ok")
 
 	case "member":
-		newMember := cfg.GetBindAddress()
-		ch.Join(newMember)
+		ch.Join(remoteAddress)
 	}
 	return nil
 }

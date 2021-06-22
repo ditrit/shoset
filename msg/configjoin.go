@@ -6,7 +6,7 @@ import "fmt"
 type ConfigJoin struct {
 	MessageBase
 	CommandName string
-	BindAddress string
+	Address string
 	Lname       string
 	ShosetType  string
 }
@@ -14,8 +14,8 @@ type ConfigJoin struct {
 // GetMsgType accessor
 func (c ConfigJoin) GetMsgType() string { return "cfgjoin" }
 
-// GetBindAddress :
-func (c ConfigJoin) GetBindAddress() string { return c.BindAddress }
+// GetAddress :
+func (c ConfigJoin) GetAddress() string { return c.Address }
 
 // GetCommandName :
 func (c ConfigJoin) GetCommandName() string { return c.CommandName }
@@ -27,13 +27,13 @@ func (c ConfigJoin) GetName() string { return c.Lname }
 func (c ConfigJoin) GetShosetType() string { return c.ShosetType }
 
  // join/ok/member
-func NewCfg(bindAddress, Lname, ShosetType, commandName string) *ConfigJoin {
+func NewCfg(address, lname, shosetType, commandName string) *ConfigJoin {
 	c := new(ConfigJoin)
 	c.InitMessageBase()
 	c.CommandName = commandName
-	c.BindAddress = bindAddress
-	c.Lname = Lname
-	c.ShosetType = ShosetType
+	c.Address = address
+	c.Lname = lname
+	c.ShosetType = shosetType
 	return c
 }
 
@@ -41,5 +41,5 @@ func (c *ConfigJoin) String() string {
 	if c == nil {
 		fmt.Printf("\nError : *Config.String : nil\n")
 	}
-	return fmt.Sprintf("[ CommandName: %s, BindAddress: %s\n", c.CommandName, c.BindAddress)
+	return fmt.Sprintf("[ CommandName: %s, BindAddress: %s\n", c.GetCommandName(), c.GetAddress())
 }

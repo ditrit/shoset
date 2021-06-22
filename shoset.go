@@ -48,7 +48,7 @@ type Shoset struct {
 
 	lName      string // Nom logique de la shoset
 	ShosetType string // Type logique de la shoset
-	bindAddr   string // Adresse sur laquelle la shoset est bindée
+	bindAddress   string // Adresse sur laquelle la shoset est bindée
 
 	// Dictionnaire des queues de message (par type de message)
 	Queue  map[string]*msg.Queue
@@ -66,9 +66,15 @@ type Shoset struct {
 }
 
 /*           Accessors            */
-func (c Shoset) GetBindAddr() string   { return c.bindAddr }
+func (c Shoset) GetBindAddress() string   { return c.bindAddress }
 func (c Shoset) GetName() string       { return c.lName }
 func (c Shoset) GetShosetType() string { return c.ShosetType }
+
+func (c *Shoset) SetBindAddress(bindAddress string) {
+	if bindAddress != "" {
+		c.bindAddress = bindAddress
+	}
+}
 
 /*       Constructor     */
 func NewShoset(lName, ShosetType string) *Shoset { //l
@@ -142,7 +148,7 @@ func NewShoset(lName, ShosetType string) *Shoset { //l
 
 // Display with fmt - override the print of the object
 func (c Shoset) String() string {
-	descr := fmt.Sprintf("Shoset - lName: %s,\n\t\tbindAddr : %s,\n\t\ttype : %s,\n\t\tjoinConns : %#v\n", c.lName, c.bindAddr, c.ShosetType, c.ConnsJoin)
+	descr := fmt.Sprintf("Shoset - lName: %s,\n\t\tbindAddr : %s,\n\t\ttype : %s,\n\t\tjoinConns : %#v\n", c.lName, c.GetBindAddress(), c.ShosetType, c.ConnsJoin)
 	c.ConnsByAddr.Iterate(
 		func(key string, val *ShosetConn) {
 			descr = fmt.Sprintf("%s - [%s] %s\n", descr, key, val.String())
@@ -152,7 +158,7 @@ func (c Shoset) String() string {
 
 //Bind : Connect to another Shoset
 func (c *Shoset) Bind(address string) error {
-	if c.bindAddr != "" { //socket already bounded to a port (already passed this Bind function once)
+	if c.GetBindAddress() != "" { //socket already bounded to a port (already passed this Bind function once)
 		fmt.Println("Shoset already bound")
 		return errors.New("Shoset already bound")
 	}
@@ -164,14 +170,14 @@ func (c *Shoset) Bind(address string) error {
 	if err != nil {                  // check if IP is ok
 		return err
 	}
-	c.bindAddr = ipAddress // bound to the port
+	c.SetBindAddress(ipAddress) // bound to the port
 	go c.handleBind()      // process runInconn()
 	return nil
 }
 
 // runBindTo : handler for the socket
 func (c *Shoset) handleBind() error {
-	listener, err := net.Listen("tcp", c.bindAddr) //open a net listener
+	listener, err := net.Listen("tcp", c.GetBindAddress()) //open a net listener
 	if err != nil {                                // check if listener is ok
 		fmt.Println("Failed to bind:", err.Error())
 		return err
@@ -206,7 +212,7 @@ func (c *Shoset) Join(address string) (*ShosetConn, error) {
 	if exists != nil {                 //connection already established for this socket
 		return exists, nil
 	}
-	if address == c.bindAddr { // connection impossible with itself
+	if address == c.GetBindAddress() { // connection impossible with itself
 		return nil, nil
 	}
 	conn, _ := NewShosetConn(c, address, "out") // we create a new connection
@@ -217,7 +223,7 @@ func (c *Shoset) Join(address string) (*ShosetConn, error) {
 //Link : Link to another Shoset
 func (c *Shoset) Link(address string) (*ShosetConn, error) {
 	conn, _ := NewShosetConn(c, address, "out")
-	go conn.runOutConn(conn.addr)
+	go conn.runOutConn(conn.remoteAddr)
 	return conn, nil
 }
 
@@ -234,7 +240,7 @@ func (c *Shoset) deleteConn(connAddr string) {
 func (c *Shoset) SetConn(connAddr, connType string, conn *ShosetConn) {
 	if conn != nil {
 		c.ConnsByAddr.Set(connAddr, conn)
-		c.ConnsByType.Set(connType, conn.addr, conn)
-		c.ConnsByName.Set(conn.name, conn.addr, conn)
+		c.ConnsByType.Set(connType, conn.remoteAddr, conn)
+		c.ConnsByName.Set(conn.name, conn.remoteAddr, conn)
 	}
 }
