@@ -343,9 +343,9 @@ func debugger() {
 	cl5.Join("localhost:8004")
 
 	for {
-		fmt.Println("\ncl : ", cl4)
-		fmt.Println("\ncl : ", cl5)
-		fmt.Println("\n\n")
+		// fmt.Println("\ncl : ", cl4)
+		// fmt.Println("\ncl : ", cl5)
+		// fmt.Println("\n\n")
 		time.Sleep(time.Second * time.Duration(2))
 
 	}

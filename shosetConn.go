@@ -165,6 +165,7 @@ func (c *ShosetConn) runJoinConn() {
 
 		if err != nil { // no connection occured
 			time.Sleep(time.Second * time.Duration(1))
+			continue
 		} else { // a connection occured
 			// fmt.Printf("\n########### a connection occured")
 			c.socket = conn
@@ -219,6 +220,7 @@ func (c *ShosetConn) SendMessage(msg msg.Message) {
 func (c *ShosetConn) receiveMsg() error {
 	fmt.Printf("\n########### enter receive message\n")
 	if !c.isValid {
+		fmt.Println("c is not valid !!!!!!!!")
 		c.ch.deleteConn(c.addr)
 		return errors.New("error : Invalid connection for join - not the same type/name")
 	}
@@ -245,7 +247,7 @@ func (c *ShosetConn) receiveMsg() error {
 		// fmt.Printf("\n########### receiveMsg : message ok")
 		msgVal, err := fGet(c)
 		if err == nil {
-			// read message data and handle it
+			// read message data and handle it with the proper function
 			fHandle, ok := c.ch.Handle[msgType]
 			if ok {
 				go fHandle(c, msgVal) //HandleConfigJoin()
@@ -261,6 +263,7 @@ func (c *ShosetConn) receiveMsg() error {
 		fmt.Println("receiveMsg : non implemented type of message " + msgType)
 		return errors.New("receiveMsg : non implemented type of message " + msgType)
 	}
+	time.Sleep(time.Second * time.Duration(1))
 	fmt.Println(c.GetIsValid(), " - after receivemsg")
 	return nil
 }

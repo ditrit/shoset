@@ -36,10 +36,9 @@ func HandleConfigJoin(c *ShosetConn, message msg.Message) error {
 				c.SendMessage(configOk)
 			} else {
 				fmt.Println("Invalid connection for join - not the same type/name")
-				c.SetIsValid(false)
+				c.SetIsValid(false) //////////////////////
 				fmt.Println(c.GetIsValid(), " - after handleconfigjoin")
 				return errors.New("error : Invalid connection for join - not the same type/name")
-				//
 			}
 		}
 		thisOne := c.bindAddr
