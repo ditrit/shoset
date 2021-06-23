@@ -223,15 +223,15 @@ func (c *Shoset) Join(address string) (*ShosetConn, error) {
 //Link : Link to another Shoset
 func (c *Shoset) Link(address string) (*ShosetConn, error) {
 	conn, _ := NewShosetConn(c, address, "out")
-	go conn.runOutConn(conn.remoteAddr)
+	go conn.runOutConn(conn.GetRemoteAddress())
 	return conn, nil
 }
 
 func (c *Shoset) deleteConn(connAddr string) {
 	conn := c.ConnsByAddr.Get(connAddr)
 	if conn != nil {
-		c.ConnsByName.Delete(conn.name, connAddr)
-		c.ConnsByType.Delete(conn.ShosetType, connAddr)
+		c.ConnsByName.Delete(conn.GetName(), connAddr)
+		c.ConnsByType.Delete(conn.GetShosetType(), connAddr)
 		c.ConnsByAddr.Delete(connAddr)
 	}
 }
@@ -240,7 +240,7 @@ func (c *Shoset) deleteConn(connAddr string) {
 func (c *Shoset) SetConn(connAddr, connType string, conn *ShosetConn) {
 	if conn != nil {
 		c.ConnsByAddr.Set(connAddr, conn)
-		c.ConnsByType.Set(connType, conn.remoteAddr, conn)
-		c.ConnsByName.Set(conn.name, conn.remoteAddr, conn)
+		c.ConnsByType.Set(connType, conn.GetRemoteAddress(), conn)
+		c.ConnsByName.Set(conn.GetName(), conn.GetRemoteAddress(), conn)
 	}
 }

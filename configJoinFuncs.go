@@ -35,7 +35,7 @@ func HandleConfigJoin(c *ShosetConn, message msg.Message) error {
 				c.SendMessage(configOk)
 			} else {
 				// fmt.Println("Invalid connection for join - not the same type/name")
-				c.SetIsValid(false) //////////////////////
+				// c.SetIsValid(false) //////////////////////
 				configNotOk := msg.NewCfg(remoteAddress, ch.GetName(), ch.GetShosetType(), "notok")
 				c.SendMessage(configNotOk)
 				// fmt.Println(c.GetIsValid(), " - after handleconfigjoin")
@@ -57,9 +57,9 @@ func HandleConfigJoin(c *ShosetConn, message msg.Message) error {
 
 	case "ok":
 		// fmt.Println("ok : ", c.remoteAddr)
-		ch.ConnsJoin.Set(c.remoteAddr, c) //////////////// need to find remote address because here we take the address of the tcp protocol which is random
+		ch.ConnsJoin.Set(c.GetRemoteAddress(), c) //////////////// need to find remote address because here we take the address of the tcp protocol which is random
 		// fmt.Println("received ok", c.GetLocalAddress())
-		ch.NameBrothers.Set(c.remoteAddr, true)
+		ch.NameBrothers.Set(c.GetRemoteAddress(), true)
 
 	case "notok":
 		// fmt.Println("received notok", c.GetLocalAddress())

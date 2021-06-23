@@ -94,7 +94,7 @@ func HandleConfigLink(c *ShosetConn, message msg.Message) error {
 
 func sendCfgToBrothers(currentConn *ShosetConn) {
 	ch := currentConn.GetCh()
-	currentAddr := currentConn.GetRemoteAddress()
+	currentAddr := currentConn.GetLocalAddress()
 	currentName := currentConn.GetName()
 	cfgNameBrothers := msg.NewNameBrothers([]string{currentAddr})
 	oldNameBrothers := []string{}
@@ -123,7 +123,7 @@ func NewCfgOut(ch *Shoset) *msg.ConfigLink {
 		func(key string, val *ShosetConn) {
 			conn := val
 			if conn.dir == "out" {
-				bros = append(bros, conn.remoteAddr)
+				bros = append(bros, conn.GetRemoteAddress())
 			}
 		},
 	)

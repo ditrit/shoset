@@ -15,16 +15,16 @@ import (
 
 // ShosetConn : client connection
 type ShosetConn struct {
-	socket     *tls.Conn
-	name       string // remote logical name
-	ShosetType string // remote ShosetType
-	brothers   map[string]bool
-	dir        string
-	remoteAddr string // addresse de la chaussette en face
-	ch         *Shoset
-	rb         *msg.Reader
-	wb         *msg.Writer
-	isValid    bool
+	socket        *tls.Conn
+	name          string // remote logical name
+	ShosetType    string // remote ShosetType
+	brothers      map[string]bool
+	dir           string
+	remoteAddress string // addresse de la chaussette en face
+	ch            *Shoset
+	rb            *msg.Reader
+	wb            *msg.Writer
+	isValid       bool
 }
 
 // GetDir :
@@ -42,7 +42,7 @@ func (c *ShosetConn) GetShosetType() string { return c.ShosetType }
 // GetBindAddr : port sur lequel on est bindé
 func (c *ShosetConn) GetLocalAddress() string { return c.ch.GetBindAddress() }
 
-func (c *ShosetConn) GetRemoteAddress() string { return c.remoteAddr }
+func (c *ShosetConn) GetRemoteAddress() string { return c.remoteAddress }
 
 func (c *ShosetConn) GetIsValid() bool { return c.isValid }
 
@@ -50,7 +50,7 @@ func (c *ShosetConn) GetIsValid() bool { return c.isValid }
 func (c *ShosetConn) SetName(lName string) { // remote logical Name
 	if lName != "" {
 		c.name = lName // remote logical Name
-		c.GetCh().ConnsByName.Set(c.name, c.remoteAddr, c)
+		c.GetCh().ConnsByName.Set(c.GetName(), c.GetRemoteAddress(), c)
 	}
 }
 
@@ -85,7 +85,7 @@ func NewShosetConn(c *Shoset, address string, dir string) (*ShosetConn, error) {
 	if err != nil {
 		return nil, err
 	}
-	conn.remoteAddr = ipAddress
+	conn.remoteAddress = ipAddress
 	// conn.bindAddr = ipAddress // delete
 	conn.brothers = make(map[string]bool)
 	conn.isValid = true
@@ -93,7 +93,7 @@ func NewShosetConn(c *Shoset, address string, dir string) (*ShosetConn, error) {
 }
 
 func (c *ShosetConn) String() string {
-	return fmt.Sprintf("ShosetConn{ way: %s, lName: %s, Type: %s, addr(bindAddr): %s(%s)", c.dir, c.name, c.ShosetType, c.remoteAddr, c.GetLocalAddress())
+	return fmt.Sprintf("ShosetConn{ way: %s, lName: %s, Type: %s, addr(bindAddr): %s(%s)", c.GetDir(), c.GetName(), c.GetShosetType(), c.GetRemoteAddress(), c.GetLocalAddress())
 }
 
 // ReadString :
@@ -126,7 +126,7 @@ func (c *ShosetConn) runOutConn(addr string) {
 	fmt.Println("Entering runoutconn")
 	myConfig := NewHandshake(c.GetCh())
 	for {
-		conn, err := tls.Dial("tcp", c.remoteAddr, c.ch.tlsConfig)
+		conn, err := tls.Dial("tcp", c.GetRemoteAddress(), c.ch.tlsConfig)
 		defer conn.Close()
 		if err != nil {
 			time.Sleep(time.Millisecond * time.Duration(100))
@@ -134,11 +134,11 @@ func (c *ShosetConn) runOutConn(addr string) {
 			c.socket = conn
 			c.rb = msg.NewReader(c.socket)
 			c.wb = msg.NewWriter(c.socket)
-			c.ch.SetConn(addr, c.ShosetType, c)
+			c.ch.SetConn(addr, c.ch.GetShosetType(), c)
 
 			// receive messages
 			for {
-				if c.name == "" { // remote logical Name // same problem than runJoinConn()
+				if c.GetName() == "" { // remote logical Name // same problem than runJoinConn()
 					c.SendMessage(*myConfig)
 				}
 				c.receiveMsg()
@@ -155,14 +155,14 @@ func (c *ShosetConn) runJoinConn() {
 	joinConfig := msg.NewCfg(ch.GetBindAddress(), ch.GetName(), ch.GetShosetType(), "join") //we create a new message config
 	for {
 		// fmt.Println("in for loop from runjoinconn")
-		if !c.isValid { // sockets are not from the same type or don't have the same name
+		if !c.GetIsValid() { // sockets are not from the same type or don't have the same name
 			// fmt.Println("c is not valid")
 			break
 		}
 		// 	ch.ConnsJoin.Set(c.addr, c)       // à déplacer une fois
 		// 	ch.NameBrothers.Set(c.addr, true) // les connexions établies (fin de fonction)
 
-		conn, err := tls.Dial("tcp", c.remoteAddr, ch.tlsConfig) // we wait for a socket to connect each loop
+		conn, err := tls.Dial("tcp", c.GetRemoteAddress(), ch.tlsConfig) // we wait for a socket to connect each loop
 
 		if err != nil { // no connection occured
 			time.Sleep(time.Second * time.Duration(1))
@@ -219,9 +219,9 @@ func (c *ShosetConn) SendMessage(msg msg.Message) {
 
 func (c *ShosetConn) receiveMsg() error {
 	// fmt.Printf("\n###########! enter receive message\n")
-	if !c.isValid {
+	if !c.GetIsValid() {
 		// fmt.Println("c is not valid !!!!!!!!", c.GetLocalAddress())
-		c.ch.deleteConn(c.remoteAddr)
+		c.ch.deleteConn(c.GetRemoteAddress())
 		return errors.New("error : Invalid connection for join - not the same type/name")
 	}
 	// fmt.Println(c.ch.bindAddress)
@@ -232,11 +232,11 @@ func (c *ShosetConn) receiveMsg() error {
 	switch {
 	case err == io.EOF:
 		// fmt.Println("\n########### receiveMsg : reached EOF - close this connection", c.GetLocalAddress())
-		c.ch.deleteConn(c.remoteAddr)
+		c.ch.deleteConn(c.GetRemoteAddress())
 		return errors.New("receiveMsg : reached EOF - close this connection")
 	case err != nil:
 		// fmt.Println("\n########### receiveMsg : failed to read - close this connection")
-		c.ch.deleteConn(c.remoteAddr)
+		c.ch.deleteConn(c.GetRemoteAddress())
 		return errors.New("error : receiveMsg : failed to read - close this connection")
 	}
 	msgType = strings.Trim(msgType, "\n")
@@ -253,13 +253,13 @@ func (c *ShosetConn) receiveMsg() error {
 				go fHandle(c, msgVal) //HandleConfigJoin()
 			}
 		} else {
-			c.ch.deleteConn(c.remoteAddr)
+			c.ch.deleteConn(c.GetRemoteAddress())
 			// fmt.Println("receiveMsg : can not read value of " + msgType)
 			return errors.New("receiveMsg : can not read value of " + msgType)
 		}
 	}
 	if !ok {
-		c.ch.deleteConn(c.remoteAddr)
+		c.ch.deleteConn(c.GetRemoteAddress())
 		fmt.Println("receiveMsg : non implemented type of message " + msgType)
 		return errors.New("receiveMsg : non implemented type of message " + msgType)
 	}
