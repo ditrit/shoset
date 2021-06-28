@@ -72,6 +72,12 @@ func (c *ShosetConn) SetIsValid(state bool) {
 	c.isValid = state
 }
 
+func (c *ShosetConn) SetRemoteAddress(address string) {
+	if address != "" {
+		c.remoteAddress = address
+	}
+}
+
 func NewShosetConn(c *Shoset, address string, dir string) (*ShosetConn, error) {
 	// Creation
 	conn := ShosetConn{}
@@ -93,7 +99,7 @@ func NewShosetConn(c *Shoset, address string, dir string) (*ShosetConn, error) {
 }
 
 func (c *ShosetConn) String() string {
-	return fmt.Sprintf("ShosetConn{ way: %s, lName: %s, Type: %s, addr(bindAddr): %s(%s)", c.GetDir(), c.GetName(), c.GetShosetType(), c.GetRemoteAddress(), c.GetLocalAddress())
+	return fmt.Sprintf("ShosetConn{ way: %s, addr(bindAddr): %s(%s)", c.GetDir(), c.GetRemoteAddress(), c.GetLocalAddress())
 }
 
 // ReadString :
@@ -123,7 +129,7 @@ func (c *ShosetConn) WriteMessage(data interface{}) error {
 
 // RunOutConn : handler for the socket, for Link()
 func (c *ShosetConn) runOutConn(addr string) {
-	fmt.Println("Entering runoutconn")
+	// fmt.Println("Entering runoutconn")
 	myConfig := NewHandshake(c.GetCh())
 	for {
 		conn, err := tls.Dial("tcp", c.GetRemoteAddress(), c.ch.tlsConfig)
@@ -181,7 +187,7 @@ func (c *ShosetConn) runJoinConn() {
 				if ch.ConnsJoin.Get(c.GetLocalAddress()) == nil { ///////////////////////////////////////////////////////////////// problem here with != : doesn't enter if - fixed with ==
 					c.SendMessage(*joinConfig)
 				}
-				// fmt.Printf("\n########### can receive message")
+				fmt.Println(c.GetLocalAddress(), " can receive message from ", c.GetRemoteAddress())
 				err := c.receiveMsg()
 				// fmt.Println(c.GetIsValid(), " - after message received - in runjoinconn")
 				time.Sleep(time.Second * time.Duration(1))
@@ -196,6 +202,7 @@ func (c *ShosetConn) runJoinConn() {
 
 // runInbound : handler for the connection, for handleBind()
 func (c *ShosetConn) runInConn() {
+	fmt.Println("enter runinconn")
 	c.rb = msg.NewReader(c.socket)
 	c.wb = msg.NewWriter(c.socket)
 	defer c.socket.Close()
@@ -218,7 +225,7 @@ func (c *ShosetConn) SendMessage(msg msg.Message) {
 }
 
 func (c *ShosetConn) receiveMsg() error {
-	// fmt.Printf("\n###########! enter receive message\n")
+	// fmt.Println("\n###########! enter receive message ", c.GetLocalAddress())
 	if !c.GetIsValid() {
 		// fmt.Println("c is not valid !!!!!!!!", c.GetLocalAddress())
 		c.ch.deleteConn(c.GetRemoteAddress())
@@ -231,11 +238,11 @@ func (c *ShosetConn) receiveMsg() error {
 	// fmt.Printf("\n########### receiveMsg : message read")
 	switch {
 	case err == io.EOF:
-		// fmt.Println("\n########### receiveMsg : reached EOF - close this connection", c.GetLocalAddress())
+		fmt.Println("\n########### receiveMsg : reached EOF - close this connection", c.GetRemoteAddress())
 		c.ch.deleteConn(c.GetRemoteAddress())
 		return errors.New("receiveMsg : reached EOF - close this connection")
 	case err != nil:
-		// fmt.Println("\n########### receiveMsg : failed to read - close this connection")
+		fmt.Println("\n########### receiveMsg : failed to read - close this connection")
 		c.ch.deleteConn(c.GetRemoteAddress())
 		return errors.New("error : receiveMsg : failed to read - close this connection")
 	}

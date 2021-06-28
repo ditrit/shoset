@@ -46,9 +46,9 @@ type Shoset struct {
 	Brothers     *MapSafeBool    // map[string]bool  "freres" au sens large (ex: toutes les instances de connecteur reliées à un même aggregateur)
 	NameBrothers *MapSafeBool    // map[string]bool  "freres" ayant un même nom logique (ex: instances d'un même connecteur)
 
-	lName      string // Nom logique de la shoset
-	ShosetType string // Type logique de la shoset
-	bindAddress   string // Adresse sur laquelle la shoset est bindée
+	lName       string // Nom logique de la shoset
+	ShosetType  string // Type logique de la shoset
+	bindAddress string // Adresse sur laquelle la shoset est bindée
 
 	// Dictionnaire des queues de message (par type de message)
 	Queue  map[string]*msg.Queue
@@ -66,9 +66,9 @@ type Shoset struct {
 }
 
 /*           Accessors            */
-func (c Shoset) GetBindAddress() string   { return c.bindAddress }
-func (c Shoset) GetName() string       { return c.lName }
-func (c Shoset) GetShosetType() string { return c.ShosetType }
+func (c Shoset) GetBindAddress() string { return c.bindAddress }
+func (c Shoset) GetName() string        { return c.lName }
+func (c Shoset) GetShosetType() string  { return c.ShosetType }
 
 func (c *Shoset) SetBindAddress(bindAddress string) {
 	if bindAddress != "" {
@@ -148,10 +148,10 @@ func NewShoset(lName, ShosetType string) *Shoset { //l
 
 // Display with fmt - override the print of the object
 func (c Shoset) String() string {
-	descr := fmt.Sprintf("Shoset - lName: %s,\n\t\tbindAddr : %s,\n\t\ttype : %s,\n\t\tjoinConns : %#v\n", c.lName, c.GetBindAddress(), c.ShosetType, c.ConnsJoin)
-	c.ConnsByAddr.Iterate(
+	descr := fmt.Sprintf("Shoset - lName: %s,\n\t\tbindAddr : %s,\n\t\ttype : %s,\n\t\n \t joinConns : ", c.GetName(), c.GetBindAddress(), c.GetShosetType())
+	c.ConnsJoin.Iterate(
 		func(key string, val *ShosetConn) {
-			descr = fmt.Sprintf("%s - [%s] %s\n", descr, key, val.String())
+			descr = fmt.Sprintf("%s, %s: %s", descr, key, val)
 		})
 	return descr
 }
@@ -171,14 +171,14 @@ func (c *Shoset) Bind(address string) error {
 		return err
 	}
 	c.SetBindAddress(ipAddress) // bound to the port
-	go c.handleBind()      // process runInconn()
+	go c.handleBind()           // process runInconn()
 	return nil
 }
 
 // runBindTo : handler for the socket
 func (c *Shoset) handleBind() error {
 	listener, err := net.Listen("tcp", c.GetBindAddress()) //open a net listener
-	if err != nil {                                // check if listener is ok
+	if err != nil {                                        // check if listener is ok
 		fmt.Println("Failed to bind:", err.Error())
 		return err
 	}
@@ -208,8 +208,10 @@ func (c *Shoset) inBoundConn(tlsConn *tls.Conn) (*ShosetConn, error) {
 
 //Join : Join to group of Shosets and duplicate in and out connexions
 func (c *Shoset) Join(address string) (*ShosetConn, error) {
+	// fmt.Println("join de ", c.GetBindAddress(), "vers ", address)
 	exists := c.ConnsJoin.Get(address) // check if address already in the map
 	if exists != nil {                 //connection already established for this socket
+		fmt.Println("connection already established : ", c.GetBindAddress(), "vers : ", address)
 		return exists, nil
 	}
 	if address == c.GetBindAddress() { // connection impossible with itself
@@ -233,6 +235,10 @@ func (c *Shoset) deleteConn(connAddr string) {
 		c.ConnsByName.Delete(conn.GetName(), connAddr)
 		c.ConnsByType.Delete(conn.GetShosetType(), connAddr)
 		c.ConnsByAddr.Delete(connAddr)
+
+	}
+	if c.ConnsJoin.Get(connAddr) != nil {
+		c.ConnsJoin.Delete(connAddr)
 	}
 }
 

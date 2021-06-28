@@ -2,7 +2,7 @@ package shoset
 
 import (
 	"errors"
-	// "fmt"
+	"fmt"
 
 	"github.com/ditrit/shoset/msg"
 )
@@ -25,9 +25,13 @@ func HandleConfigJoin(c *ShosetConn, message msg.Message) error {
 	case "join":
 		if dir == "in" { // a socket wants to join this one
 			// fmt.Printf("########### a socket wants to join this one")
+			if exists := c.ch.ConnsJoin.Get(remoteAddress); exists != nil {
+				return nil
+			}
 			if ch.GetName() == cfg.GetName() && ch.GetShosetType() == cfg.GetShosetType() {
 				// fmt.Printf("\n###########  same type")
 				// fmt.Println("in : ", remoteAddress)
+				c.SetRemoteAddress(remoteAddress)
 				ch.ConnsJoin.Set(remoteAddress, c)
 				ch.NameBrothers.Set(remoteAddress, true)
 				// ch.Join(remoteAddress)
@@ -35,13 +39,14 @@ func HandleConfigJoin(c *ShosetConn, message msg.Message) error {
 				c.SendMessage(configOk)
 			} else {
 				// fmt.Println("Invalid connection for join - not the same type/name")
-				// c.SetIsValid(false) //////////////////////
+				c.SetIsValid(false) //////////////////////
 				configNotOk := msg.NewCfg(remoteAddress, ch.GetName(), ch.GetShosetType(), "notok")
 				c.SendMessage(configNotOk)
 				// fmt.Println(c.GetIsValid(), " - after handleconfigjoin")
 				return errors.New("error : Invalid connection for join - not the same type/name")
 			}
 		}
+
 		thisOne := c.GetLocalAddress()
 		cfgNewMember := msg.NewCfg(remoteAddress, ch.GetName(), ch.GetShosetType(), "member")
 		ch.ConnsJoin.Iterate(
@@ -67,6 +72,7 @@ func HandleConfigJoin(c *ShosetConn, message msg.Message) error {
 		return errors.New("error : connection not ok")
 
 	case "member":
+		fmt.Println("message member recu")
 		ch.Join(remoteAddress)
 	}
 	return nil

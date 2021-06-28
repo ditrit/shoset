@@ -310,9 +310,15 @@ func testJoin() {
 	cl3.Join("localhost:8001")
 	cl3.Join("localhost:8002")
 
+	cl4 := shoset.NewShoset("cl", "cl")
+	cl4.Bind("localhost:8004")
+	cl4.Join("localhost:8002") // we join it to our first socket
+
 	for {
-		time.Sleep(time.Second * time.Duration(1))
+		time.Sleep(time.Second * time.Duration(2))
 		fmt.Println("\ncl : ", cl2)
+		fmt.Println("\ncl : ", cl3)
+		fmt.Println("\ncl : ", cl4)
 	}
 
 	<-done
@@ -344,9 +350,9 @@ func debugger() {
 	cl5.Join("localhost:8004")
 
 	for {
-		fmt.Println("\ncl : ", cl4)
-		fmt.Println("\ncl : ", cl5)
-		fmt.Println()
+		// fmt.Println("\ncl : ", cl4)
+		// fmt.Println("\ncl : ", cl5)
+		// fmt.Println()
 		time.Sleep(time.Second * time.Duration(2))
 
 	}
