@@ -6,8 +6,11 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strings"
+	"io/ioutil"
 
 	"github.com/ditrit/shoset/msg"
+	"github.com/spf13/viper"
 )
 
 //terminal
@@ -17,16 +20,6 @@ var keyPath = "./certs/key.pem"
 //debugger
 // var certPath = "../certs/cert.pem"
 // var keyPath = "../certs/key.pem"
-
-// returns bool whether the given file or directory exists
-func CertsCheck(path string) bool {
-	_, err := os.Stat(keyPath)
-	if os.IsNotExist(err) {
-		fmt.Println("File does not exist.")
-		return false
-	}
-	return true
-}
 
 // MessageHandlers interface
 type MessageHandlers interface {
@@ -63,6 +56,8 @@ type Shoset struct {
 
 	// synchronisation des goroutines
 	Done chan bool
+
+	viperConfig *viper.Viper
 }
 
 /*           Accessors            */
@@ -82,14 +77,18 @@ func NewShoset(lName, ShosetType string) *Shoset { //l
 	shoset := Shoset{}
 
 	// Initialisation
+	
 	shoset.lName = lName
 	shoset.ShosetType = ShosetType
+	shoset.viperConfig = viper.New()
 	shoset.ConnsByAddr = NewMapSafeConn()
 	shoset.ConnsByName = NewMapSafeMapConn()
 	shoset.ConnsByType = NewMapSafeMapConn()
 	shoset.ConnsJoin = NewMapSafeConn()
+	shoset.ConnsJoin.SetViper(shoset.viperConfig)
 	shoset.Brothers = NewMapSafeBool()
 	shoset.NameBrothers = NewMapSafeBool()
+	
 
 	// Dictionnaire des queues de message (par type de message)
 	shoset.Queue = make(map[string]*msg.Queue)
@@ -126,7 +125,7 @@ func NewShoset(lName, ShosetType string) *Shoset { //l
 	shoset.Wait["config"] = WaitConfig
 
 	// Configuration TLS //////////////////////////////////// à améliorer
-	if CertsCheck(certPath) && CertsCheck(keyPath) {
+	if pathCheck(certPath) && pathCheck(keyPath) {
 		cert, err := tls.LoadX509KeyPair(certPath, keyPath)
 		if err != nil { // only client in insecure mode
 			fmt.Println("! Unable to Load certificate !")
@@ -170,6 +169,35 @@ func (c *Shoset) Bind(address string) error {
 	if err != nil {                  // check if IP is ok
 		return err
 	}
+
+	viperAddress := computeAddress(ipAddress, false)
+	fmt.Println(viperAddress)
+	if !pathCheck(viperAddress+".yaml") { //viper config not initialized (first time in bind func)
+		fmt.Println("First bind :::::::::::::")
+		// init viper config
+		c.viperConfig.AddConfigPath(".")
+		c.viperConfig.SetConfigName(viperAddress)
+		c.viperConfig.SetConfigType("yaml")
+	} else { // file already exists for this socket
+		fmt.Println("!!!!!!!!!!!!!!")
+		content, err := ioutil.ReadFile(viperAddress+".yaml")
+		if err != nil {
+			fmt.Println("no file ...")
+		}
+	
+		// Convert []byte to string and print to screen
+		text := string(content)
+		fmt.Println(text)
+		onceBindedAddress := c.viperConfig.GetStringSlice("shoset_127~0~0~1_8001")
+		fmt.Println("!!!!!!!!!!!!!!", onceBindedAddress)
+		for _, bindedAddress := range onceBindedAddress {
+			if exists := c.ConnsJoin.Get(bindedAddress); exists == nil {
+				c.Join(bindedAddress)
+			}
+		}
+	}
+		
+	c.ConnsJoin.SetConfigName(viperAddress)
 	c.SetBindAddress(ipAddress) // bound to the port
 	go c.handleBind()           // process runInconn()
 	return nil
@@ -182,6 +210,7 @@ func (c *Shoset) handleBind() error {
 		fmt.Println("Failed to bind:", err.Error())
 		return err
 	}
+	// defer WriteViper()
 	defer listener.Close()
 
 	for {
@@ -191,19 +220,12 @@ func (c *Shoset) handleBind() error {
 			break
 		}
 		tlsConn := tls.Server(unencConn, c.tlsConfig) // create the securised connection protocol
-		conn, _ := c.inBoundConn(tlsConn)             // create the securised connection
+		address := tlsConn.RemoteAddr().String()
+		conn, _ := NewShosetConn(c, address, "in") // create the securised connection
+		conn.socket = tlsConn //we override socket attribut with our securised protocol
 		go conn.runInConn()
 	}
 	return nil
-}
-
-//inBoundConn : Add a new connection from a client
-func (c *Shoset) inBoundConn(tlsConn *tls.Conn) (*ShosetConn, error) {
-	address := tlsConn.RemoteAddr().String()
-	//c.SetConn(conn.addr, conn)
-	conn, _ := NewShosetConn(c, address, "in")
-	conn.socket = tlsConn //we override socket attribut with our securised protocol
-	return conn, nil
 }
 
 //Join : Join to group of Shosets and duplicate in and out connexions
@@ -237,7 +259,7 @@ func (c *Shoset) deleteConn(connAddr string) {
 		c.ConnsByAddr.Delete(connAddr)
 
 	}
-	if c.ConnsJoin.Get(connAddr) != nil {
+	if c.ConnsJoin.Get(connAddr) != nil { // also delete in ConnsJoin
 		c.ConnsJoin.Delete(connAddr)
 	}
 }
@@ -249,4 +271,30 @@ func (c *Shoset) SetConn(connAddr, connType string, conn *ShosetConn) {
 		c.ConnsByType.Set(connType, conn.GetRemoteAddress(), conn)
 		c.ConnsByName.Set(conn.GetName(), conn.GetRemoteAddress(), conn)
 	}
+}
+
+// compute the name for the .yaml file corresponding to each socket
+func computeAddress(ipAddress string, reverse bool) string {
+	if !reverse { // compute for file name
+		_ipAddress := strings.Replace(ipAddress, ":", "_", 1)
+		_ipAddress = strings.Replace(_ipAddress, ".", "~", 3)
+		name := "shoset_" + _ipAddress
+		return name	
+		
+	} else { // compute backward to get ipAddress
+		_ipAddress := strings.Replace(ipAddress, "_", ":", 1)
+		_ipAddress = strings.Replace(_ipAddress, "~", ".", 3)
+		name := "shoset_" + _ipAddress
+		return name	
+	}
+}
+
+// returns bool whether the given file or directory exists
+func pathCheck(path string) bool {
+	_, err := os.Stat(path)
+	if os.IsNotExist(err) {
+		fmt.Println("File does not exist.")
+		return false
+	}
+	return true
 }
