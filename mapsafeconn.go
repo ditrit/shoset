@@ -2,17 +2,13 @@ package shoset
 
 import (
 	"sync"
-	"github.com/spf13/viper"
 	// "fmt"
 )
-
 
 // MapSafeConn : simple key map safe for goroutines...
 type MapSafeConn struct {
 	m map[string]*ShosetConn
 	sync.Mutex
-	ConfigName string
-	viperConfig *viper.Viper
 }
 
 // NewMapSafeConn : constructor
@@ -47,7 +43,6 @@ func (m *MapSafeConn) GetByType(shosetType string) []*ShosetConn {
 func (m *MapSafeConn) Get(key string) *ShosetConn {
 	m.Lock()
 	defer m.Unlock()
-	// fmt.Println(m.m[key])
 	return m.m[key]
 }
 
@@ -56,22 +51,11 @@ func (m *MapSafeConn) Set(key string, value *ShosetConn) *MapSafeConn {
 	
 	m.Lock()
 	m.m[key] = value
-	keys := m.keys()
-	if m.ConfigName != "" {
-		m.viperConfig.Set("join", keys)
-		m.viperConfig.WriteConfigAs("./"+m.ConfigName+".yaml")
-	}
 	m.Unlock()
 	return m
 }
 
-func (m *MapSafeConn) GetConfig() []string {
-	m.Lock()
-	defer m.Unlock()
-	return m.viperConfig.GetStringSlice("join")
-}
-
-func (m *MapSafeConn) keys() []string {
+func (m *MapSafeConn) Keys() []string {
 	addresses := make([]string, m.Len())
 	i := 0
 	for key := range m.m {
@@ -84,22 +68,12 @@ func (m *MapSafeConn) keys() []string {
 	
 }
 
-func (m*MapSafeConn) SetConfigName(name string) {
-	if name != "" {
-		m.ConfigName = name
-	}
-}
-
 // Delete : delete a value in a MapSafeConn
 func (m *MapSafeConn) Delete(key string) {
 	m.Lock()
 	_, ok := m.m[key]
 	if ok {
 		delete(m.m, key)
-	}
-	if m.ConfigName != "" {
-		m.viperConfig.Set(m.ConfigName, m.keys())
-		m.viperConfig.WriteConfigAs("./"+m.ConfigName+".yaml")
 	}
 	m.Unlock()
 }
@@ -116,8 +90,4 @@ func (m *MapSafeConn) Iterate(iter func(string, *ShosetConn)) {
 // Len : return length of the map
 func (m *MapSafeConn) Len() int {
 	return len(m.m)
-}
-
-func (m *MapSafeConn) SetViper(viperConfig *viper.Viper) {
-	m.viperConfig = viperConfig
 }

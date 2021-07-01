@@ -25,14 +25,14 @@ func HandleConfigJoin(c *ShosetConn, message msg.Message) error {
 	case "join":
 		if dir == "in" { // a socket wants to join this one
 			// fmt.Printf("########### a socket wants to join this one")
-			if exists := c.ch.ConnsJoin.Get(remoteAddress); exists != nil {
+			if exists := c.ch.ConnsByName.Get(ch.GetName()).Get(remoteAddress); exists != nil {
 				return nil
 			}
 			if ch.GetName() == cfg.GetName() && ch.GetShosetType() == cfg.GetShosetType() {
 				// fmt.Printf("\n###########  same type")
 				// fmt.Println("in : ", remoteAddress)
 				c.SetRemoteAddress(remoteAddress)
-				ch.ConnsJoin.Set(remoteAddress, c)
+				ch.ConnsByName.Get(ch.GetName()).Set(remoteAddress, c)
 				ch.NameBrothers.Set(remoteAddress, true)
 				// ch.Join(remoteAddress)
 				configOk := msg.NewCfg(remoteAddress, ch.GetName(), ch.GetShosetType(), "ok")
@@ -49,7 +49,7 @@ func HandleConfigJoin(c *ShosetConn, message msg.Message) error {
 
 		thisOne := c.GetLocalAddress()
 		cfgNewMember := msg.NewCfg(remoteAddress, ch.GetName(), ch.GetShosetType(), "member")
-		ch.ConnsJoin.Iterate(
+		ch.ConnsByName.Get(ch.GetName()).Iterate(
 			func(key string, val *ShosetConn) {
 				if key != remoteAddress && key != thisOne {
 					val.SendMessage(cfgNewMember) //tell to the other member that there is a new member to join
@@ -62,7 +62,7 @@ func HandleConfigJoin(c *ShosetConn, message msg.Message) error {
 
 	case "ok":
 		// fmt.Println("ok : ", c.remoteAddr)
-		ch.ConnsJoin.Set(c.GetRemoteAddress(), c) //////////////// need to find remote address because here we take the address of the tcp protocol which is random
+		ch.ConnsByName.Get(ch.GetName()).Set(c.GetRemoteAddress(), c) //////////////// need to find remote address because here we take the address of the tcp protocol which is random
 		// fmt.Println("received ok", c.GetLocalAddress())
 		ch.NameBrothers.Set(c.GetRemoteAddress(), true)
 

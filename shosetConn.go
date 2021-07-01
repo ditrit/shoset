@@ -184,7 +184,7 @@ func (c *ShosetConn) runJoinConn() {
 			for {
 				// fmt.Println("~~~~", ch.ConnsJoin.Get(c.GetBindAddr()))
 				// fmt.Printf("\n########### enter receive message loop")
-				if ch.ConnsJoin.Get(c.GetLocalAddress()) == nil { ///////////////////////////////////////////////////////////////// problem here with != : doesn't enter if - fixed with ==
+				if ch.ConnsByName.Get(ch.GetName()).Get(c.GetLocalAddress()) == nil { ///////////////////////////////////////////////////////////////// problem here with != : doesn't enter if - fixed with ==
 					c.SendMessage(*joinConfig)
 				}
 				// fmt.Println(c.GetLocalAddress(), " can receive message from ", c.GetRemoteAddress())
