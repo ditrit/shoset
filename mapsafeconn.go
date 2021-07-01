@@ -59,12 +59,18 @@ func (m *MapSafeConn) Set(key string, value *ShosetConn) *MapSafeConn {
 	keys := m.keys()
 	if m.ConfigName != "" {
 		m.viperConfig.Set(m.ConfigName, keys)
-		fmt.Println("config : ", m.viperConfig.Get(m.ConfigName))
+		fmt.Println("config : ", m.viperConfig.GetStringSlice(m.ConfigName))
 		fmt.Println("keys = ", keys)
 		m.viperConfig.WriteConfigAs("./"+m.ConfigName+".yaml")
 	}
 	m.Unlock()
 	return m
+}
+
+func (m *MapSafeConn) GetConfig() []string {
+	m.Lock()
+	defer m.Unlock()
+	return m.viperConfig.GetStringSlice(m.ConfigName)
 }
 
 func (m *MapSafeConn) keys() []string {

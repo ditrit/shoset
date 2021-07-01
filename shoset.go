@@ -188,11 +188,12 @@ func (c *Shoset) Bind(address string) error {
 		// Convert []byte to string and print to screen
 		text := string(content)
 		fmt.Println(text)
-		onceBindedAddress := c.viperConfig.GetStringSlice("shoset_127~0~0~1_8001")
+		// onceBindedAddress := c.viperConfig.GetStringSlice("shoset_127~0~0~1_8001")
+		onceBindedAddress := c.ConnsJoin.GetConfig()
 		fmt.Println("!!!!!!!!!!!!!!", onceBindedAddress)
 		for _, bindedAddress := range onceBindedAddress {
 			if exists := c.ConnsJoin.Get(bindedAddress); exists == nil {
-				c.Join(bindedAddress)
+				c.Join(computeAddress(bindedAddress, true))
 			}
 		}
 	}
@@ -281,10 +282,9 @@ func computeAddress(ipAddress string, reverse bool) string {
 		name := "shoset_" + _ipAddress
 		return name	
 		
-	} else { // compute backward to get ipAddress
-		_ipAddress := strings.Replace(ipAddress, "_", ":", 1)
-		_ipAddress = strings.Replace(_ipAddress, "~", ".", 3)
-		name := "shoset_" + _ipAddress
+	} else { // compute backward to get port for join
+		port := ipAddress[len(ipAddress)-4:] //get the port from the file name - only for port from 1000 to 9999 -> need to find a solution
+		fmt.Println(name)
 		return name	
 	}
 }
