@@ -2,7 +2,7 @@ package shoset
 
 import (
 	"errors"
-	"fmt"
+	// "fmt"
 
 	"github.com/ditrit/shoset/msg"
 )
@@ -72,7 +72,6 @@ func HandleConfigJoin(c *ShosetConn, message msg.Message) error {
 		return errors.New("error : connection not ok")
 
 	case "member":
-		fmt.Println("message member recu")
 		ch.Join(remoteAddress)
 	}
 	return nil

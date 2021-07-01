@@ -3,7 +3,7 @@ package shoset
 import (
 	"sync"
 	"github.com/spf13/viper"
-	"fmt"
+	// "fmt"
 )
 
 
@@ -58,9 +58,7 @@ func (m *MapSafeConn) Set(key string, value *ShosetConn) *MapSafeConn {
 	m.m[key] = value
 	keys := m.keys()
 	if m.ConfigName != "" {
-		m.viperConfig.Set(m.ConfigName, keys)
-		fmt.Println("config : ", m.viperConfig.GetStringSlice(m.ConfigName))
-		fmt.Println("keys = ", keys)
+		m.viperConfig.Set("join", keys)
 		m.viperConfig.WriteConfigAs("./"+m.ConfigName+".yaml")
 	}
 	m.Unlock()
@@ -70,18 +68,20 @@ func (m *MapSafeConn) Set(key string, value *ShosetConn) *MapSafeConn {
 func (m *MapSafeConn) GetConfig() []string {
 	m.Lock()
 	defer m.Unlock()
-	return m.viperConfig.GetStringSlice(m.ConfigName)
+	return m.viperConfig.GetStringSlice("join")
 }
 
 func (m *MapSafeConn) keys() []string {
 	addresses := make([]string, m.Len())
-	fmt.Println("len : ", m.Len())
 	i := 0
 	for key := range m.m {
-		addresses[i] = key
-		i++
+		if m.m[key].GetDir() == "out" {
+			addresses[i] = key
+			i++
+		}
 	}
-	return addresses
+	return addresses[:i]
+	
 }
 
 func (m*MapSafeConn) SetConfigName(name string) {

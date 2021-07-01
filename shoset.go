@@ -7,7 +7,6 @@ import (
 	"net"
 	"os"
 	"strings"
-	"io/ioutil"
 
 	"github.com/ditrit/shoset/msg"
 	"github.com/spf13/viper"
@@ -147,11 +146,11 @@ func NewShoset(lName, ShosetType string) *Shoset { //l
 
 // Display with fmt - override the print of the object
 func (c Shoset) String() string {
-	descr := fmt.Sprintf("Shoset - lName: %s,\n\t\tbindAddr : %s,\n\t\ttype : %s,\n\t\n \t joinConns : ", c.GetName(), c.GetBindAddress(), c.GetShosetType())
-	c.ConnsJoin.Iterate(
-		func(key string, val *ShosetConn) {
-			descr = fmt.Sprintf("%s, %s: %s", descr, key, val)
-		})
+	descr := fmt.Sprintf("Shoset - lName: %s,\n\t\tbindAddr : %s,\n\t\ttype : %s,\n\t\n \t joinConns : %#v\n", c.GetName(), c.GetBindAddress(), c.GetShosetType(), c.ConnsJoin)
+	// c.ConnsJoin.Iterate(
+	// 	func(key string, val *ShosetConn) {
+	// 		descr = fmt.Sprintf("%s, %s: %s", descr, key, val)
+	// 	})
 	return descr
 }
 
@@ -170,35 +169,25 @@ func (c *Shoset) Bind(address string) error {
 		return err
 	}
 
-	viperAddress := computeAddress(ipAddress, false)
-	fmt.Println(viperAddress)
-	if !pathCheck(viperAddress+".yaml") { //viper config not initialized (first time in bind func)
-		fmt.Println("First bind :::::::::::::")
-		// init viper config
-		c.viperConfig.AddConfigPath(".")
-		c.viperConfig.SetConfigName(viperAddress)
-		c.viperConfig.SetConfigType("yaml")
-	} else { // file already exists for this socket
-		fmt.Println("!!!!!!!!!!!!!!")
-		content, err := ioutil.ReadFile(viperAddress+".yaml")
-		if err != nil {
-			fmt.Println("no file ...")
-		}
+	viperAddress := computeAddress(ipAddress)
+	c.ConnsJoin.SetConfigName(viperAddress)
 	
-		// Convert []byte to string and print to screen
-		text := string(content)
-		fmt.Println(text)
-		// onceBindedAddress := c.viperConfig.GetStringSlice("shoset_127~0~0~1_8001")
-		onceBindedAddress := c.ConnsJoin.GetConfig()
-		fmt.Println("!!!!!!!!!!!!!!", onceBindedAddress)
-		for _, bindedAddress := range onceBindedAddress {
-			if exists := c.ConnsJoin.Get(bindedAddress); exists == nil {
-				c.Join(computeAddress(bindedAddress, true))
+	// viper config
+	c.viperConfig.AddConfigPath(".")
+	c.viperConfig.SetConfigName(viperAddress)
+	c.viperConfig.SetConfigType("yaml")
+
+	if err := c.viperConfig.ReadInConfig(); err != nil {
+		fmt.Println("Config file not created yet")
+	} else {
+		remotes := c.ConnsJoin.GetConfig() // get all the sockets we need to join
+		for _, remote := range remotes {
+			if exists := c.ConnsJoin.Get(remote); exists == nil {
+				c.Join(remote) // we join the socket(s) from the config file
 			}
 		}
 	}
-		
-	c.ConnsJoin.SetConfigName(viperAddress)
+	
 	c.SetBindAddress(ipAddress) // bound to the port
 	go c.handleBind()           // process runInconn()
 	return nil
@@ -234,7 +223,7 @@ func (c *Shoset) Join(address string) (*ShosetConn, error) {
 	// fmt.Println("join de ", c.GetBindAddress(), "vers ", address)
 	exists := c.ConnsJoin.Get(address) // check if address already in the map
 	if exists != nil {                 //connection already established for this socket
-		fmt.Println("connection already established : ", c.GetBindAddress(), "vers : ", address)
+		// fmt.Println("connection already established : ", c.GetBindAddress(), "to : ", address)
 		return exists, nil
 	}
 	if address == c.GetBindAddress() { // connection impossible with itself
@@ -275,18 +264,11 @@ func (c *Shoset) SetConn(connAddr, connType string, conn *ShosetConn) {
 }
 
 // compute the name for the .yaml file corresponding to each socket
-func computeAddress(ipAddress string, reverse bool) string {
-	if !reverse { // compute for file name
-		_ipAddress := strings.Replace(ipAddress, ":", "_", 1)
-		_ipAddress = strings.Replace(_ipAddress, ".", "~", 3)
-		name := "shoset_" + _ipAddress
-		return name	
-		
-	} else { // compute backward to get port for join
-		port := ipAddress[len(ipAddress)-4:] //get the port from the file name - only for port from 1000 to 9999 -> need to find a solution
-		fmt.Println(name)
-		return name	
-	}
+func computeAddress(ipAddress string) string {
+	_ipAddress := strings.Replace(ipAddress, ":", "_", 1)
+	_ipAddress = strings.Replace(_ipAddress, ".", "~", 3)
+	name := "shoset_" + _ipAddress
+	return name	
 }
 
 // returns bool whether the given file or directory exists

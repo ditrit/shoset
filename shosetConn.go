@@ -187,7 +187,7 @@ func (c *ShosetConn) runJoinConn() {
 				if ch.ConnsJoin.Get(c.GetLocalAddress()) == nil { ///////////////////////////////////////////////////////////////// problem here with != : doesn't enter if - fixed with ==
 					c.SendMessage(*joinConfig)
 				}
-				fmt.Println(c.GetLocalAddress(), " can receive message from ", c.GetRemoteAddress())
+				// fmt.Println(c.GetLocalAddress(), " can receive message from ", c.GetRemoteAddress())
 				err := c.receiveMsg()
 				// fmt.Println(c.GetIsValid(), " - after message received - in runjoinconn")
 				time.Sleep(time.Second * time.Duration(1))
@@ -202,7 +202,7 @@ func (c *ShosetConn) runJoinConn() {
 
 // runInbound : handler for the connection, for handleBind()
 func (c *ShosetConn) runInConn() {
-	fmt.Println("enter runinconn")
+	// fmt.Println("enter runinconn")
 	c.rb = msg.NewReader(c.socket)
 	c.wb = msg.NewWriter(c.socket)
 	defer c.socket.Close()
@@ -238,12 +238,16 @@ func (c *ShosetConn) receiveMsg() error {
 	// fmt.Printf("\n########### receiveMsg : message read")
 	switch {
 	case err == io.EOF:
-		fmt.Println("\n########### receiveMsg : reached EOF - close this connection", c.GetRemoteAddress())
-		c.ch.deleteConn(c.GetRemoteAddress())
+		// fmt.Println("\n########### receiveMsg : reached EOF - close this connection", c.GetRemoteAddress())
+		if c.GetDir() == "in" {
+			c.ch.deleteConn(c.GetRemoteAddress())
+		}
 		return errors.New("receiveMsg : reached EOF - close this connection")
 	case err != nil:
-		fmt.Println("\n########### receiveMsg : failed to read - close this connection")
-		c.ch.deleteConn(c.GetRemoteAddress())
+		// fmt.Println("\n########### receiveMsg : failed to read - close this connection")
+		if c.GetDir() == "in" {
+			c.ch.deleteConn(c.GetRemoteAddress())
+		}
 		return errors.New("error : receiveMsg : failed to read - close this connection")
 	}
 	msgType = strings.Trim(msgType, "\n")
@@ -260,14 +264,18 @@ func (c *ShosetConn) receiveMsg() error {
 				go fHandle(c, msgVal) //HandleConfigJoin()
 			}
 		} else {
-			c.ch.deleteConn(c.GetRemoteAddress())
+			if c.GetDir() == "in" {
+				c.ch.deleteConn(c.GetRemoteAddress())
+			}
 			// fmt.Println("receiveMsg : can not read value of " + msgType)
 			return errors.New("receiveMsg : can not read value of " + msgType)
 		}
 	}
 	if !ok {
-		c.ch.deleteConn(c.GetRemoteAddress())
-		fmt.Println("receiveMsg : non implemented type of message " + msgType)
+		if c.GetDir() == "in" {
+			c.ch.deleteConn(c.GetRemoteAddress())
+		}
+		// fmt.Println("receiveMsg : non implemented type of message " + msgType)
 		return errors.New("receiveMsg : non implemented type of message " + msgType)
 	}
 	time.Sleep(time.Second * time.Duration(1))
