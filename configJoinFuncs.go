@@ -2,7 +2,7 @@ package shoset
 
 import (
 	"errors"
-	// "fmt"
+	"fmt"
 
 	"github.com/ditrit/shoset/msg"
 )
@@ -16,7 +16,7 @@ func GetConfigJoin(c *ShosetConn) (msg.Message, error) {
 
 // HandleConfigJoin :
 func HandleConfigJoin(c *ShosetConn, message msg.Message) error {
-	// fmt.Printf("########### enter handleconfigjoin\n")
+	fmt.Printf("########### enter handleconfigjoin\n")
 	cfg := message.(msg.ConfigJoin) // compute config from message
 	ch := c.GetCh()
 	dir := c.GetDir()
@@ -25,14 +25,17 @@ func HandleConfigJoin(c *ShosetConn, message msg.Message) error {
 	case "join":
 		if dir == "in" { // a socket wants to join this one
 			// fmt.Printf("########### a socket wants to join this one")
-			if exists := c.ch.ConnsByName.Get(ch.GetName()).Get(remoteAddress); exists != nil {
-				return nil
+			if connsJoin := c.ch.ConnsByName.Get(c.ch.GetName()); connsJoin != nil {
+				if connsJoin.Get(remoteAddress) != nil {
+					return nil
+				}
 			}
+
 			if ch.GetName() == cfg.GetName() && ch.GetShosetType() == cfg.GetShosetType() {
 				// fmt.Printf("\n###########  same type")
 				// fmt.Println("in : ", remoteAddress)
 				c.SetRemoteAddress(remoteAddress)
-				ch.ConnsByName.Get(ch.GetName()).Set(remoteAddress, c)
+				ch.ConnsByName.Set(ch.GetName(), remoteAddress, c)
 				ch.NameBrothers.Set(remoteAddress, true)
 				// ch.Join(remoteAddress)
 				configOk := msg.NewCfg(remoteAddress, ch.GetName(), ch.GetShosetType(), "ok")
@@ -62,7 +65,7 @@ func HandleConfigJoin(c *ShosetConn, message msg.Message) error {
 
 	case "ok":
 		// fmt.Println("ok : ", c.remoteAddr)
-		ch.ConnsByName.Get(ch.GetName()).Set(c.GetRemoteAddress(), c) //////////////// need to find remote address because here we take the address of the tcp protocol which is random
+		ch.ConnsByName.Set(ch.GetName(), c.GetRemoteAddress(), c) //////////////// need to find remote address because here we take the address of the tcp protocol which is random
 		// fmt.Println("received ok", c.GetLocalAddress())
 		ch.NameBrothers.Set(c.GetRemoteAddress(), true)
 

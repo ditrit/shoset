@@ -331,7 +331,7 @@ func simpleSocket() {
 	cl1.Bind("localhost:8001") //we take the port 8001 for our first socket
 
 	for {
-		fmt.Println("\ncl : ", cl1)
+		// fmt.Println("\ncl : ", cl1)
 		time.Sleep(time.Second * time.Duration(1))
 
 	}

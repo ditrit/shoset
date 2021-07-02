@@ -25,20 +25,20 @@ func NewMapSafeMapConn() *MapSafeMapConn {
 func (m *MapSafeMapConn) Get(key string) *MapSafeConn {
 	m.Lock()
 	defer m.Unlock()
-	fmt.Println(len(m.m))
 	return m.m[key]
 }
 
 func (m *MapSafeMapConn) GetConfig() []string {
 	m.Lock()
 	defer m.Unlock()
-	return m.viperConfig.GetStringSlice(m.ConfigName)
+	return m.viperConfig.GetStringSlice("bind") //temporary - find a better way when link option
 }
 
 // Set : assign a value to a MapSafeMapConn
 func (m *MapSafeMapConn) Set(lname, key string, value *ShosetConn) *MapSafeMapConn {
 	m.Lock()
 	defer m.Unlock()
+	fmt.Println("Address will be set")
 	if lname != "" && key != "" {
 		if m.m[lname] == nil {
 			m.m[lname] = NewMapSafeConn()
@@ -48,7 +48,7 @@ func (m *MapSafeMapConn) Set(lname, key string, value *ShosetConn) *MapSafeMapCo
 
 	keys := m.m[lname].Keys()
 	if m.ConfigName != "" {
-		m.viperConfig.Set(m.ConfigName, keys)
+		m.viperConfig.Set("bind", keys) //temporary - find a better way when link option
 		m.viperConfig.WriteConfigAs("./"+m.ConfigName+".yaml")
 	}
 	return m
@@ -67,8 +67,9 @@ func (m *MapSafeMapConn) Delete(lname, key string) {
 	if ok {
 		m.m[lname].Delete(key)
 	}
+	keys := m.m[lname].Keys()
 	if m.ConfigName != "" {
-		m.viperConfig.Set(m.ConfigName, m.m[lname].Keys())
+		m.viperConfig.Set("bind", keys) //temporary - find a better way when link option
 		m.viperConfig.WriteConfigAs("./"+m.ConfigName+".yaml")
 	}
 	m.Unlock()
