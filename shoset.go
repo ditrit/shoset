@@ -183,7 +183,7 @@ func (c *Shoset) Bind(address string) error {
 	} else {
 		remotes := c.ConnsByName.GetConfig() // get all the sockets we need to join
 		for _, remote := range remotes {
-			if exists := c.ConnsByName.Get(c.lName).Get(remote); exists == nil {
+			if exists := c.ConnsByName.Get(c.GetName()).Get(remote); exists == nil {
 				c.Join(remote) // we join the socket(s) from the config file
 			}
 		}
@@ -222,6 +222,7 @@ func (c *Shoset) handleBind() error {
 //Join : Join to group of Shosets and duplicate in and out connexions
 func (c *Shoset) Join(address string) (*ShosetConn, error) {
 	// fmt.Println("join de ", c.GetBindAddress(), "vers ", address)
+	fmt.Println(c.GetName())
 	exist := c.ConnsByName.Get(c.GetName())
 	fmt.Println(exist)
 	exists := exist.Get(address) // check if address already in the map

@@ -3,7 +3,7 @@ package shoset
 import (
 	"sync"
 	"github.com/spf13/viper"
-	// "fmt"
+	"fmt"
 )
 
 // MapSafeMapConn : simple key map safe for goroutines...
@@ -25,6 +25,7 @@ func NewMapSafeMapConn() *MapSafeMapConn {
 func (m *MapSafeMapConn) Get(key string) *MapSafeConn {
 	m.Lock()
 	defer m.Unlock()
+	fmt.Println(len(m.m))
 	return m.m[key]
 }
 
