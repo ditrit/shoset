@@ -2,7 +2,7 @@ package shoset
 
 import (
 	"errors"
-	"fmt"
+	// "fmt"
 
 	"github.com/ditrit/shoset/msg"
 )
@@ -16,7 +16,7 @@ func GetConfigJoin(c *ShosetConn) (msg.Message, error) {
 
 // HandleConfigJoin :
 func HandleConfigJoin(c *ShosetConn, message msg.Message) error {
-	fmt.Printf("########### enter handleconfigjoin\n")
+	// fmt.Printf("########### enter handleconfigjoin\n")
 	cfg := message.(msg.ConfigJoin) // compute config from message
 	ch := c.GetCh()
 	dir := c.GetDir()
