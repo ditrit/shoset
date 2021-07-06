@@ -75,7 +75,7 @@ func NewShoset(lName, ShosetType string) *Shoset { //l
 	shoset := Shoset{}
 
 	// Initialisation
-	
+
 	shoset.lName = lName
 	shoset.ShosetType = ShosetType
 	shoset.viperConfig = viper.New()
@@ -85,7 +85,6 @@ func NewShoset(lName, ShosetType string) *Shoset { //l
 	shoset.ConnsByName.SetViper(shoset.viperConfig)
 	shoset.Brothers = NewMapSafeBool()
 	shoset.NameBrothers = NewMapSafeBool()
-	
 
 	// Dictionnaire des queues de message (par type de message)
 	shoset.Queue = make(map[string]*msg.Queue)
@@ -170,7 +169,7 @@ func (c *Shoset) Bind(address string) error {
 
 	viperAddress := computeAddress(ipAddress)
 	c.ConnsByName.SetConfigName(viperAddress)
-	
+
 	// viper config
 	c.viperConfig.AddConfigPath(".")
 	c.viperConfig.SetConfigName(viperAddress)
@@ -185,7 +184,7 @@ func (c *Shoset) Bind(address string) error {
 			c.Join(remote)
 		}
 	}
-	
+
 	c.SetBindAddress(ipAddress) // bound to the port
 	go c.handleBind()           // process runInconn()
 	return nil
@@ -210,7 +209,7 @@ func (c *Shoset) handleBind() error {
 		tlsConn := tls.Server(unencConn, c.tlsConfig) // create the securised connection protocol
 		address := tlsConn.RemoteAddr().String()
 		conn, _ := NewShosetConn(c, address, "in") // create the securised connection
-		conn.socket = tlsConn //we override socket attribut with our securised protocol
+		conn.socket = tlsConn                      //we override socket attribut with our securised protocol
 		go conn.runInConn()
 	}
 	return nil
@@ -224,7 +223,7 @@ func (c *Shoset) Join(address string) (*ShosetConn, error) {
 	if connsJoin != nil {
 		// fmt.Println("connsJoin : ", connsJoin)
 		exists := connsJoin.Get(address) // check if address is already in the map
-		if exists != nil {                 //connection already established for this socket
+		if exists != nil {               //connection already established for this socket
 			// fmt.Println("connection already established : ", c.GetBindAddress(), "to : ", address)
 			return exists, nil
 		}
@@ -239,6 +238,7 @@ func (c *Shoset) Join(address string) (*ShosetConn, error) {
 
 //Link : Link to another Shoset
 func (c *Shoset) Link(address string) (*ShosetConn, error) {
+	fmt.Println("enter link")
 	conn, _ := NewShosetConn(c, address, "out")
 	go conn.runOutConn(conn.GetRemoteAddress())
 	return conn, nil
@@ -263,9 +263,14 @@ func (c *Shoset) deleteConn(connAddr string) {
 // SetConn :
 func (c *Shoset) SetConn(connAddr, connType string, conn *ShosetConn) {
 	if conn != nil {
+		fmt.Println("enter setconn !!!!!!!!!!!!!!")
+		fmt.Println("enter setconn-byaddr")
 		c.ConnsByAddr.Set(connAddr, conn)
+		fmt.Println("enter setconn-bytype")
 		c.ConnsByType.Set(connType, conn.GetRemoteAddress(), conn)
-		c.ConnsByName.Set(conn.GetName(), conn.GetRemoteAddress(), conn)
+		fmt.Println("enter setconn-byname : ", c.GetName())
+		c.ConnsByName.Set(conn.GetName(), conn.GetRemoteAddress(), conn) // conn.GetName() -> c.GetName plus de problème
+		fmt.Println("finish setconn")
 	}
 }
 
@@ -274,7 +279,7 @@ func computeAddress(ipAddress string) string {
 	_ipAddress := strings.Replace(ipAddress, ":", "_", 1)
 	_ipAddress = strings.Replace(_ipAddress, ".", "~", 3)
 	name := "shoset_" + _ipAddress
-	return name	
+	return name
 }
 
 // returns bool whether the given file or directory exists

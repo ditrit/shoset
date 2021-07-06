@@ -2,7 +2,7 @@ package main // tests run in the main package
 
 import (
 	"fmt"
-	"os"
+	// "os"
 
 	"time"
 
@@ -339,20 +339,29 @@ func simpleSocket() {
 	<-done
 }
 
-func debugger() {
+func test_link() {
 	done := make(chan bool)
 
-	cl4 := shoset.NewShoset("cl", "cl")
-	cl4.Bind("localhost:8004")
-	cl5 := shoset.NewShoset("cl", "cl")
-	// fmt.Println("\ncl : ", cl5)
-	cl5.Bind("localhost:8005")
-	cl5.Join("localhost:8004")
+	cl1 := shoset.NewShoset("cl", "cl") // cluster
+	cl1.Bind("localhost:8001")
+
+	cl2 := shoset.NewShoset("cl", "cl")
+	cl2.Bind("localhost:8002")
+	cl2.Join("localhost:8001")
+
+	aga1 := shoset.NewShoset("aga", "a") // agregateur
+	aga1.Bind("localhost:8111")
+	fmt.Println("\n################")
+	aga1.Link("localhost:8001")
+
+	// Ca1 := shoset.NewShoset("Ca", "c") //connecteur
+	// Ca1.Bind("localhost:8211")
+	// Ca1.Link("localhost:8111")
 
 	for {
-		// fmt.Println("\ncl : ", cl4)
-		// fmt.Println("\ncl : ", cl5)
-		// fmt.Println()
+		fmt.Println("\ncl : ", cl1)
+		fmt.Println("\ncl : ", cl2)
+		fmt.Println("\nag : ", aga1)
 		time.Sleep(time.Second * time.Duration(2))
 
 	}
@@ -360,23 +369,19 @@ func debugger() {
 	<-done
 }
 
-func viper() {
-
-}
-
 func main() {
 	//terminal
-	arg := os.Args[1]
-	if arg == "1" {
-		fmt.Println("Running testJoin")
-		testJoin()
-	} else if arg == "2" {
-		fmt.Println("Running simpleSocket")
-		simpleSocket()
-	} else {
-		fmt.Println("You must specify one parameter")
-	}
+	// arg := os.Args[1]
+	// if arg == "1" {
+	// 	fmt.Println("Running testJoin")
+	// 	testJoin()
+	// } else if arg == "2" {
+	// 	fmt.Println("Running simpleSocket")
+	// 	simpleSocket()
+	// } else {
+	// 	fmt.Println("You must specify one parameter")
+	// }
 
 	//debugger
-	// debugger()
+	test_link()
 }

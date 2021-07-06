@@ -3,7 +3,7 @@ package shoset
 import (
 	"sync"
 	"github.com/spf13/viper"
-	// "fmt"
+	"fmt"
 )
 
 // MapSafeMapConn : simple key map safe for goroutines...
@@ -38,19 +38,25 @@ func (m *MapSafeMapConn) GetConfig() []string {
 func (m *MapSafeMapConn) Set(lname, key string, value *ShosetConn) *MapSafeMapConn {
 	m.Lock()
 	defer m.Unlock()
-	// fmt.Println("Address will be set")
+	fmt.Println("Address will be set with lname-key : ", lname, key)
 	if lname != "" && key != "" {
+		fmt.Println("enter condition")
 		if m.m[lname] == nil {
 			m.m[lname] = NewMapSafeConn()
 		}
 		m.m[lname].Set(key, value)
+
 	}
+	fmt.Println(m.m[lname])
 
 	keys := m.m[lname].Keys()
+	fmt.Println("keys ok : ", keys)
 	if m.ConfigName != "" {
 		m.viperConfig.Set("bind", keys) //temporary - find a better way when link option
 		m.viperConfig.WriteConfigAs("./"+m.ConfigName+".yaml")
 	}
+
+	fmt.Println("Address will be set")
 	return m
 }
 

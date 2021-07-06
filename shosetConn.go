@@ -130,7 +130,7 @@ func (c *ShosetConn) WriteMessage(data interface{}) error {
 
 // RunOutConn : handler for the socket, for Link()
 func (c *ShosetConn) runOutConn(addr string) {
-	// fmt.Println("Entering runoutconn")
+	fmt.Println("Entering runoutconn")
 	myConfig := NewHandshake(c.GetCh())
 	for {
 		conn, err := tls.Dial("tcp", c.GetRemoteAddress(), c.ch.tlsConfig)
@@ -138,6 +138,7 @@ func (c *ShosetConn) runOutConn(addr string) {
 		if err != nil {
 			time.Sleep(time.Millisecond * time.Duration(100))
 		} else {
+			fmt.Println("!!!!!!!!!!!!! init socket conn, name : ", c.GetName())
 			c.socket = conn
 			c.rb = msg.NewReader(c.socket)
 			c.wb = msg.NewWriter(c.socket)
@@ -145,6 +146,7 @@ func (c *ShosetConn) runOutConn(addr string) {
 
 			// receive messages
 			for {
+				fmt.Println("enter for loop runoutconn")
 				if c.GetName() == "" { // remote logical Name // same problem than runJoinConn()
 					c.SendMessage(*myConfig)
 				}
@@ -225,13 +227,13 @@ func (c *ShosetConn) runInConn() {
 // SendMessage :
 func (c *ShosetConn) SendMessage(msg msg.Message) {
 	//fmt.Printf("     Sending message %s(%s) -> %s(%s) %#v.\n", c.GetCh().GetName(), c.GetCh().GetBindAddr(), c.GetName(), c.addr, msg)
-	// fmt.Printf("\n########### enter send message")
+	fmt.Println("\nenter send message")
 	c.WriteString(msg.GetMsgType())
 	c.WriteMessage(msg)
 }
 
 func (c *ShosetConn) receiveMsg() error {
-	// fmt.Println("###########! enter receive message ", c.GetLocalAddress())
+	fmt.Println("enter receive message ", c.GetLocalAddress())
 	if !c.GetIsValid() {
 		// fmt.Println("c is not valid !!!!!!!!", c.GetLocalAddress())
 		c.ch.deleteConn(c.GetRemoteAddress())

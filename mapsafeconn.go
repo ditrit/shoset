@@ -1,6 +1,7 @@
 package shoset
 
 import (
+	"fmt"
 	"sync"
 	// "fmt"
 )
@@ -56,7 +57,10 @@ func (m *MapSafeConn) Set(key string, value *ShosetConn) *MapSafeConn {
 }
 
 func (m *MapSafeConn) Keys() []string {
+	fmt.Println("enter keys")
+	fmt.Println(m)
 	addresses := make([]string, m.Len())
+	fmt.Println("addresses talble ok")
 	i := 0
 	for key := range m.m {
 		if m.m[key].GetDir() == "out" {
@@ -89,5 +93,8 @@ func (m *MapSafeConn) Iterate(iter func(string, *ShosetConn)) {
 
 // Len : return length of the map
 func (m *MapSafeConn) Len() int {
+	fmt.Println("enter len")
+	fmt.Println(m)
+	fmt.Println("len : ", len(m.GetM()))
 	return len(m.m)
 }
