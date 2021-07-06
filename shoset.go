@@ -34,7 +34,6 @@ type Shoset struct {
 	ConnsByAddr  *MapSafeConn    // map[string]*ShosetConn    ensemble des connexions
 	ConnsByName  *MapSafeMapConn // map[string]map[string]*ShosetConn   connexions par nom logique
 	ConnsByType  *MapSafeMapConn // map[string]map[string]*ShosetConn   connexions par type
-	ConnsJoin    *MapSafeConn    // map[string]*ShosetConn    connexions nécessaires au join (non utilisées en dehors du join)
 	Brothers     *MapSafeBool    // map[string]bool  "freres" au sens large (ex: toutes les instances de connecteur reliées à un même aggregateur)
 	NameBrothers *MapSafeBool    // map[string]bool  "freres" ayant un même nom logique (ex: instances d'un même connecteur)
 
@@ -83,7 +82,6 @@ func NewShoset(lName, ShosetType string) *Shoset { //l
 	shoset.ConnsByAddr = NewMapSafeConn()
 	shoset.ConnsByName = NewMapSafeMapConn()
 	shoset.ConnsByType = NewMapSafeMapConn()
-	shoset.ConnsJoin = NewMapSafeConn()
 	shoset.ConnsByName.SetViper(shoset.viperConfig)
 	shoset.Brothers = NewMapSafeBool()
 	shoset.NameBrothers = NewMapSafeBool()
@@ -156,7 +154,7 @@ func (c Shoset) String() string {
 
 //Bind : Connect to another Shoset
 func (c *Shoset) Bind(address string) error {
-	fmt.Println("######## enter bind")
+	// fmt.Println("######## enter bind")
 	if c.GetBindAddress() != "" { //socket already bounded to a port (already passed this Bind function once)
 		fmt.Println("Shoset already bound")
 		return errors.New("Shoset already bound")
@@ -179,19 +177,12 @@ func (c *Shoset) Bind(address string) error {
 	c.viperConfig.SetConfigType("yaml")
 
 	if err := c.viperConfig.ReadInConfig(); err != nil {
-		fmt.Println("Config file not created yet")
+		// fmt.Println("Config file not created yet")
 	} else {
-		fmt.Println("Config file created")
+		// fmt.Println("Config file created")
 		remotes := c.ConnsByName.GetConfig() // get all the sockets we need to join
 		for _, remote := range remotes {
-			// fmt.Println(remote)
-			// if connsJoin := c.ConnsByName.Get(c.GetName()); connsJoin != nil {
-			// 	if exists := connsJoin.Get(remote); exists == nil {
-			// 		fmt.Println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-			// 		c.Join(remote) // we join the socket(s) from the config file
-			// 	}
-			// }
-			c.Join(remote) // a verifier avec Xavier
+			c.Join(remote)
 		}
 	}
 	
@@ -228,10 +219,10 @@ func (c *Shoset) handleBind() error {
 //Join : Join to group of Shosets and duplicate in and out connexions
 func (c *Shoset) Join(address string) (*ShosetConn, error) {
 	// fmt.Println("join de ", c.GetBindAddress(), "vers ", address)
-	fmt.Println("name : ", c.GetName())
+	// fmt.Println("name : ", c.GetName())
 	connsJoin := c.ConnsByName.Get(c.GetName())
 	if connsJoin != nil {
-		fmt.Println("connsJoin : ", connsJoin)
+		// fmt.Println("connsJoin : ", connsJoin)
 		exists := connsJoin.Get(address) // check if address is already in the map
 		if exists != nil {                 //connection already established for this socket
 			// fmt.Println("connection already established : ", c.GetBindAddress(), "to : ", address)
