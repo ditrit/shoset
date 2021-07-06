@@ -267,7 +267,7 @@ func (c *ShosetConn) receiveMsg() error {
 			// read message data and handle it with the proper function
 			fHandle, ok := c.ch.Handle[msgType]
 			if ok {
-				go fHandle(c, msgVal) //HandleConfigJoin()
+				go fHandle(c, msgVal) //HandleConfigJoin() or HandleConfigLink()
 			}
 		} else {
 			if c.GetDir() == "in" {

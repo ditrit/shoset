@@ -30,6 +30,7 @@ func HandleConfigLink(c *ShosetConn, message msg.Message) error {
 		if c.GetLocalAddress() == "" {
 			c.SetLocalAddress(cfg.GetBindAddress())
 		}
+		
 		if dir == "in" {
 			ch.SetConn(c.GetLocalAddress(), c.GetShosetType(), c)
 			if ch.NameBrothers.Len() > 0 {
