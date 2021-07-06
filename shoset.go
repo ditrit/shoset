@@ -34,7 +34,6 @@ type Shoset struct {
 	ConnsByAddr  *MapSafeConn    // map[string]*ShosetConn    ensemble des connexions
 	ConnsByName  *MapSafeMapConn // map[string]map[string]*ShosetConn   connexions par nom logique
 	ConnsByType  *MapSafeMapConn // map[string]map[string]*ShosetConn   connexions par type
-	ConnsJoin    *MapSafeConn    // map[string]*ShosetConn    connexions nécessaires au join (non utilisées en dehors du join)
 	Brothers     *MapSafeBool    // map[string]bool  "freres" au sens large (ex: toutes les instances de connecteur reliées à un même aggregateur)
 	NameBrothers *MapSafeBool    // map[string]bool  "freres" ayant un même nom logique (ex: instances d'un même connecteur)
 
@@ -83,7 +82,6 @@ func NewShoset(lName, ShosetType string) *Shoset { //l
 	shoset.ConnsByAddr = NewMapSafeConn()
 	shoset.ConnsByName = NewMapSafeMapConn()
 	shoset.ConnsByType = NewMapSafeMapConn()
-	shoset.ConnsJoin = NewMapSafeConn()
 	shoset.ConnsByName.SetViper(shoset.viperConfig)
 	shoset.Brothers = NewMapSafeBool()
 	shoset.NameBrothers = NewMapSafeBool()
