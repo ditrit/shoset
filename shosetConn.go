@@ -99,7 +99,7 @@ func NewShosetConn(c *Shoset, address string, dir string) (*ShosetConn, error) {
 }
 
 func (c *ShosetConn) String() string {
-	return fmt.Sprintf("ShosetConn{ way: %s, remoteAddress : %s}", c.GetDir(), c.GetRemoteAddress())
+	return fmt.Sprintf("ShosetConn{ name : %s, way : %s, remoteAddress : %s}", c.GetName(), c.GetDir(), c.GetRemoteAddress())
 }
 
 // ReadString :
@@ -131,22 +131,22 @@ func (c *ShosetConn) WriteMessage(data interface{}) error {
 // RunOutConn : handler for the socket, for Link()
 func (c *ShosetConn) runOutConn(addr string) {
 	fmt.Println("Entering runoutconn")
-	myConfig := NewHandshake(c.GetCh())
+	myConfig := msg.NewCfgLink(c.ch.bindAddress, c.ch.lName, c.ch.ShosetType)
 	for {
 		conn, err := tls.Dial("tcp", c.GetRemoteAddress(), c.ch.tlsConfig)
 		defer conn.Close()
 		if err != nil {
 			time.Sleep(time.Millisecond * time.Duration(100))
 		} else {
-			fmt.Println("!!!!!!!!!!!!! init socket conn, name : ", c.GetName())
+			// fmt.Println("!!!!!!!!!!!!! init socket conn, name : ", c.GetName())
 			c.socket = conn
 			c.rb = msg.NewReader(c.socket)
 			c.wb = msg.NewWriter(c.socket)
-			c.ch.SetConn(addr, c.ch.GetShosetType(), c)
+			// c.ch.SetConn(addr, c.ch.GetShosetType(), c) //getName == nil causes pointer error
 
 			// receive messages
 			for {
-				fmt.Println("enter for loop runoutconn")
+				// fmt.Println("enter for loop runoutconn")
 				if c.GetName() == "" { // remote logical Name // same problem than runJoinConn()
 					c.SendMessage(*myConfig)
 				}
@@ -161,7 +161,7 @@ func (c *ShosetConn) runJoinConn() {
 	// fmt.Println("########### enter runjoinconn")
 	ch := c.GetCh()
 	// fmt.Println(ch.GetBindAddr())                                                        // socket from socketConn
-	joinConfig := msg.NewCfg(ch.GetBindAddress(), ch.GetName(), ch.GetShosetType(), "join") //we create a new message config
+	joinConfig := msg.NewCfgJoin(ch.GetBindAddress(), ch.GetLogicalName(), ch.GetShosetType(), "join") //we create a new message config
 	for {
 		// fmt.Println("in for loop from runjoinconn")
 		if !c.GetIsValid() { // sockets are not from the same type or don't have the same name
@@ -188,7 +188,7 @@ func (c *ShosetConn) runJoinConn() {
 				// fmt.Println("~~~~", ch.ConnsJoin.Get(c.GetBindAddr()))
 				// fmt.Println("\n########### enter receive message loop")
 				// fmt.Println("connsJoin : ", ch.ConnsByName.Get(ch.GetName()))
-				if connsJoin := ch.ConnsByName.Get(ch.GetName()); connsJoin != nil {
+				if connsJoin := ch.ConnsByName.Get(ch.GetLogicalName()); connsJoin != nil {
 					if exists := connsJoin.Get(c.GetLocalAddress()); exists == nil {
 						c.SendMessage(*joinConfig)
 					}
@@ -227,13 +227,13 @@ func (c *ShosetConn) runInConn() {
 // SendMessage :
 func (c *ShosetConn) SendMessage(msg msg.Message) {
 	//fmt.Printf("     Sending message %s(%s) -> %s(%s) %#v.\n", c.GetCh().GetName(), c.GetCh().GetBindAddr(), c.GetName(), c.addr, msg)
-	fmt.Println("\nenter send message")
+	// fmt.Println("\nenter send message")
 	c.WriteString(msg.GetMsgType())
 	c.WriteMessage(msg)
 }
 
 func (c *ShosetConn) receiveMsg() error {
-	fmt.Println("enter receive message ", c.GetLocalAddress())
+	// fmt.Println("enter receive message ", c.GetLocalAddress())
 	if !c.GetIsValid() {
 		// fmt.Println("c is not valid !!!!!!!!", c.GetLocalAddress())
 		c.ch.deleteConn(c.GetRemoteAddress())

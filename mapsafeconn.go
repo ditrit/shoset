@@ -1,15 +1,18 @@
 package shoset
 
 import (
-	"fmt"
 	"sync"
-	// "fmt"
+	"fmt"
 )
 
 // MapSafeConn : simple key map safe for goroutines...
 type MapSafeConn struct {
 	m map[string]*ShosetConn
 	sync.Mutex
+}
+
+func (m *MapSafeConn) String() string {
+	return fmt.Sprintf("MapSafeConn{ m : %s", m.Keys())
 }
 
 // NewMapSafeConn : constructor
@@ -57,10 +60,10 @@ func (m *MapSafeConn) Set(key string, value *ShosetConn) *MapSafeConn {
 }
 
 func (m *MapSafeConn) Keys() []string {
-	fmt.Println("enter keys")
-	fmt.Println(m)
+	// fmt.Println("enter keys")
+	// fmt.Println(m)
 	addresses := make([]string, m.Len())
-	fmt.Println("addresses talble ok")
+	// fmt.Println("addresses talble ok")
 	i := 0
 	for key := range m.m {
 		if m.m[key].GetDir() == "out" {
@@ -69,7 +72,6 @@ func (m *MapSafeConn) Keys() []string {
 		}
 	}
 	return addresses[:i]
-	
 }
 
 // Delete : delete a value in a MapSafeConn
@@ -93,8 +95,8 @@ func (m *MapSafeConn) Iterate(iter func(string, *ShosetConn)) {
 
 // Len : return length of the map
 func (m *MapSafeConn) Len() int {
-	fmt.Println("enter len")
-	fmt.Println(m)
-	fmt.Println("len : ", len(m.GetM()))
+	// fmt.Println("enter len")
+	// fmt.Println(m)
+	// fmt.Println("len : ", len(m.GetM()))
 	return len(m.m)
 }

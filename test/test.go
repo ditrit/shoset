@@ -2,7 +2,7 @@ package main // tests run in the main package
 
 import (
 	"fmt"
-	// "os"
+	"os"
 
 	"time"
 
@@ -351,7 +351,6 @@ func test_link() {
 
 	aga1 := shoset.NewShoset("aga", "a") // agregateur
 	aga1.Bind("localhost:8111")
-	fmt.Println("\n################")
 	aga1.Link("localhost:8001")
 
 	// Ca1 := shoset.NewShoset("Ca", "c") //connecteur
@@ -362,6 +361,7 @@ func test_link() {
 		fmt.Println("\ncl : ", cl1)
 		fmt.Println("\ncl : ", cl2)
 		fmt.Println("\nag : ", aga1)
+		// fmt.Println("\nca : ", Ca1)
 		time.Sleep(time.Second * time.Duration(2))
 
 	}
@@ -371,7 +371,8 @@ func test_link() {
 
 func main() {
 	//terminal
-	// arg := os.Args[1]
+	arg := os.Args[1]
+	fmt.Println(arg)
 	// if arg == "1" {
 	// 	fmt.Println("Running testJoin")
 	// 	testJoin()

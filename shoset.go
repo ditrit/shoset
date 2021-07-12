@@ -60,7 +60,7 @@ type Shoset struct {
 
 /*           Accessors            */
 func (c Shoset) GetBindAddress() string { return c.bindAddress }
-func (c Shoset) GetName() string        { return c.lName }
+func (c Shoset) GetLogicalName() string        { return c.lName }
 func (c Shoset) GetShosetType() string  { return c.ShosetType }
 
 func (c *Shoset) SetBindAddress(bindAddress string) {
@@ -143,8 +143,8 @@ func NewShoset(lName, ShosetType string) *Shoset { //l
 
 // Display with fmt - override the print of the object
 func (c Shoset) String() string {
-	descr := fmt.Sprintf("Shoset -  lName: %s,\n\t\tbindAddr : %s,\n\t\ttype : %s,\n\t\tConnsByName :", c.GetName(), c.GetBindAddress(), c.GetShosetType())
-	c.ConnsByName.Iterate(c.GetName(),
+	descr := fmt.Sprintf("Shoset -  lName: %s,\n\t\tbindAddr : %s,\n\t\ttype : %s,\n\t\tConnsByName :", c.GetLogicalName(), c.GetBindAddress(), c.GetShosetType())
+	c.ConnsByName.Iterate(c.GetLogicalName(),
 		func(key string, val *ShosetConn) {
 			descr = fmt.Sprintf("%s %s\n\t\t\t     ", descr, val)
 		})
@@ -181,7 +181,7 @@ func (c *Shoset) Bind(address string) error {
 		// fmt.Println("Config file created")
 		remotes := c.ConnsByName.GetConfig() // get all the sockets we need to join
 		for _, remote := range remotes {
-			c.Join(remote)
+			c.Join(remote) // ou link
 		}
 	}
 
@@ -219,7 +219,7 @@ func (c *Shoset) handleBind() error {
 func (c *Shoset) Join(address string) (*ShosetConn, error) {
 	// fmt.Println("join de ", c.GetBindAddress(), "vers ", address)
 	// fmt.Println("name : ", c.GetName())
-	connsJoin := c.ConnsByName.Get(c.GetName())
+	connsJoin := c.ConnsByName.Get(c.GetLogicalName())
 	if connsJoin != nil {
 		// fmt.Println("connsJoin : ", connsJoin)
 		exists := connsJoin.Get(address) // check if address is already in the map
@@ -239,6 +239,19 @@ func (c *Shoset) Join(address string) (*ShosetConn, error) {
 //Link : Link to another Shoset
 func (c *Shoset) Link(address string) (*ShosetConn, error) {
 	fmt.Println("enter link")
+	connsJoin := c.ConnsByName.Get(c.GetLogicalName())
+	if connsJoin != nil {
+		// fmt.Println("connsJoin : ", connsJoin)
+		exists := connsJoin.Get(address) // check if address is already in the map
+		if exists != nil {               //connection already established for this socket
+			// fmt.Println("connection already established : ", c.GetBindAddress(), "to : ", address)
+			return exists, nil
+		}
+	}
+	if address == c.GetBindAddress() { // connection impossible with itself
+		fmt.Println("can't connect to itself")
+		return nil, nil
+	}
 	conn, _ := NewShosetConn(c, address, "out")
 	go conn.runOutConn(conn.GetRemoteAddress())
 	return conn, nil
@@ -253,7 +266,7 @@ func (c *Shoset) deleteConn(connAddr string) {
 
 	}
 
-	if connsJoin := c.ConnsByName.Get(c.GetName()); connsJoin != nil {
+	if connsJoin := c.ConnsByName.Get(c.GetLogicalName()); connsJoin != nil {
 		if connsJoin.Get(connAddr) != nil {
 			c.ConnsByName.Delete(c.lName, connAddr)
 		}
@@ -268,7 +281,7 @@ func (c *Shoset) SetConn(connAddr, connType string, conn *ShosetConn) {
 		c.ConnsByAddr.Set(connAddr, conn)
 		fmt.Println("enter setconn-bytype")
 		c.ConnsByType.Set(connType, conn.GetRemoteAddress(), conn)
-		fmt.Println("enter setconn-byname : ", c.GetName())
+		fmt.Println("enter setconn-byname : ", c.GetLogicalName())
 		c.ConnsByName.Set(conn.GetName(), conn.GetRemoteAddress(), conn) // conn.GetName() -> c.GetName plus de problème
 		fmt.Println("finish setconn")
 	}

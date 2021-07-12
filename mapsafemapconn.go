@@ -2,6 +2,7 @@ package shoset
 
 import (
 	"sync"
+
 	"github.com/spf13/viper"
 	"fmt"
 )
@@ -10,8 +11,12 @@ import (
 type MapSafeMapConn struct {
 	m map[string]*MapSafeConn
 	sync.Mutex
-	ConfigName string
+	ConfigName  string
 	viperConfig *viper.Viper
+}
+
+func (m *MapSafeMapConn) String() string {
+	return fmt.Sprintf("MapSafeMapConn{ m : %s", m.m)
 }
 
 // NewMapSafeMapConn : constructor
@@ -31,36 +36,36 @@ func (m *MapSafeMapConn) Get(key string) *MapSafeConn {
 func (m *MapSafeMapConn) GetConfig() []string {
 	m.Lock()
 	defer m.Unlock()
-	return m.viperConfig.GetStringSlice("bind") //temporary - find a better way when link option
+	return m.viperConfig.GetStringSlice("link") //temporary - find a better way when link option
 }
 
 // Set : assign a value to a MapSafeMapConn
 func (m *MapSafeMapConn) Set(lname, key string, value *ShosetConn) *MapSafeMapConn {
 	m.Lock()
 	defer m.Unlock()
-	fmt.Println("Address will be set with lname-key : ", lname, key)
+	// fmt.Println("Address will be set with lname-key : ", lname, key)
 	if lname != "" && key != "" {
-		fmt.Println("enter condition")
+		// fmt.Println("enter condition")
 		if m.m[lname] == nil {
 			m.m[lname] = NewMapSafeConn()
 		}
 		m.m[lname].Set(key, value)
 
 	}
-	fmt.Println(m.m[lname])
+	// fmt.Println(m.m[lname])
 
 	keys := m.m[lname].Keys()
-	fmt.Println("keys ok : ", keys)
+	// fmt.Println("keys ok : ", keys)
 	if m.ConfigName != "" {
 		m.viperConfig.Set("bind", keys) //temporary - find a better way when link option
-		m.viperConfig.WriteConfigAs("./"+m.ConfigName+".yaml")
+		m.viperConfig.WriteConfigAs("./" + m.ConfigName + ".yaml")
 	}
 
-	fmt.Println("Address will be set")
+	// fmt.Println("Address will be set")
 	return m
 }
 
-func (m*MapSafeMapConn) SetConfigName(name string) {
+func (m *MapSafeMapConn) SetConfigName(name string) {
 	if name != "" {
 		m.ConfigName = name
 	}
@@ -76,7 +81,7 @@ func (m *MapSafeMapConn) Delete(lname, key string) {
 	keys := m.m[lname].Keys()
 	if m.ConfigName != "" {
 		m.viperConfig.Set("bind", keys) //temporary - find a better way when link option
-		m.viperConfig.WriteConfigAs("./"+m.ConfigName+".yaml")
+		m.viperConfig.WriteConfigAs("./" + m.ConfigName + ".yaml")
 	}
 	m.Unlock()
 }
@@ -98,4 +103,17 @@ func (m *MapSafeMapConn) Len() int {
 
 func (m *MapSafeMapConn) SetViper(viperConfig *viper.Viper) {
 	m.viperConfig = viperConfig
+}
+
+func (m *MapSafeMapConn) Keys() []string {
+	// fmt.Println("enter keys")
+	// fmt.Println(m)
+	lName := make([]string, m.Len())
+	// fmt.Println("lName talble ok")
+	i := 0
+	for key := range m.m {
+		lName[i] = key
+		i++
+	}
+	return lName[:i]
 }
