@@ -4,7 +4,7 @@ import (
 	"sync"
 
 	"github.com/spf13/viper"
-	"fmt"
+	// "fmt"
 )
 
 // MapSafeMapConn : simple key map safe for goroutines...
@@ -13,10 +13,6 @@ type MapSafeMapConn struct {
 	sync.Mutex
 	ConfigName  string
 	viperConfig *viper.Viper
-}
-
-func (m *MapSafeMapConn) String() string {
-	return fmt.Sprintf("MapSafeMapConn{ m : %s", m.m)
 }
 
 // NewMapSafeMapConn : constructor
@@ -87,12 +83,15 @@ func (m *MapSafeMapConn) Delete(lname, key string) {
 }
 
 // Iterate : iterate through MapSafeMapConn Values using a function
-func (m *MapSafeMapConn) Iterate(lname string, iter func(string, *ShosetConn)) {
+func (m *MapSafeMapConn) Iterate(lnames []string, iter func(string, *ShosetConn)) {
 	m.Lock()
-	mapConn := m.m[lname]
-	if mapConn != nil {
-		mapConn.Iterate(iter)
+	for _, lname := range lnames {
+		mapConn := m.m[lname]
+		if mapConn != nil {
+			mapConn.Iterate(iter)
+		}
 	}
+	
 	m.Unlock()
 }
 

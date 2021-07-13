@@ -2,17 +2,13 @@ package shoset
 
 import (
 	"sync"
-	"fmt"
+	// "fmt"
 )
 
 // MapSafeConn : simple key map safe for goroutines...
 type MapSafeConn struct {
 	m map[string]*ShosetConn
 	sync.Mutex
-}
-
-func (m *MapSafeConn) String() string {
-	return fmt.Sprintf("MapSafeConn{ m : %s", m.Keys())
 }
 
 // NewMapSafeConn : constructor
@@ -66,7 +62,12 @@ func (m *MapSafeConn) Keys() []string {
 	// fmt.Println("addresses talble ok")
 	i := 0
 	for key := range m.m {
+		// fmt.Println("############## key : ", key)
 		if m.m[key].GetDir() == "out" {
+			// fmt.Println("ok #########")
+			addresses[i] = key
+			i++
+		} else { ///////////////////////////// test
 			addresses[i] = key
 			i++
 		}

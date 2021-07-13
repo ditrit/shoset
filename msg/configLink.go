@@ -18,22 +18,23 @@ type ConfigLink struct {
 // 	return fmt.Sprintf("[ CommandName: %s, LogicalName: %s, BindAddress: %s, Address: %s\n", c.CommandName, c.LogicalName, c.Address, c.Address)
 // }
 
-func NewCfgLink(address, lname, shosetType string) *ConfigLink {
+func NewCfgLink(address, lName, shosetType string) *ConfigLink {
 	c := new(ConfigLink)
 	c.InitMessageBase()
 	c.CommandName = "link"
 	c.Address = address
-	c.LogicalName = lname
+	c.LogicalName = lName
 	c.ShosetType = shosetType
 	return c
 }
 
-func NewCfgBrothers(myBrothers, yourBrothers []string) *ConfigLink {
+func NewCfgBrothers(myBrothers, yourBrothers []string, lName string) *ConfigLink {
 	c := new(ConfigLink)
 	c.InitMessageBase()
 	c.CommandName = "brothers"
 	c.MyBrothers = myBrothers
 	c.YourBrothers = yourBrothers
+	c.LogicalName = lName
 	return c
 }
 

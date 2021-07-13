@@ -30,12 +30,13 @@ func HandleConfigJoin(c *ShosetConn, message msg.Message) error {
 				}
 			}
 
-			if ch.GetLogicalName() == cfg.GetName() && ch.GetShosetType() == cfg.GetShosetType() {
+			if ch.GetLogicalName() == cfg.GetLogicalName() && ch.GetShosetType() == cfg.GetShosetType() {
 				// fmt.Printf("\n###########  same type")
 				// fmt.Println("in : ", remoteAddress)
 				c.SetRemoteAddress(remoteAddress)
 				ch.ConnsByName.Set(ch.GetLogicalName(), remoteAddress, c) // set conn in this socket
 				ch.NameBrothers.Set(remoteAddress, true)
+				c.SetName(cfg.GetLogicalName())
 				// ch.Join(remoteAddress)
 				configOk := msg.NewCfgJoin(remoteAddress, ch.GetLogicalName(), ch.GetShosetType(), "aknowledge_join")
 				c.SendMessage(configOk)
@@ -64,6 +65,7 @@ func HandleConfigJoin(c *ShosetConn, message msg.Message) error {
 		ch.ConnsByName.Set(ch.GetLogicalName(), c.GetRemoteAddress(), c) // set conns in the other socket
 		// fmt.Println("received ok", c.GetLocalAddress())
 		ch.NameBrothers.Set(c.GetRemoteAddress(), true)
+		c.SetName(cfg.GetLogicalName())
 
 	case "unaknowledge_join":
 		// fmt.Println("received notok", c.GetLocalAddress())

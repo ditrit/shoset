@@ -349,9 +349,17 @@ func test_link() {
 	cl2.Bind("localhost:8002")
 	cl2.Join("localhost:8001")
 
+	// cl3 := shoset.NewShoset("cl", "cl")
+	// cl3.Bind("localhost:8003")
+	// cl3.Join("localhost:8001")
+
 	aga1 := shoset.NewShoset("aga", "a") // agregateur
 	aga1.Bind("localhost:8111")
 	aga1.Link("localhost:8001")
+
+	aga2 := shoset.NewShoset("aga", "a") // agregateur
+	aga2.Bind("localhost:8112")
+	aga2.Link("localhost:8001")
 
 	// Ca1 := shoset.NewShoset("Ca", "c") //connecteur
 	// Ca1.Bind("localhost:8211")
@@ -360,7 +368,9 @@ func test_link() {
 	for {
 		fmt.Println("\ncl : ", cl1)
 		fmt.Println("\ncl : ", cl2)
+		// fmt.Println("\ncl : ", cl3)
 		fmt.Println("\nag : ", aga1)
+		fmt.Println("\nag : ", aga2)
 		// fmt.Println("\nca : ", Ca1)
 		time.Sleep(time.Second * time.Duration(2))
 

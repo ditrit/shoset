@@ -18,7 +18,6 @@ type ShosetConn struct {
 	socket        *tls.Conn
 	name          string // remote logical name
 	ShosetType    string // remote ShosetType
-	brothers      map[string]bool
 	dir           string
 	remoteAddress string // addresse de la chaussette en face
 	ch            *Shoset
@@ -92,8 +91,6 @@ func NewShosetConn(c *Shoset, address string, dir string) (*ShosetConn, error) {
 		return nil, err
 	}
 	conn.remoteAddress = ipAddress
-	// conn.bindAddr = ipAddress // delete
-	conn.brothers = make(map[string]bool)
 	conn.isValid = true
 	return &conn, nil
 }
@@ -131,6 +128,7 @@ func (c *ShosetConn) WriteMessage(data interface{}) error {
 // RunOutConn : handler for the socket, for Link()
 func (c *ShosetConn) runOutConn(addr string) {
 	fmt.Println("Entering runoutconn")
+	// fmt.Println("c.ch.lname = ", c.ch.lName)
 	myConfig := msg.NewCfgLink(c.ch.bindAddress, c.ch.lName, c.ch.ShosetType)
 	for {
 		conn, err := tls.Dial("tcp", c.GetRemoteAddress(), c.ch.tlsConfig)

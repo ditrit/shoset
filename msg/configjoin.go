@@ -21,7 +21,7 @@ func (c ConfigJoin) GetAddress() string { return c.Address }
 func (c ConfigJoin) GetCommandName() string { return c.CommandName }
 
 // GetName :
-func (c ConfigJoin) GetName() string { return c.Lname }
+func (c ConfigJoin) GetLogicalName() string { return c.Lname }
 
 // GetShosetType :
 func (c ConfigJoin) GetShosetType() string { return c.ShosetType }

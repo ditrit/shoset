@@ -144,7 +144,7 @@ func NewShoset(lName, ShosetType string) *Shoset { //l
 // Display with fmt - override the print of the object
 func (c Shoset) String() string {
 	descr := fmt.Sprintf("Shoset -  lName: %s,\n\t\tbindAddr : %s,\n\t\ttype : %s,\n\t\tConnsByName :", c.GetLogicalName(), c.GetBindAddress(), c.GetShosetType())
-	c.ConnsByName.Iterate(c.GetLogicalName(),
+	c.ConnsByName.Iterate([]string{"cl", "aga"},
 		func(key string, val *ShosetConn) {
 			descr = fmt.Sprintf("%s %s\n\t\t\t     ", descr, val)
 		})
