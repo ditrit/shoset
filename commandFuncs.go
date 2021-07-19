@@ -17,7 +17,7 @@ func GetCommand(c *ShosetConn) (msg.Message, error) {
 // HandleCommand :
 func HandleCommand(c *ShosetConn, message msg.Message) error {
 	cmd := message.(msg.Command)
-	c.GetCh().Queue["cmd"].Push(cmd, c.ShosetType, c.GetLocalAddress())
+	c.GetCh().Queue["cmd"].Push(cmd, c.GetShosetType(), c.GetLocalAddress())
 	return nil
 }
 

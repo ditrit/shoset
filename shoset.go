@@ -186,6 +186,9 @@ func (c *Shoset) Bind(address string) error {
 	}
 
 	c.SetBindAddress(ipAddress) // bound to the port
+
+	// conn, _ := NewShosetConn(c, c.GetBindAddress(), "myself")
+	// c.ConnsByName.Set(c.GetLogicalName(), c.GetBindAddress(), conn)
 	go c.handleBind()           // process runInconn()
 	return nil
 }
@@ -238,7 +241,7 @@ func (c *Shoset) Join(address string) (*ShosetConn, error) {
 
 //Link : Link to another Shoset
 func (c *Shoset) Link(address string) (*ShosetConn, error) {
-	fmt.Println("enter link")
+	// fmt.Println(c.GetBindAddress(), " will link to : ", address)
 	connsJoin := c.ConnsByName.Get(c.GetLogicalName())
 	if connsJoin != nil {
 		// fmt.Println("connsJoin : ", connsJoin)
@@ -257,18 +260,18 @@ func (c *Shoset) Link(address string) (*ShosetConn, error) {
 	return conn, nil
 }
 
-func (c *Shoset) deleteConn(connAddr string) {
+func (c *Shoset) deleteConn(connAddr, connLname string) {
 	conn := c.ConnsByAddr.Get(connAddr)
 	if conn != nil {
-		c.ConnsByName.Delete(conn.GetName(), connAddr)
+		c.ConnsByName.Delete(conn.GetRemoteLogicalName(), connAddr)
 		c.ConnsByType.Delete(conn.GetShosetType(), connAddr)
 		c.ConnsByAddr.Delete(connAddr)
 
 	}
 
-	if connsJoin := c.ConnsByName.Get(c.GetLogicalName()); connsJoin != nil {
+	if connsJoin := c.ConnsByName.Get(connLname); connsJoin != nil {
 		if connsJoin.Get(connAddr) != nil {
-			c.ConnsByName.Delete(c.lName, connAddr)
+			c.ConnsByName.Delete(connLname, connAddr)
 		}
 	}
 }
@@ -282,7 +285,7 @@ func (c *Shoset) SetConn(connAddr, connType string, conn *ShosetConn) {
 		fmt.Println("enter setconn-bytype")
 		c.ConnsByType.Set(connType, conn.GetRemoteAddress(), conn)
 		fmt.Println("enter setconn-byname : ", c.GetLogicalName())
-		c.ConnsByName.Set(conn.GetName(), conn.GetRemoteAddress(), conn) // conn.GetName() -> c.GetName plus de problème
+		c.ConnsByName.Set(conn.GetRemoteLogicalName(), conn.GetRemoteAddress(), conn) // conn.GetName() -> c.GetName plus de problème
 		fmt.Println("finish setconn")
 	}
 }

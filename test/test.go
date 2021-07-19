@@ -342,8 +342,8 @@ func simpleSocket() {
 func test_link() {
 	done := make(chan bool)
 
-	cl1 := shoset.NewShoset("cl", "cl") // cluster
-	cl1.Bind("localhost:8001")
+	// cl1 := shoset.NewShoset("cl", "cl") // cluster
+	// cl1.Bind("localhost:8001")
 
 	cl2 := shoset.NewShoset("cl", "cl")
 	cl2.Bind("localhost:8002")
@@ -357,6 +357,8 @@ func test_link() {
 	aga1.Bind("localhost:8111")
 	aga1.Link("localhost:8001")
 
+	// time.Sleep(time.Second * time.Duration(3))
+
 	aga2 := shoset.NewShoset("aga", "a") // agregateur
 	aga2.Bind("localhost:8112")
 	aga2.Link("localhost:8001")
@@ -366,14 +368,14 @@ func test_link() {
 	// Ca1.Link("localhost:8111")
 
 	for {
-		fmt.Println("\ncl : ", cl1)
+		// fmt.Println("\ncl : ", cl1)
 		fmt.Println("\ncl : ", cl2)
+		// fmt.Println("\n", cl2.ConnsByName)
 		// fmt.Println("\ncl : ", cl3)
 		fmt.Println("\nag : ", aga1)
 		fmt.Println("\nag : ", aga2)
 		// fmt.Println("\nca : ", Ca1)
-		time.Sleep(time.Second * time.Duration(2))
-
+		time.Sleep(time.Second * time.Duration(3))
 	}
 
 	<-done
@@ -383,16 +385,16 @@ func main() {
 	//terminal
 	arg := os.Args[1]
 	fmt.Println(arg)
-	// if arg == "1" {
-	// 	fmt.Println("Running testJoin")
-	// 	testJoin()
-	// } else if arg == "2" {
-	// 	fmt.Println("Running simpleSocket")
-	// 	simpleSocket()
-	// } else {
-	// 	fmt.Println("You must specify one parameter")
-	// }
+	if arg == "1" {
+		fmt.Println("Running testLink")
+		test_link()
+	} else if arg == "2" {
+		fmt.Println("Running simpleSocket")
+		simpleSocket()
+	} else {
+		fmt.Println("You must specify one parameter")
+	}
 
 	//debugger
-	test_link()
+	// test_link()
 }

@@ -50,7 +50,7 @@ func (m *MapSafeMapConn) Set(lname, key string, value *ShosetConn) *MapSafeMapCo
 	}
 	// fmt.Println(m.m[lname])
 
-	keys := m.m[lname].Keys()
+	keys := m.m[lname].Keys("out")
 	// fmt.Println("keys ok : ", keys)
 	if m.ConfigName != "" {
 		m.viperConfig.Set("bind", keys) //temporary - find a better way when link option
@@ -74,7 +74,7 @@ func (m *MapSafeMapConn) Delete(lname, key string) {
 	if ok {
 		m.m[lname].Delete(key)
 	}
-	keys := m.m[lname].Keys()
+	keys := m.m[lname].Keys("all")
 	if m.ConfigName != "" {
 		m.viperConfig.Set("bind", keys) //temporary - find a better way when link option
 		m.viperConfig.WriteConfigAs("./" + m.ConfigName + ".yaml")

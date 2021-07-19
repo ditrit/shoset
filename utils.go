@@ -82,7 +82,7 @@ func GetByType(m *MapSafeConn, shosetType string) []*ShosetConn {
 	var result []*ShosetConn
 	//m.Lock()
 	for _, val := range m.GetM() {
-		if val.ShosetType == shosetType {
+		if val.GetShosetType() == shosetType {
 			result = append(result, val)
 		}
 	}

@@ -28,10 +28,10 @@ func NewCfgLink(address, lName, shosetType string) *ConfigLink {
 	return c
 }
 
-func NewCfgBrothers(myBrothers, yourBrothers []string, lName string) *ConfigLink {
+func NewCfgBrothers(myBrothers, yourBrothers []string, lName, commandName string) *ConfigLink {
 	c := new(ConfigLink)
 	c.InitMessageBase()
-	c.CommandName = "brothers"
+	c.CommandName = commandName
 	c.MyBrothers = myBrothers
 	c.YourBrothers = yourBrothers
 	c.LogicalName = lName

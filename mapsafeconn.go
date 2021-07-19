@@ -31,7 +31,7 @@ func (m *MapSafeConn) GetByType(shosetType string) []*ShosetConn {
 	var result []*ShosetConn
 	m.Lock()
 	for _, val := range m.m {
-		if val.ShosetType == shosetType {
+		if val.GetShosetType() == shosetType {
 			result = append(result, val)
 		}
 	}
@@ -55,23 +55,24 @@ func (m *MapSafeConn) Set(key string, value *ShosetConn) *MapSafeConn {
 	return m
 }
 
-func (m *MapSafeConn) Keys() []string {
-	// fmt.Println("enter keys")
-	// fmt.Println(m)
+func (m *MapSafeConn) Keys(dir string) []string {
+	// m.Lock()
+	// defer m.Unlock()
 	addresses := make([]string, m.Len())
-	// fmt.Println("addresses talble ok")
 	i := 0
 	for key := range m.m {
-		// fmt.Println("############## key : ", key)
-		if m.m[key].GetDir() == "out" {
-			// fmt.Println("ok #########")
-			addresses[i] = key
-			i++
+		if dir != "all" {
+			// fmt.Println("############## key : ", key)
+			if m.m[key].GetDir() == dir { // on ne veut pas le in du join
+				addresses[i] = key
+				i++ 
+			}
 		} else { ///////////////////////////// test
-			addresses[i] = key
-			i++
+				addresses[i] = key
+				i++
 		}
 	}
+	// fmt.Println(addresses)
 	return addresses[:i]
 }
 
