@@ -56,8 +56,8 @@ func (m *MapSafeConn) Set(key string, value *ShosetConn) *MapSafeConn {
 }
 
 func (m *MapSafeConn) Keys(dir string) []string {
-	// m.Lock()
-	// defer m.Unlock()
+	m.Lock()
+	defer m.Unlock()
 	addresses := make([]string, m.Len())
 	i := 0
 	for key := range m.m {

@@ -153,7 +153,7 @@ func (c *ShosetConn) runOutConn(addr string) {
 				err := c.receiveMsg()
 				time.Sleep(time.Second * time.Duration(1))
 				if err != nil {
-					fmt.Println("error detected in receiving msg 2")
+					// fmt.Println("error detected in receiving msg 2")
 					c.SetRemoteLogicalName("") // reinitialize conn
 					break
 				}
@@ -209,7 +209,7 @@ func (c *ShosetConn) runJoinConn() {
 				// fmt.Println(c.GetIsValid(), " - after message received - in runjoinconn")
 				time.Sleep(time.Second * time.Duration(1))
 				if err != nil {
-					fmt.Println("error detected in receiving msg")
+					// fmt.Println("error detected in receiving msg")
 					c.SetRemoteLogicalName("") // reinitialize conn
 					break
 				}

@@ -50,11 +50,10 @@ func HandleConfigJoin(c *ShosetConn, message msg.Message) error {
 			}
 		}
 
-		thisOne := c.GetLocalAddress()
 		cfgNewMember := msg.NewCfgJoin(remoteAddress, ch.GetLogicalName(), ch.GetShosetType(), "member")
 		ch.ConnsByName.Get(ch.GetLogicalName()).Iterate(
-			func(key string, val *ShosetConn) {
-				if key != remoteAddress && key != thisOne {
+			func(address string, val *ShosetConn) {
+				if address != remoteAddress && address != c.GetLocalAddress() {
 					val.SendMessage(cfgNewMember) //tell to the other member that there is a new member to join
 				}
 			},
