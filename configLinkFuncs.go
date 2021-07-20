@@ -1,7 +1,7 @@
 package shoset
 
 import (
-	// "fmt"
+	"fmt"
 	// "time"
 
 	"github.com/ditrit/shoset/msg"
@@ -61,9 +61,9 @@ func HandleConfigLink(c *ShosetConn, message msg.Message) error {
 
 			brothers := msg.NewCfgBrothers(localBrothersArray, remoteBrothersArray, c.ch.GetLogicalName(), "brothers")
 			remoteBrothers.Iterate(
-				func(key string, val *ShosetConn) {
-					if key != c.GetLocalAddress() {
-						val.SendMessage(brothers) //tell to the other member that there is a new member to join
+				func(address string, remoteBro *ShosetConn) {
+					if address != c.GetLocalAddress() {
+						remoteBro.SendMessage(brothers) //send config to others
 					}
 				},
 			)
@@ -100,16 +100,17 @@ func HandleConfigLink(c *ShosetConn, message msg.Message) error {
 						// send aknoledge_brother ???
 					}
 
-					// newLocalBrothers := c.ch.ConnsByName.Get(c.ch.GetLogicalName()).Keys("me")
-					// for _, lName := range c.ch.ConnsByName.Keys() {
-					// 	lNameConns := c.ch.ConnsByName.Get(lName)
-					// 	addresses := lNameConns.Keys("in")
-					// 	brothers := msg.NewCfgBrothers(newLocalBrothers, addresses, c.ch.GetLogicalName(), "brothers")
-					// 	lNameConns.Iterate(
-					// 		func(key string, val *ShosetConn) {
-					// 			val.SendMessage(brothers)
-					// 		})
-					// }
+					newLocalBrothers := c.ch.ConnsByName.Get(c.ch.GetLogicalName()).Keys("me")
+					for _, lName := range c.ch.ConnsByName.Keys() {
+						lNameConns := c.ch.ConnsByName.Get(lName)
+						addresses := lNameConns.Keys("in")
+						brothers := msg.NewCfgBrothers(newLocalBrothers, addresses, c.ch.GetLogicalName(), "brothers")
+						lNameConns.Iterate(
+							func(key string, val *ShosetConn) {
+								fmt.Println(c.ch.GetBindAddress(), " send message to : ", val.ch.GetBindAddress())
+								val.SendMessage(brothers)
+							})
+					}
 				}
 			}
 
