@@ -357,15 +357,24 @@ func test_link() {
 	aga1.Bind("localhost:8111")
 	aga1.Link("localhost:8001")
 
-	// time.Sleep(time.Second * time.Duration(3))
+	
 
 	aga2 := shoset.NewShoset("aga", "a") // agregateur
 	aga2.Bind("localhost:8112")
 	aga2.Link("localhost:8002")
 
-	// Ca1 := shoset.NewShoset("Ca", "c") //connecteur
-	// Ca1.Bind("localhost:8211")
-	// Ca1.Link("localhost:8111")
+	Ca1 := shoset.NewShoset("Ca", "c") //connecteur
+	Ca1.Bind("localhost:8211")
+	Ca1.Link("localhost:8111")
+
+	time.Sleep(time.Second * time.Duration(3))
+	aga3 := shoset.NewShoset("aga", "a") // agregateur
+	aga3.Bind("localhost:8113")
+	aga3.Link("localhost:8002")
+
+	Ca2 := shoset.NewShoset("Ca", "c") //connecteur
+	Ca2.Bind("localhost:8212")
+	Ca2.Link("localhost:8113")
 
 	for {
 		fmt.Println("\ncl : ", cl1)
@@ -374,7 +383,9 @@ func test_link() {
 		fmt.Println("\ncl : ", cl3)
 		fmt.Println("\nag : ", aga1)
 		fmt.Println("\nag : ", aga2)
-		// fmt.Println("\nca : ", Ca1)
+		fmt.Println("\nag : ", aga3)
+		fmt.Println("\nca : ", Ca1)
+		fmt.Println("\nca : ", Ca2)
 		time.Sleep(time.Second * time.Duration(3))
 	}
 

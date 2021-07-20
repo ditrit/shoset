@@ -15,15 +15,15 @@ import (
 
 // ShosetConn : client connection
 type ShosetConn struct {
-	socket        *tls.Conn
-	remoteLname   string // logical name de la chaussette en face
-	shosetType    string // remote ShosetType
-	dir           string
-	remoteAddress string // addresse de la chaussette en face
-	ch            *Shoset
-	rb            *msg.Reader
-	wb            *msg.Writer
-	isValid       bool
+	socket           *tls.Conn
+	remoteLname      string // logical name de la chaussette en face
+	remoteShosetType string // remote ShosetType
+	dir              string
+	remoteAddress    string // addresse de la chaussette en face
+	ch               *Shoset
+	rb               *msg.Reader
+	wb               *msg.Writer
+	isValid          bool
 }
 
 // GetDir :
@@ -38,7 +38,7 @@ func (c *ShosetConn) GetLocalLogicalName() string { return c.ch.GetLogicalName()
 func (c *ShosetConn) GetRemoteLogicalName() string { return c.remoteLname }
 
 // GetShosetType : // remote ShosetTypeName
-func (c *ShosetConn) GetShosetType() string { return c.shosetType }
+func (c *ShosetConn) GetRemoteShosetType() string { return c.remoteShosetType }
 
 // GetBindAddr : port sur lequel on est bindé
 func (c *ShosetConn) GetLocalAddress() string { return c.ch.GetBindAddress() }
@@ -63,7 +63,7 @@ func (c *ShosetConn) SetLocalAddress(bindAddress string) {
 // SetShosetType : // remote ShosetType
 func (c *ShosetConn) SetShosetType(ShosetType string) {
 	if ShosetType != "" {
-		c.shosetType = ShosetType
+		c.remoteShosetType = ShosetType
 	}
 }
 

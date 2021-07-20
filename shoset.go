@@ -144,10 +144,12 @@ func NewShoset(lName, ShosetType string) *Shoset { //l
 // Display with fmt - override the print of the object
 func (c Shoset) String() string {
 	descr := fmt.Sprintf("Shoset -  lName: %s,\n\t\tbindAddr : %s,\n\t\ttype : %s,\n\t\tConnsByName :", c.GetLogicalName(), c.GetBindAddress(), c.GetShosetType())
-	c.ConnsByName.Iterate([]string{"cl", "aga"},
+	for _, lName := range c.ConnsByName.Keys() {
+		c.ConnsByName.Iterate(lName,
 		func(key string, val *ShosetConn) {
 			descr = fmt.Sprintf("%s %s\n\t\t\t     ", descr, val)
 		})
+	}
 	return descr
 }
 
@@ -264,7 +266,7 @@ func (c *Shoset) deleteConn(connAddr, connLname string) {
 	conn := c.ConnsByAddr.Get(connAddr)
 	if conn != nil {
 		c.ConnsByName.Delete(conn.GetRemoteLogicalName(), connAddr)
-		c.ConnsByType.Delete(conn.GetShosetType(), connAddr)
+		c.ConnsByType.Delete(conn.GetRemoteShosetType(), connAddr)
 		c.ConnsByAddr.Delete(connAddr)
 
 	}

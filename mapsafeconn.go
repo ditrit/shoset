@@ -31,7 +31,7 @@ func (m *MapSafeConn) GetByType(shosetType string) []*ShosetConn {
 	var result []*ShosetConn
 	m.Lock()
 	for _, val := range m.m {
-		if val.GetShosetType() == shosetType {
+		if val.GetRemoteShosetType() == shosetType {
 			result = append(result, val)
 		}
 	}
@@ -55,7 +55,7 @@ func (m *MapSafeConn) Set(key string, value *ShosetConn) *MapSafeConn {
 	return m
 }
 
-func (m *MapSafeConn) Keys(dir string) []string {
+func (m *MapSafeConn) Keys(dir string) []string { // list of addresses
 	m.Lock()
 	defer m.Unlock()
 	addresses := make([]string, m.Len())

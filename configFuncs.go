@@ -18,7 +18,7 @@ func GetConfig(c *ShosetConn) (msg.Message, error) {
 // HandleConfig :config
 func HandleConfig(c *ShosetConn, message msg.Message) error {
 	conf := message.(msg.Config)
-	c.GetCh().Queue["cmd"].Push(conf, c.GetShosetType(), c.GetLocalAddress())
+	c.GetCh().Queue["cmd"].Push(conf, c.GetRemoteShosetType(), c.GetLocalAddress())
 	return nil
 }
 

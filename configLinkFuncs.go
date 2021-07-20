@@ -1,7 +1,7 @@
 package shoset
 
 import (
-	"fmt"
+
 	// "time"
 
 	"github.com/ditrit/shoset/msg"
@@ -57,8 +57,6 @@ func HandleConfigLink(c *ShosetConn, message msg.Message) error {
 			}
 			// fmt.Println(c.ch.GetBindAddress(), "remote brothers 1 : ", remoteBrothersArray)
 
-			// fmt.Println(c.ch.GetBindAddress(), " : ", "brothers arrays : ", localBrothersArray, remoteBrothersArray)
-
 			brothers := msg.NewCfgBrothers(localBrothersArray, remoteBrothersArray, c.ch.GetLogicalName(), "brothers")
 			remoteBrothers.Iterate(
 				func(address string, remoteBro *ShosetConn) {
@@ -94,6 +92,7 @@ func HandleConfigLink(c *ShosetConn, message msg.Message) error {
 			for _, bro := range localBrothers { // à tester en rajoutant un aga ////////////////// ne fonctionne pas encore
 				if bro != c.ch.GetBindAddress() {
 					conn, err := NewShosetConn(c.ch, bro, "me") // create empty socket so that the two aga know each other
+					conn.SetRemoteLogicalName(c.ch.GetLogicalName())
 					if err == nil {
 						// fmt.Println(c.ch.GetBindAddress(), " has a new bro : ", bro, "####################")
 						c.ch.ConnsByName.Set(c.ch.GetLogicalName(), bro, conn) // put them into ConnsByName - need to put this one in the other socket
@@ -107,7 +106,7 @@ func HandleConfigLink(c *ShosetConn, message msg.Message) error {
 						brothers := msg.NewCfgBrothers(newLocalBrothers, addresses, c.ch.GetLogicalName(), "brothers")
 						lNameConns.Iterate(
 							func(key string, val *ShosetConn) {
-								fmt.Println(c.ch.GetBindAddress(), " send message to : ", val.ch.GetBindAddress())
+								// fmt.Println(c.ch.GetBindAddress(), " send message to : ", val.ch.GetBindAddress())
 								val.SendMessage(brothers)
 							})
 					}

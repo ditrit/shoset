@@ -83,15 +83,12 @@ func (m *MapSafeMapConn) Delete(lname, key string) {
 }
 
 // Iterate : iterate through MapSafeMapConn Values using a function
-func (m *MapSafeMapConn) Iterate(lnames []string, iter func(string, *ShosetConn)) {
+func (m *MapSafeMapConn) Iterate(lname string, iter func(string, *ShosetConn)) {
 	m.Lock()
-	for _, lname := range lnames {
-		mapConn := m.m[lname]
-		if mapConn != nil {
-			mapConn.Iterate(iter)
-		}
+	mapConn := m.m[lname]
+	if mapConn != nil {
+		mapConn.Iterate(iter)
 	}
-	
 	m.Unlock()
 }
 
@@ -104,7 +101,7 @@ func (m *MapSafeMapConn) SetViper(viperConfig *viper.Viper) {
 	m.viperConfig = viperConfig
 }
 
-func (m *MapSafeMapConn) Keys() []string {
+func (m *MapSafeMapConn) Keys() []string { // list of logical names inside ConnsByName
 	// fmt.Println("enter keys")
 	// fmt.Println(m)
 	lName := make([]string, m.Len())

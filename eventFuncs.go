@@ -18,7 +18,7 @@ func GetEvent(c *ShosetConn) (msg.Message, error) {
 func HandleEvent(c *ShosetConn, message msg.Message) error {
 	evt := message.(msg.Event)
 	fmt.Println("Shoset")
-	c.GetCh().Queue["evt"].Push(evt, c.GetShosetType(), c.GetLocalAddress())
+	c.GetCh().Queue["evt"].Push(evt, c.GetRemoteShosetType(), c.GetLocalAddress())
 	return nil
 }
 
