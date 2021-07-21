@@ -34,8 +34,6 @@ type Shoset struct {
 	ConnsByAddr  *MapSafeConn    // map[string]*ShosetConn    ensemble des connexions
 	ConnsByName  *MapSafeMapConn // map[string]map[string]*ShosetConn   connexions par nom logique
 	ConnsByType  *MapSafeMapConn // map[string]map[string]*ShosetConn   connexions par type
-	Brothers     *MapSafeBool    // map[string]bool  "freres" au sens large (ex: toutes les instances de connecteur reliées à un même aggregateur)
-	NameBrothers *MapSafeBool    // map[string]bool  "freres" ayant un même nom logique (ex: instances d'un même connecteur)
 
 	lName       string // Nom logique de la shoset
 	ShosetType  string // Type logique de la shoset
@@ -83,8 +81,6 @@ func NewShoset(lName, ShosetType string) *Shoset { //l
 	shoset.ConnsByName = NewMapSafeMapConn()
 	shoset.ConnsByType = NewMapSafeMapConn()
 	shoset.ConnsByName.SetViper(shoset.viperConfig)
-	shoset.Brothers = NewMapSafeBool()
-	shoset.NameBrothers = NewMapSafeBool()
 
 	// Dictionnaire des queues de message (par type de message)
 	shoset.Queue = make(map[string]*msg.Queue)
@@ -181,10 +177,13 @@ func (c *Shoset) Bind(address string) error {
 		// fmt.Println("Config file not created yet")
 	} else {
 		// fmt.Println("Config file created")
-		remotes := c.ConnsByName.GetConfig() // get all the sockets we need to join
-		for _, remote := range remotes {
-			c.Protocol(remote, "join") // ou link
+		remotesToJoin, _ := c.ConnsByName.GetConfig() // get all the sockets we need to join
+		for _, remote := range remotesToJoin {
+			c.Protocol(remote, "join")
 		}
+		// for _, remote := range remotesToLink {
+		// 	c.Protocol(remote, "link")
+		// }
 	}
 
 	c.SetBindAddress(ipAddress) // bound to the port
@@ -215,12 +214,13 @@ func (c *Shoset) handleBind() error {
 		address := tlsConn.RemoteAddr().String()
 		conn, _ := NewShosetConn(c, address, "in") // create the securised connection
 		conn.socket = tlsConn                      //we override socket attribut with our securised protocol
-		go conn.runInConn()
+		go conn.runInConn("aieaieaie")
 	}
 	return nil
 }
 
 func (c *Shoset) Protocol(address, protocolType string) (*ShosetConn, error) {
+	// fmt.Println(c.GetBindAddress(), " enter protocol ", protocolType, " for ", address)
 	connsJoin := c.ConnsByName.Get(c.GetLogicalName())
 	if connsJoin != nil {
 		exists := connsJoin.Get(address) // check if address is already in the map
@@ -235,11 +235,14 @@ func (c *Shoset) Protocol(address, protocolType string) (*ShosetConn, error) {
 
 	switch protocolType {
 	case "join":
-		config := msg.NewCfg(c.GetBindAddress(), c.GetLogicalName(), c.GetShosetType(), "join")
-		go conn.runConn(config)
+		// config := msg.NewCfg(c.GetBindAddress(), c.GetLogicalName(), c.GetShosetType(), "join")
+		// fmt.Println("config : ", config)
+		go conn.runJoinConn()
+		// go conn.runConn(config, "join")
 	case "link":
-		config := msg.NewCfg(c.GetBindAddress(), c.GetLogicalName(), c.GetShosetType(), "link")
-		go conn.runConn(config)
+		// config := msg.NewCfg(c.GetBindAddress(), c.GetLogicalName(), c.GetShosetType(), "link")
+		go conn.runOutConn()
+		// go conn.runConn(config, "link")
 	case "bye":
 		fmt.Println("case note treated yet")
 	default:
@@ -249,18 +252,18 @@ func (c *Shoset) Protocol(address, protocolType string) (*ShosetConn, error) {
 	return conn, nil
 }
 
-func (c *Shoset) deleteConn(connAddr, connLname string) {
+func (c *Shoset) deleteConn(connAddr, connLname, protocolType string) {
 	conn := c.ConnsByAddr.Get(connAddr)
 	if conn != nil {
-		c.ConnsByName.Delete(conn.GetRemoteLogicalName(), connAddr)
-		c.ConnsByType.Delete(conn.GetRemoteShosetType(), connAddr)
+		c.ConnsByName.Delete(conn.GetRemoteLogicalName(), connAddr, protocolType)
+		c.ConnsByType.Delete(conn.GetRemoteShosetType(), connAddr, protocolType)
 		c.ConnsByAddr.Delete(connAddr)
 
 	}
 
 	if connsJoin := c.ConnsByName.Get(connLname); connsJoin != nil {
 		if connsJoin.Get(connAddr) != nil {
-			c.ConnsByName.Delete(connLname, connAddr)
+			c.ConnsByName.Delete(connLname, connAddr, protocolType)
 		}
 	}
 }

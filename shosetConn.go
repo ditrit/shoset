@@ -125,14 +125,110 @@ func (c *ShosetConn) WriteMessage(data interface{}) error {
 	return c.wb.WriteMessage(data)
 }
 
+// RunOutConn : handler for the socket, for Link()
+func (c *ShosetConn) runOutConn() {
+	// fmt.Println("Entering runoutconn")
+	// fmt.Println("c.ch.lname = ", c.ch.lName)
+	myConfig := msg.NewCfg(c.ch.bindAddress, c.ch.lName, c.ch.ShosetType, "link")
+	for {
+		conn, err := tls.Dial("tcp", c.GetRemoteAddress(), c.ch.tlsConfig)
+		defer conn.Close()
+		if err != nil {
+			time.Sleep(time.Millisecond * time.Duration(100))
+			continue
+		} else {
+			// fmt.Println("!!!!!!!!!!!!! init socket conn, name : ", c.GetName())
+			c.socket = conn
+			c.rb = msg.NewReader(c.socket)
+			c.wb = msg.NewWriter(c.socket)
+
+			// receive messages
+			for {
+				// fmt.Println("enter for loop runoutconn")
+				if c.GetRemoteLogicalName() == "" { // remote logical Name // same problem than runJoinConn()
+					c.SendMessage(*myConfig)
+				}
+				// c.SendMessage(*myConfig)
+				err := c.receiveMsg("link")
+				time.Sleep(time.Second * time.Duration(1))
+				if err != nil {
+					// fmt.Println("error detected in receiving msg 2")
+					c.SetRemoteLogicalName("") // reinitialize conn
+					break
+				}
+			}
+		}
+	}
+}
+
+// RunJoinConn : handler for the socket, for Join()
+func (c *ShosetConn) runJoinConn() {
+	// fmt.Println("########### enter runjoinconn")
+	ch := c.GetCh()
+	// fmt.Println(ch.GetBindAddr())
+	joinConfig := msg.NewCfg(ch.GetBindAddress(), ch.GetLogicalName(), ch.GetShosetType(), "join") //we create a new message config
+	for {
+		// fmt.Println("in for loop from runjoinconn")
+		if !c.GetIsValid() { // sockets are not from the same type or don't have the same name
+			// fmt.Println("c is not valid")
+			break
+		}
+		// 	ch.ConnsJoin.Set(c.addr, c)       // à déplacer une fois
+		// 	ch.NameBrothers.Set(c.addr, true) // les connexions établies (fin de fonction)
+
+		conn, err := tls.Dial("tcp", c.GetRemoteAddress(), ch.tlsConfig) // we wait for a socket to connect each loop
+
+		if err != nil { // no connection occured
+			time.Sleep(time.Millisecond * time.Duration(100))
+			continue
+		} else { // a connection occured
+			// fmt.Printf("\n########### a connection occured")
+			c.socket = conn
+			c.rb = msg.NewReader(c.socket)
+			c.wb = msg.NewWriter(c.socket)
+			defer conn.Close()
+
+			// receive messages
+			for {
+				// fmt.Println("~~~~", ch.ConnsJoin.Get(c.GetBindAddr()))
+				// fmt.Println("\n########### enter receive message loop")
+				// fmt.Println("connsJoin : ", ch.ConnsByName.Get(ch.GetName()))
+				// if connsJoin := ch.ConnsByName.Get(ch.GetLogicalName()); connsJoin != nil {
+				// 	if exists := connsJoin.Get(c.GetLocalAddress()); exists == nil {
+				// 		c.SendMessage(*joinConfig)
+				// 	}
+				// }
+				if c.GetRemoteLogicalName() == "" { // remote logical Name // same problem than runJoinConn()
+					c.SendMessage(*joinConfig)
+				}
+				// c.SendMessage(*joinConfig)
+
+				// fmt.Println(c.GetLocalAddress(), " can receive message from ", c.GetRemoteAddress())
+				err := c.receiveMsg("join")
+				// fmt.Println(c.GetIsValid(), " - after message received - in runjoinconn")
+				time.Sleep(time.Second * time.Duration(1))
+				if err != nil {
+					// fmt.Println("error detected in receiving msg")
+					c.SetRemoteLogicalName("") // reinitialize conn
+					break
+				}
+			}
+		}
+	}
+}
+
 // runConn : handler for the socket, for Protocol()
-func (c *ShosetConn) runConn(config *msg.ConfigProtocol) {
+func (c *ShosetConn) runConn(config *msg.ConfigProtocol, protocolType string) {
+	fmt.Println("remote address : ", c.GetRemoteAddress())
+	// time.Sleep(time.Second * time.Duration(1))
+	// fmt.Println("tlsconfig : ", c.ch.tlsConfig)
 	for {
 		conn, err := tls.Dial("tcp", c.GetRemoteAddress(), c.ch.tlsConfig)
 		if err != nil {
 			time.Sleep(time.Millisecond * time.Duration(100))
 			continue
 		} else {
+			// fmt.Println("enter runconn!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
 			c.socket = conn
 			c.rb = msg.NewReader(c.socket)
 			c.wb = msg.NewWriter(c.socket)
@@ -143,7 +239,7 @@ func (c *ShosetConn) runConn(config *msg.ConfigProtocol) {
 					c.SendMessage(*config)
 				}
 
-				err := c.receiveMsg()
+				err := c.receiveMsg(protocolType)
 				time.Sleep(time.Second * time.Duration(1))
 				if err != nil {
 					c.SetRemoteLogicalName("") // reinitialize conn
@@ -155,14 +251,14 @@ func (c *ShosetConn) runConn(config *msg.ConfigProtocol) {
 }
 
 // runInConn : handler for the connection, for handleBind()
-func (c *ShosetConn) runInConn() {
+func (c *ShosetConn) runInConn(protocolType string) {
 	// fmt.Println("enter runinconn")
 	c.rb = msg.NewReader(c.socket)
 	c.wb = msg.NewWriter(c.socket)
 	defer c.socket.Close()
 	// receive messages
 	for {
-		err := c.receiveMsg()
+		err := c.receiveMsg(protocolType)
 		time.Sleep(time.Millisecond * time.Duration(10))
 		if err != nil {
 			return
@@ -178,11 +274,11 @@ func (c *ShosetConn) SendMessage(msg msg.Message) {
 	c.WriteMessage(msg)
 }
 
-func (c *ShosetConn) receiveMsg() error {
+func (c *ShosetConn) receiveMsg(protocolType string) error {
 	// fmt.Println("enter receive message ", c.GetLocalAddress())
 	if !c.GetIsValid() {
 		// fmt.Println("c is not valid !!!!!!!!", c.GetLocalAddress())
-		c.ch.deleteConn(c.GetRemoteAddress(), c.GetRemoteLogicalName())
+		c.ch.deleteConn(c.GetRemoteAddress(), c.GetRemoteLogicalName(), protocolType)
 		return errors.New("error : Invalid connection for join - not the same type/name")
 	}
 	// fmt.Println(c.ch.bindAddress)
@@ -194,13 +290,13 @@ func (c *ShosetConn) receiveMsg() error {
 	case err == io.EOF:
 		// fmt.Println("\n########### receiveMsg : reached EOF - close this connection", c.GetRemoteAddress())
 		if c.GetDir() == "in" {
-			c.ch.deleteConn(c.GetRemoteAddress(), c.GetRemoteLogicalName())
+			c.ch.deleteConn(c.GetRemoteAddress(), c.GetRemoteLogicalName(), protocolType)
 		}
 		return errors.New("receiveMsg : reached EOF - close this connection")
 	case err != nil:
 		// fmt.Println("\n########### receiveMsg : failed to read - close this connection")
 		if c.GetDir() == "in" {
-			c.ch.deleteConn(c.GetRemoteAddress(), c.GetRemoteLogicalName())
+			c.ch.deleteConn(c.GetRemoteAddress(), c.GetRemoteLogicalName(), protocolType)
 		}
 		return errors.New("error : receiveMsg : failed to read - close this connection")
 	}
@@ -219,7 +315,7 @@ func (c *ShosetConn) receiveMsg() error {
 			}
 		} else {
 			if c.GetDir() == "in" {
-				c.ch.deleteConn(c.GetRemoteAddress(), c.GetRemoteLogicalName())
+				c.ch.deleteConn(c.GetRemoteAddress(), c.GetRemoteLogicalName(), protocolType)
 			}
 			// fmt.Println("receiveMsg : can not read value of " + msgType)
 			return errors.New("receiveMsg : can not read value of " + msgType)
@@ -227,7 +323,7 @@ func (c *ShosetConn) receiveMsg() error {
 	}
 	if !ok {
 		if c.GetDir() == "in" {
-			c.ch.deleteConn(c.GetRemoteAddress(), c.GetRemoteLogicalName())
+			c.ch.deleteConn(c.GetRemoteAddress(), c.GetRemoteLogicalName(), protocolType)
 		}
 		// fmt.Println("receiveMsg : non implemented type of message " + msgType)
 		return errors.New("receiveMsg : non implemented type of message " + msgType)

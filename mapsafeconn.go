@@ -56,18 +56,17 @@ func (m *MapSafeConn) Set(key string, value *ShosetConn) *MapSafeConn {
 }
 
 func (m *MapSafeConn) Keys(dir string) []string { // list of addresses
-	m.Lock()
-	defer m.Unlock()
+	// m.Lock()
+	// defer m.Unlock()
 	addresses := make([]string, m.Len())
 	i := 0
 	for key := range m.m {
 		if dir != "all" {
-			// fmt.Println("############## key : ", key)
 			if m.m[key].GetDir() == dir { // on ne veut pas le in du join
 				addresses[i] = key
 				i++ 
 			}
-		} else { ///////////////////////////// test
+		} else {
 				addresses[i] = key
 				i++
 		}

@@ -303,16 +303,16 @@ func testJoin() {
 	cl2 := shoset.NewShoset("cl", "cl") // always "cl" "cl" for gandalf
 	fmt.Println("\ncl : ", cl2)
 	cl2.Bind("localhost:8002") //we take the port 8002 for our first socket
-	cl2.Protocol("localhost:8001","join") // we join it to our first socket
+	cl2.Protocol("localhost:8001", "join") // we join it to our first socket
 
 	cl3 := shoset.NewShoset("cl", "cl")
 	cl3.Bind("localhost:8003")
-	cl3.Protocol("localhost:8001","join")
-	cl3.Protocol("localhost:8002","join")
+	cl3.Protocol("localhost:8001", "join")
+	cl3.Protocol("localhost:8002", "join")
 
 	cl4 := shoset.NewShoset("cl", "cl")
 	cl4.Bind("localhost:8004")
-	cl4.Protocol("localhost:8002","join") // we join it to our first socket
+	cl4.Protocol("localhost:8002", "join") // we join it to our first socket
 
 	for {
 		time.Sleep(time.Second * time.Duration(2))
@@ -327,11 +327,16 @@ func testJoin() {
 func simpleSocket() {
 	done := make(chan bool)
 
-	cl1 := shoset.NewShoset("cl", "cl")
-	cl1.Bind("localhost:8001") //we take the port 8001 for our first socket
+	// cl1 := shoset.NewShoset("cl", "cl")
+	// cl1.Bind("localhost:8001") //we take the port 8001 for our first socket
+
+	aga1 := shoset.NewShoset("aga", "a") // agregateur
+	aga1.Bind("localhost:8111")
+	aga1.Protocol("localhost:8001","link")
 
 	for {
-		fmt.Println("\ncl : ", cl1)
+		fmt.Println("\ncl : ", aga1)
+		// fmt.Println("\ncl : ", cl1)
 		time.Sleep(time.Second * time.Duration(1))
 
 	}
@@ -353,9 +358,9 @@ func test_link() {
 	cl3.Bind("localhost:8003")
 	cl3.Protocol("localhost:8002","join")
 
-	aga1 := shoset.NewShoset("aga", "a") // agregateur
-	aga1.Bind("localhost:8111")
-	aga1.Protocol("localhost:8001","link")
+	// aga1 := shoset.NewShoset("aga", "a") // agregateur
+	// aga1.Bind("localhost:8111")
+	// aga1.Protocol("localhost:8001","link")
 
 	
 
@@ -381,7 +386,7 @@ func test_link() {
 		fmt.Println("\ncl : ", cl2)
 		// fmt.Println("\n", cl2.ConnsByName)
 		fmt.Println("\ncl : ", cl3)
-		fmt.Println("\nag : ", aga1)
+		// fmt.Println("\nag : ", aga1)
 		fmt.Println("\nag : ", aga2)
 		fmt.Println("\nag : ", aga3)
 		fmt.Println("\nca : ", Ca1)
@@ -399,6 +404,7 @@ func main() {
 	if arg == "1" {
 		fmt.Println("Running testLink")
 		test_link()
+		// testJoin()
 	} else if arg == "2" {
 		fmt.Println("Running simpleSocket")
 		simpleSocket()

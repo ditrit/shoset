@@ -34,7 +34,7 @@ func HandleConfigLink(c *ShosetConn, message msg.Message) error {
 			}
 
 			c.SetRemoteAddress(remoteAddress)                            // avoid tcp port name
-			c.ch.ConnsByName.Set(cfg.GetLogicalName(), remoteAddress, c) // set conn in this socket
+			c.ch.ConnsByName.Set(cfg.GetLogicalName(), remoteAddress, "link", c) // set conn in this socket
 			c.SetRemoteLogicalName(cfg.GetLogicalName())
 
 			// fmt.Println(c.ch)
@@ -73,7 +73,7 @@ func HandleConfigLink(c *ShosetConn, message msg.Message) error {
 		// fmt.Println(c.ch.GetBindAddress(), " enter case brothers")
 		if dir == "out" { // this socket wants to link to another
 			// fmt.Println("config name : ", cfg.GetLogicalName())
-			c.ch.ConnsByName.Set(cfg.GetLogicalName(), c.GetRemoteAddress(), c) // set conns in the other socket
+			c.ch.ConnsByName.Set(cfg.GetLogicalName(), c.GetRemoteAddress(), "link", c) // set conns in the other socket
 			// c.ch.ConnsByName.Set(c.ch.GetLogicalName(), c.GetRemoteAddress(), c) // set conns in the other socket
 			c.SetRemoteLogicalName(cfg.GetLogicalName())
 
@@ -97,8 +97,7 @@ func HandleConfigLink(c *ShosetConn, message msg.Message) error {
 					conn.SetRemoteLogicalName(c.ch.GetLogicalName())
 					if err == nil {
 						// fmt.Println(c.ch.GetBindAddress(), " has a new bro : ", bro, "####################")
-						c.ch.ConnsByName.Set(c.ch.GetLogicalName(), bro, conn) // put them into ConnsByName - need to put this one in the other socket
-						// send aknoledge_brother ???
+						c.ch.ConnsByName.Set(c.ch.GetLogicalName(), bro, "me", conn) // shouldn't be linked when reconnection !!!!!!!!!!
 					}
 
 					newLocalBrothers := c.ch.ConnsByName.Get(c.ch.GetLogicalName()).Keys("me")

@@ -2,7 +2,7 @@ package shoset
 
 import (
 	"errors"
-	// "fmt"
+	"fmt"
 
 	"github.com/ditrit/shoset/msg"
 )
@@ -16,7 +16,7 @@ func GetConfigJoin(c *ShosetConn) (msg.Message, error) {
 
 // HandleConfigJoin :
 func HandleConfigJoin(c *ShosetConn, message msg.Message) error {
-	// fmt.Printf("########### enter handleconfigjoin\n")
+	fmt.Println("########### enter handleconfigjoin")
 	cfg := message.(msg.ConfigProtocol) // compute config from message
 	ch := c.GetCh()
 	dir := c.GetDir()
@@ -34,8 +34,7 @@ func HandleConfigJoin(c *ShosetConn, message msg.Message) error {
 				// fmt.Printf("\n###########  same type")
 				// fmt.Println("in : ", remoteAddress)
 				c.SetRemoteAddress(remoteAddress)
-				ch.ConnsByName.Set(ch.GetLogicalName(), remoteAddress, c) // set conn in this socket
-				ch.NameBrothers.Set(remoteAddress, true)
+				ch.ConnsByName.Set(ch.GetLogicalName(), remoteAddress, "join", c) // set conn in this socket
 				c.SetRemoteLogicalName(cfg.GetLogicalName())
 				// ch.Join(remoteAddress)
 				configOk := msg.NewCfg(remoteAddress, ch.GetLogicalName(), ch.GetShosetType(), "aknowledge_join")
@@ -61,9 +60,8 @@ func HandleConfigJoin(c *ShosetConn, message msg.Message) error {
 
 	case "aknowledge_join":
 		// fmt.Println("ok : ", c.remoteAddr)
-		ch.ConnsByName.Set(ch.GetLogicalName(), c.GetRemoteAddress(), c) // set conns in the other socket
+		ch.ConnsByName.Set(ch.GetLogicalName(), c.GetRemoteAddress(), "join", c) // set conns in the other socket
 		// fmt.Println("received ok", c.GetLocalAddress())
-		ch.NameBrothers.Set(c.GetRemoteAddress(), true)
 		c.SetRemoteLogicalName(cfg.GetLogicalName())
 
 	case "unaknowledge_join":
