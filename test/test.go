@@ -11,7 +11,7 @@ import (
 
 func shosetClient(logicalName, ShosetType, address string) {
 	c := shoset.NewShoset(logicalName, ShosetType)
-	c.Link(address)
+	c.Protocol(address, "link")
 
 	go func() {
 		for {
@@ -97,27 +97,27 @@ func shosetTest() {
 
 	b1 := shoset.NewShoset("b", "c")
 	b1.Bind("localhost:8201")
-	b1.Link("localhost:8302")
-	b1.Link("localhost:8301")
-	b1.Link("localhost:8303")
-	b1.Link("localhost:8401")
-	b1.Link("localhost:8402")
+	b1.Protocol("localhost:8302","link")
+	b1.Protocol("localhost:8301","link")
+	b1.Protocol("localhost:8303","link")
+	b1.Protocol("localhost:8401","link")
+	b1.Protocol("localhost:8402","link")
 
 	a1 := shoset.NewShoset("a", "c")
 	a1.Bind("localhost:8101")
-	a1.Link("localhost:8201")
+	a1.Protocol("localhost:8201","link")
 
 	b2 := shoset.NewShoset("b", "c")
 	b2.Bind("localhost:8202")
-	b2.Link("localhost:8301")
+	b2.Protocol("localhost:8301","link")
 
 	b3 := shoset.NewShoset("b", "c")
 	b3.Bind("localhost:8203")
-	b3.Link("localhost:8303")
+	b3.Protocol("localhost:8303","link")
 
 	a2 := shoset.NewShoset("a", "c")
 	a2.Bind("localhost:8102")
-	a2.Link("localhost:8202")
+	a2.Protocol("localhost:8202","link")
 
 	time.Sleep(time.Second * time.Duration(1))
 	fmt.Printf("a1 : %s", a1.String())
@@ -141,90 +141,90 @@ func shosetTestEtoile() {
 
 	cl2 := shoset.NewShoset("cl", "cl")
 	cl2.Bind("localhost:8002")
-	cl2.Join("localhost:8001")
+	cl2.Protocol("localhost:8001","join")
 	cl3 := shoset.NewShoset("cl", "cl")
 	cl3.Bind("localhost:8003")
-	cl3.Join("localhost:8002")
+	cl3.Protocol("localhost:8002","join")
 
 	cl4 := shoset.NewShoset("cl", "cl")
 	cl4.Bind("localhost:8004")
-	cl4.Join("localhost:8001")
+	cl4.Protocol("localhost:8001","join")
 
 	cl5 := shoset.NewShoset("cl", "cl")
 	cl5.Bind("localhost:8005")
-	cl5.Join("localhost:8001")
+	cl5.Protocol("localhost:8001","join")
 
 	aga1 := shoset.NewShoset("aga", "a")
 	aga1.Bind("localhost:8111")
-	aga1.Link("localhost:8001")
+	aga1.Protocol("localhost:8001","link")
 	aga2 := shoset.NewShoset("aga", "a")
 	aga2.Bind("localhost:8112")
-	aga2.Link("localhost:8005")
+	aga2.Protocol("localhost:8005","link")
 
 	agb1 := shoset.NewShoset("agb", "a")
 	agb1.Bind("localhost:8121")
-	agb1.Link("localhost:8002")
+	agb1.Protocol("localhost:8002","link")
 	agb2 := shoset.NewShoset("agb", "a")
 	agb2.Bind("localhost:8122")
-	agb2.Link("localhost:8003")
+	agb2.Protocol("localhost:8003","link")
 
 	time.Sleep(time.Second * time.Duration(2))
 
 	Ca1 := shoset.NewShoset("Ca", "c")
 	Ca1.Bind("localhost:8211")
-	Ca1.Link("localhost:8111")
+	Ca1.Protocol("localhost:8111","link")
 	Ca2 := shoset.NewShoset("Ca", "c")
 	Ca2.Bind("localhost:8212")
-	Ca2.Link("localhost:8111")
+	Ca2.Protocol("localhost:8111","link")
 	Ca3 := shoset.NewShoset("Ca", "c")
 	Ca3.Bind("localhost:8213")
-	Ca3.Link("localhost:8111")
+	Ca3.Protocol("localhost:8111","link")
 
 	Cb1 := shoset.NewShoset("Cb", "c")
 	Cb1.Bind("localhost:8221")
-	Cb1.Link("localhost:8112")
+	Cb1.Protocol("localhost:8112","link")
 	Cb2 := shoset.NewShoset("Cb", "c")
 	Cb2.Bind("localhost:8222")
-	Cb2.Link("localhost:8112")
+	Cb2.Protocol("localhost:8112","link")
 
 	Cc1 := shoset.NewShoset("Cc", "c")
 	Cc1.Bind("localhost:8231")
-	Cc1.Link("localhost:8111")
+	Cc1.Protocol("localhost:8111","link")
 	Cc2 := shoset.NewShoset("Cc", "c")
 	Cc2.Bind("localhost:8232")
-	Cc2.Link("localhost:8111")
+	Cc2.Protocol("localhost:8111","link")
 
 	Cd1 := shoset.NewShoset("Cd", "c")
 	Cd1.Bind("localhost:8241")
-	Cd1.Link("localhost:8111")
+	Cd1.Protocol("localhost:8111","link")
 	Cd2 := shoset.NewShoset("Cd", "c")
 	Cd2.Bind("localhost:8242")
-	Cd2.Link("localhost:8112")
+	Cd2.Protocol("localhost:8112","link")
 
 	Ce1 := shoset.NewShoset("Ce", "c")
 	Ce1.Bind("localhost:8251")
-	Ce1.Link("localhost:8122")
+	Ce1.Protocol("localhost:8122","link")
 	Ce2 := shoset.NewShoset("Ce", "c")
 	Ce2.Bind("localhost:8252")
-	Ce2.Link("localhost:8122")
+	Ce2.Protocol("localhost:8122","link")
 
 	Cf1 := shoset.NewShoset("Cf", "c")
 	Cf1.Bind("localhost:8261")
-	Cf1.Link("localhost:8121")
+	Cf1.Protocol("localhost:8121","link")
 	Cf2 := shoset.NewShoset("Cg", "c")
 	Cf2.Bind("localhost:8262")
-	Cf2.Link("localhost:8121")
+	Cf2.Protocol("localhost:8121","link")
 
 	Cg1 := shoset.NewShoset("Cg", "c")
 	Cg1.Bind("localhost:8271")
-	Cg1.Link("localhost:8121")
+	Cg1.Protocol("localhost:8121","link")
 	Cg2 := shoset.NewShoset("Cg", "c")
 	Cg2.Bind("localhost:8272")
-	Cg2.Link("localhost:8122")
+	Cg2.Protocol("localhost:8122","link")
 
 	Ch1 := shoset.NewShoset("Ch", "c")
 	Ch1.Bind("localhost:8281")
-	Ch1.Link("localhost:8111")
+	Ch1.Protocol("localhost:8111","link")
 
 	time.Sleep(time.Second * time.Duration(2))
 	fmt.Printf("cl1 : %s", cl2.String())
@@ -271,11 +271,11 @@ func testQueue() {
 	/*	// First let's make 2 sockets talk each other
 		C1 := shoset.NewShoset("C1", "c")
 		C1.Bind("localhost:8261")
-		C1.Link("localhost:8262")
+		C1.Protocol("localhost:8262","link")
 
 		C2 := shoset.NewShoset("C2", "cl")
 		C2.Bind("localhost:8262")
-		C2.Link("localhost:8261")
+		C2.Protocol("localhost:8261","link")
 
 		// Let's check for sockets connections
 		time.Sleep(time.Second * time.Duration(1))
@@ -303,16 +303,16 @@ func testJoin() {
 	cl2 := shoset.NewShoset("cl", "cl") // always "cl" "cl" for gandalf
 	fmt.Println("\ncl : ", cl2)
 	cl2.Bind("localhost:8002") //we take the port 8002 for our first socket
-	cl2.Join("localhost:8001") // we join it to our first socket
+	cl2.Protocol("localhost:8001","join") // we join it to our first socket
 
 	cl3 := shoset.NewShoset("cl", "cl")
 	cl3.Bind("localhost:8003")
-	cl3.Join("localhost:8001")
-	cl3.Join("localhost:8002")
+	cl3.Protocol("localhost:8001","join")
+	cl3.Protocol("localhost:8002","join")
 
 	cl4 := shoset.NewShoset("cl", "cl")
 	cl4.Bind("localhost:8004")
-	cl4.Join("localhost:8002") // we join it to our first socket
+	cl4.Protocol("localhost:8002","join") // we join it to our first socket
 
 	for {
 		time.Sleep(time.Second * time.Duration(2))
@@ -347,34 +347,34 @@ func test_link() {
 
 	cl2 := shoset.NewShoset("cl", "cl")
 	cl2.Bind("localhost:8002")
-	cl2.Join("localhost:8001")
+	cl2.Protocol("localhost:8001","join")
 
 	cl3 := shoset.NewShoset("cl", "cl")
 	cl3.Bind("localhost:8003")
-	cl3.Join("localhost:8002")
+	cl3.Protocol("localhost:8002","join")
 
 	aga1 := shoset.NewShoset("aga", "a") // agregateur
 	aga1.Bind("localhost:8111")
-	aga1.Link("localhost:8001")
+	aga1.Protocol("localhost:8001","link")
 
 	
 
 	aga2 := shoset.NewShoset("aga", "a") // agregateur
 	aga2.Bind("localhost:8112")
-	aga2.Link("localhost:8002")
+	aga2.Protocol("localhost:8002","link")
 
 	Ca1 := shoset.NewShoset("Ca", "c") //connecteur
 	Ca1.Bind("localhost:8211")
-	Ca1.Link("localhost:8111")
+	Ca1.Protocol("localhost:8111","link")
 
 	time.Sleep(time.Second * time.Duration(3))
 	aga3 := shoset.NewShoset("aga", "a") // agregateur
 	aga3.Bind("localhost:8113")
-	aga3.Link("localhost:8002")
+	aga3.Protocol("localhost:8002","link")
 
 	Ca2 := shoset.NewShoset("Ca", "c") //connecteur
 	Ca2.Bind("localhost:8212")
-	Ca2.Link("localhost:8113")
+	Ca2.Protocol("localhost:8113","link")
 
 	for {
 		fmt.Println("\ncl : ", cl1)

@@ -16,14 +16,14 @@ import (
 // ShosetConn : client connection
 type ShosetConn struct {
 	socket           *tls.Conn
-	remoteLname      string // logical name de la chaussette en face
-	remoteShosetType string // remote ShosetType
+	remoteLname      string // logical name of the socket in fornt of this one
+	remoteShosetType string // shosetType of the socket in fornt of this one
 	dir              string
-	remoteAddress    string // addresse de la chaussette en face
+	remoteAddress    string // addresse of the socket in fornt of this one
 	ch               *Shoset
 	rb               *msg.Reader
 	wb               *msg.Writer
-	isValid          bool
+	isValid          bool // for join protocol
 }
 
 // GetDir :
@@ -125,91 +125,27 @@ func (c *ShosetConn) WriteMessage(data interface{}) error {
 	return c.wb.WriteMessage(data)
 }
 
-// RunOutConn : handler for the socket, for Link()
-func (c *ShosetConn) runOutConn(addr string) {
-	// fmt.Println("Entering runoutconn")
-	// fmt.Println("c.ch.lname = ", c.ch.lName)
-	myConfig := msg.NewCfgLink(c.ch.bindAddress, c.ch.lName, c.ch.ShosetType)
+// runConn : handler for the socket, for Protocol()
+func (c *ShosetConn) runConn(config *msg.ConfigProtocol) {
 	for {
 		conn, err := tls.Dial("tcp", c.GetRemoteAddress(), c.ch.tlsConfig)
-		defer conn.Close()
 		if err != nil {
 			time.Sleep(time.Millisecond * time.Duration(100))
 			continue
 		} else {
-			// fmt.Println("!!!!!!!!!!!!! init socket conn, name : ", c.GetName())
-			c.socket = conn
-			c.rb = msg.NewReader(c.socket)
-			c.wb = msg.NewWriter(c.socket)
-			// c.ch.SetConn(addr, c.ch.GetShosetType(), c) //getName == nil causes pointer error
-
-			// receive messages
-			for {
-				// fmt.Println("enter for loop runoutconn")
-				if c.GetRemoteLogicalName() == "" { // remote logical Name // same problem than runJoinConn()
-					c.SendMessage(*myConfig)
-				}
-				// c.SendMessage(*myConfig)
-				err := c.receiveMsg()
-				time.Sleep(time.Second * time.Duration(1))
-				if err != nil {
-					// fmt.Println("error detected in receiving msg 2")
-					c.SetRemoteLogicalName("") // reinitialize conn
-					break
-				}
-			}
-		}
-	}
-}
-
-// RunJoinConn : handler for the socket, for Join()
-func (c *ShosetConn) runJoinConn() {
-	// fmt.Println("########### enter runjoinconn")
-	ch := c.GetCh()
-	// fmt.Println(ch.GetBindAddr())
-	joinConfig := msg.NewCfgJoin(ch.GetBindAddress(), ch.GetLogicalName(), ch.GetShosetType(), "join") //we create a new message config
-	for {
-		// fmt.Println("in for loop from runjoinconn")
-		if !c.GetIsValid() { // sockets are not from the same type or don't have the same name
-			// fmt.Println("c is not valid")
-			break
-		}
-		// 	ch.ConnsJoin.Set(c.addr, c)       // à déplacer une fois
-		// 	ch.NameBrothers.Set(c.addr, true) // les connexions établies (fin de fonction)
-
-		conn, err := tls.Dial("tcp", c.GetRemoteAddress(), ch.tlsConfig) // we wait for a socket to connect each loop
-
-		if err != nil { // no connection occured
-			time.Sleep(time.Millisecond * time.Duration(100))
-			continue
-		} else { // a connection occured
-			// fmt.Printf("\n########### a connection occured")
 			c.socket = conn
 			c.rb = msg.NewReader(c.socket)
 			c.wb = msg.NewWriter(c.socket)
 			defer conn.Close()
 
-			// receive messages
 			for {
-				// fmt.Println("~~~~", ch.ConnsJoin.Get(c.GetBindAddr()))
-				// fmt.Println("\n########### enter receive message loop")
-				// fmt.Println("connsJoin : ", ch.ConnsByName.Get(ch.GetName()))
-				// if connsJoin := ch.ConnsByName.Get(ch.GetLogicalName()); connsJoin != nil {
-				// 	if exists := connsJoin.Get(c.GetLocalAddress()); exists == nil {
-				// 		c.SendMessage(*joinConfig)
-				// 	}
-				// }
-				if c.GetRemoteLogicalName() == "" { // remote logical Name // same problem than runJoinConn()
-					c.SendMessage(*joinConfig)
+				if c.GetRemoteLogicalName() == "" {
+					c.SendMessage(*config)
 				}
-				// c.SendMessage(*joinConfig)
 
-				// fmt.Println(c.GetLocalAddress(), " can receive message from ", c.GetRemoteAddress())
 				err := c.receiveMsg()
-				// fmt.Println(c.GetIsValid(), " - after message received - in runjoinconn")
 				time.Sleep(time.Second * time.Duration(1))
 				if err != nil {
-					// fmt.Println("error detected in receiving msg")
 					c.SetRemoteLogicalName("") // reinitialize conn
 					break
 				}
@@ -218,7 +154,7 @@ func (c *ShosetConn) runJoinConn() {
 	}
 }
 
-// runInbound : handler for the connection, for handleBind()
+// runInConn : handler for the connection, for handleBind()
 func (c *ShosetConn) runInConn() {
 	// fmt.Println("enter runinconn")
 	c.rb = msg.NewReader(c.socket)

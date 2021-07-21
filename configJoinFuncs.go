@@ -9,7 +9,7 @@ import (
 
 // GetConfigJoin :
 func GetConfigJoin(c *ShosetConn) (msg.Message, error) {
-	var cfg msg.ConfigJoin
+	var cfg msg.ConfigProtocol
 	err := c.ReadMessage(&cfg)
 	return cfg, err
 }
@@ -17,7 +17,7 @@ func GetConfigJoin(c *ShosetConn) (msg.Message, error) {
 // HandleConfigJoin :
 func HandleConfigJoin(c *ShosetConn, message msg.Message) error {
 	// fmt.Printf("########### enter handleconfigjoin\n")
-	cfg := message.(msg.ConfigJoin) // compute config from message
+	cfg := message.(msg.ConfigProtocol) // compute config from message
 	ch := c.GetCh()
 	dir := c.GetDir()
 	remoteAddress := cfg.GetAddress()
@@ -38,19 +38,19 @@ func HandleConfigJoin(c *ShosetConn, message msg.Message) error {
 				ch.NameBrothers.Set(remoteAddress, true)
 				c.SetRemoteLogicalName(cfg.GetLogicalName())
 				// ch.Join(remoteAddress)
-				configOk := msg.NewCfgJoin(remoteAddress, ch.GetLogicalName(), ch.GetShosetType(), "aknowledge_join")
+				configOk := msg.NewCfg(remoteAddress, ch.GetLogicalName(), ch.GetShosetType(), "aknowledge_join")
 				c.SendMessage(configOk)
 			} else {
 				// fmt.Println("Invalid connection for join - not the same type/name")
 				c.SetIsValid(false) //////////////////////
-				configNotOk := msg.NewCfgJoin(remoteAddress, ch.GetLogicalName(), ch.GetShosetType(), "unaknowledge_join")
+				configNotOk := msg.NewCfg(remoteAddress, ch.GetLogicalName(), ch.GetShosetType(), "unaknowledge_join")
 				c.SendMessage(configNotOk)
 				// fmt.Println(c.GetIsValid(), " - after handleconfigjoin")
 				return errors.New("error : Invalid connection for join - not the same type/name")
 			}
 		}
 
-		cfgNewMember := msg.NewCfgJoin(remoteAddress, ch.GetLogicalName(), ch.GetShosetType(), "member")
+		cfgNewMember := msg.NewCfg(remoteAddress, ch.GetLogicalName(), ch.GetShosetType(), "member")
 		ch.ConnsByName.Get(ch.GetLogicalName()).Iterate(
 			func(address string, val *ShosetConn) {
 				if address != remoteAddress && address != c.GetLocalAddress() {
@@ -72,7 +72,7 @@ func HandleConfigJoin(c *ShosetConn, message msg.Message) error {
 		return errors.New("error : connection not ok")
 
 	case "member":
-		ch.Join(remoteAddress)
+		ch.Protocol(remoteAddress, "join")
 	}
 	return nil
 }

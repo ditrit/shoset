@@ -4,19 +4,21 @@ import (
 
 	// "time"
 
+	// "fmt"
+
 	"github.com/ditrit/shoset/msg"
 )
 
 // GetConfigLink :
 func GetConfigLink(c *ShosetConn) (msg.Message, error) {
-	var cfg msg.ConfigLink
+	var cfg msg.ConfigProtocol
 	err := c.ReadMessage(&cfg)
 	return cfg, err
 }
 
 // HandleConfigLink :
 func HandleConfigLink(c *ShosetConn, message msg.Message) error {
-	cfg := message.(msg.ConfigLink)
+	cfg := message.(msg.ConfigProtocol)
 	remoteAddress := cfg.GetAddress()
 	dir := c.GetDir()
 
@@ -91,7 +93,7 @@ func HandleConfigLink(c *ShosetConn, message msg.Message) error {
 
 			for _, bro := range localBrothers { // à tester en rajoutant un aga ////////////////// ne fonctionne pas encore
 				if bro != c.ch.GetBindAddress() {
-					conn, err := NewShosetConn(c.ch, bro, "me") // create empty socket so that the two aga know each other
+					conn, err := NewShosetConn(c.ch, bro, "me") // create empty socket so that the two aga/Ca know each other
 					conn.SetRemoteLogicalName(c.ch.GetLogicalName())
 					if err == nil {
 						// fmt.Println(c.ch.GetBindAddress(), " has a new bro : ", bro, "####################")
@@ -118,7 +120,7 @@ func HandleConfigLink(c *ShosetConn, message msg.Message) error {
 				if remoteBrothers != nil {
 					if remoteBrothers.Get(remoteBro) == nil {
 						// fmt.Println("!!!!!!!!!!! new link")
-						c.ch.Link(remoteBro)
+						c.ch.Protocol(remoteBro, "link")
 					}
 				}
 			}

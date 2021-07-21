@@ -60,7 +60,7 @@ type Shoset struct {
 
 /*           Accessors            */
 func (c Shoset) GetBindAddress() string { return c.bindAddress }
-func (c Shoset) GetLogicalName() string        { return c.lName }
+func (c Shoset) GetLogicalName() string { return c.lName }
 func (c Shoset) GetShosetType() string  { return c.ShosetType }
 
 func (c *Shoset) SetBindAddress(bindAddress string) {
@@ -146,9 +146,9 @@ func (c Shoset) String() string {
 	descr := fmt.Sprintf("Shoset -  lName: %s,\n\t\tbindAddr : %s,\n\t\ttype : %s,\n\t\tConnsByName :", c.GetLogicalName(), c.GetBindAddress(), c.GetShosetType())
 	for _, lName := range c.ConnsByName.Keys() {
 		c.ConnsByName.Iterate(lName,
-		func(key string, val *ShosetConn) {
-			descr = fmt.Sprintf("%s %s\n\t\t\t     ", descr, val)
-		})
+			func(key string, val *ShosetConn) {
+				descr = fmt.Sprintf("%s %s\n\t\t\t     ", descr, val)
+			})
 	}
 	return descr
 }
@@ -183,7 +183,7 @@ func (c *Shoset) Bind(address string) error {
 		// fmt.Println("Config file created")
 		remotes := c.ConnsByName.GetConfig() // get all the sockets we need to join
 		for _, remote := range remotes {
-			c.Join(remote) // ou link
+			c.Protocol(remote, "join") // ou link
 		}
 	}
 
@@ -191,7 +191,7 @@ func (c *Shoset) Bind(address string) error {
 
 	// conn, _ := NewShosetConn(c, c.GetBindAddress(), "myself")
 	// c.ConnsByName.Set(c.GetLogicalName(), c.GetBindAddress(), conn)
-	go c.handleBind()           // process runInconn()
+	go c.handleBind() // process runInconn()
 	return nil
 }
 
@@ -220,45 +220,32 @@ func (c *Shoset) handleBind() error {
 	return nil
 }
 
-//Join : Join to group of Shosets and duplicate in and out connexions
-func (c *Shoset) Join(address string) (*ShosetConn, error) {
-	// fmt.Println("join de ", c.GetBindAddress(), "vers ", address)
-	// fmt.Println("name : ", c.GetName())
+func (c *Shoset) Protocol(address, protocolType string) (*ShosetConn, error) {
 	connsJoin := c.ConnsByName.Get(c.GetLogicalName())
 	if connsJoin != nil {
-		// fmt.Println("connsJoin : ", connsJoin)
 		exists := connsJoin.Get(address) // check if address is already in the map
 		if exists != nil {               //connection already established for this socket
-			// fmt.Println("connection already established : ", c.GetBindAddress(), "to : ", address)
 			return exists, nil
 		}
 	}
 	if address == c.GetBindAddress() { // connection impossible with itself
-		return nil, nil
-	}
-	conn, _ := NewShosetConn(c, address, "out") // we create a new connection
-	go conn.runJoinConn()                       // we let the connection to other socket process run in background
-	return conn, nil
-}
-
-//Link : Link to another Shoset
-func (c *Shoset) Link(address string) (*ShosetConn, error) {
-	// fmt.Println(c.GetBindAddress(), " will link to : ", address)
-	connsJoin := c.ConnsByName.Get(c.GetLogicalName())
-	if connsJoin != nil {
-		// fmt.Println("connsJoin : ", connsJoin)
-		exists := connsJoin.Get(address) // check if address is already in the map
-		if exists != nil {               //connection already established for this socket
-			// fmt.Println("connection already established : ", c.GetBindAddress(), "to : ", address)
-			return exists, nil
-		}
-	}
-	if address == c.GetBindAddress() { // connection impossible with itself
-		fmt.Println("can't connect to itself")
 		return nil, nil
 	}
 	conn, _ := NewShosetConn(c, address, "out")
-	go conn.runOutConn(conn.GetRemoteAddress())
+
+	switch protocolType {
+	case "join":
+		config := msg.NewCfg(c.GetBindAddress(), c.GetLogicalName(), c.GetShosetType(), "join")
+		go conn.runConn(config)
+	case "link":
+		config := msg.NewCfg(c.GetBindAddress(), c.GetLogicalName(), c.GetShosetType(), "link")
+		go conn.runConn(config)
+	case "bye":
+		fmt.Println("case note treated yet")
+	default:
+		fmt.Println("Wrong input protocolType")
+		return nil, errors.New("Wrong input protocolType")
+	}
 	return conn, nil
 }
 
@@ -275,20 +262,6 @@ func (c *Shoset) deleteConn(connAddr, connLname string) {
 		if connsJoin.Get(connAddr) != nil {
 			c.ConnsByName.Delete(connLname, connAddr)
 		}
-	}
-}
-
-// SetConn :
-func (c *Shoset) SetConn(connAddr, connType string, conn *ShosetConn) {
-	if conn != nil {
-		fmt.Println("enter setconn !!!!!!!!!!!!!!")
-		fmt.Println("enter setconn-byaddr")
-		c.ConnsByAddr.Set(connAddr, conn)
-		fmt.Println("enter setconn-bytype")
-		c.ConnsByType.Set(connType, conn.GetRemoteAddress(), conn)
-		fmt.Println("enter setconn-byname : ", c.GetLogicalName())
-		c.ConnsByName.Set(conn.GetRemoteLogicalName(), conn.GetRemoteAddress(), conn) // conn.GetName() -> c.GetName plus de problème
-		fmt.Println("finish setconn")
 	}
 }
 
