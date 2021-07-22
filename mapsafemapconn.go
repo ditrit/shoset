@@ -4,7 +4,7 @@ import (
 	"sync"
 
 	"github.com/spf13/viper"
-	"fmt"
+	// "fmt"
 )
 
 // MapSafeMapConn : simple key map safe for goroutines...
@@ -39,7 +39,7 @@ func (m *MapSafeMapConn) GetConfig() ([]string, []string) {
 func (m *MapSafeMapConn) Set(lname, key, protocolType string, value *ShosetConn) *MapSafeMapConn {
 	m.Lock()
 	defer m.Unlock()
-	fmt.Println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!", protocolType)
+	// fmt.Println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!", protocolType)
 	// fmt.Println("Address will be set with lname-key : ", lname, key)
 	if lname != "" && key != "" {
 		// fmt.Println("enter condition")
@@ -59,7 +59,7 @@ func (m *MapSafeMapConn) Set(lname, key, protocolType string, value *ShosetConn)
 	}
 
 	// fmt.Println("Address will be set")
-	fmt.Println("!!!!!!!!!!!!!!!okkkkkkkkkkkkkk!!!!!!!!!!!!!!!!!!!!!!!!!!", protocolType)
+	// fmt.Println("!!!!!!!!!!!!!!!okkkkkkkkkkkkkk!!!!!!!!!!!!!!!!!!!!!!!!!!", protocolType)
 	return m
 }
 

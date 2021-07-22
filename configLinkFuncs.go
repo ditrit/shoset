@@ -74,20 +74,10 @@ func HandleConfigLink(c *ShosetConn, message msg.Message) error {
 		if dir == "out" { // this socket wants to link to another
 			// fmt.Println("config name : ", cfg.GetLogicalName())
 			c.ch.ConnsByName.Set(cfg.GetLogicalName(), c.GetRemoteAddress(), "link", c) // set conns in the other socket
-			// c.ch.ConnsByName.Set(c.ch.GetLogicalName(), c.GetRemoteAddress(), c) // set conns in the other socket
 			c.SetRemoteLogicalName(cfg.GetLogicalName())
 
-			// fmt.Println(c.ch)
-			// fmt.Println(c.ch.ConnsByName)
-
 			localBrothers := cfg.GetYourBrothers()
-			// fmt.Println("local brothers 2: ", localBrothers)
-			// fmt.Println("I'm ", c.ch.GetBindAddress(), " and here are my known local brothers : ", myKnownLocalBrothers)
-			// fmt.Println(c.ch.ConnsByName)
-			// fmt.Println(c.ch.ConnsByName.Get(c.ch.GetLogicalName()))
 			remoteBrothers := cfg.GetMyBrothers()
-			// fmt.Println("remote brothers 2 : ", remoteBrothers)
-			// myKnownRemoteBrothers := c.ch.ConnsByName.Get(cfg.GetLogicalName())
 
 			// fmt.Println(c.ch.GetBindAddress(), " : ", "received brothers arrays : ", localBrothers, remoteBrothers)
 
