@@ -390,15 +390,20 @@ func testJoin3() {
 	cl3.Bind("localhost:8003")
 	cl3.Protocol("localhost:8002", "join")
 
+	cl4 := shoset.NewShoset("cl", "cl")
+	cl4.Bind("localhost:8004")
+	cl4.Protocol("localhost:8001", "join")
+
 	cl5 := shoset.NewShoset("cl", "cl")
 	cl5.Bind("localhost:8005")
-	cl5.Protocol("localhost:8001", "join")
+	cl5.Protocol("localhost:8004", "join")
 
 	for {
 		time.Sleep(time.Second * time.Duration(1))
 		fmt.Println("\ncl : ", cl1)
 		fmt.Println("\ncl : ", cl2)
 		fmt.Println("\ncl : ", cl3)
+		fmt.Println("\ncl : ", cl4)
 		fmt.Println("\ncl : ", cl5)
 	}
 
@@ -421,11 +426,16 @@ func testJoin4() {
 	cl4.Bind("localhost:8004")
 	cl4.Protocol("localhost:8001", "join") // we join it to our first socket
 
+	cl5 := shoset.NewShoset("cl", "cl")
+	cl5.Bind("localhost:8005")
+	cl5.Protocol("localhost:8004", "join")
+
 	for {
 		time.Sleep(time.Second * time.Duration(1))
 		fmt.Println("\ncl : ", cl2)
 		fmt.Println("\ncl : ", cl3)
 		fmt.Println("\ncl : ", cl4)
+		fmt.Println("\ncl : ", cl5)
 	}
 
 	<-done
@@ -523,6 +533,10 @@ func test_link1() {
 	cl3.Bind("localhost:8003")
 	cl3.Protocol("localhost:8002", "join")
 
+	cl4 := shoset.NewShoset("cl", "cl")
+	cl4.Bind("localhost:8004")
+	cl4.Protocol("localhost:8001", "join")
+
 	aga1 := shoset.NewShoset("aga", "a") // agregateur
 	aga1.Bind("localhost:8111")
 	aga1.Protocol("localhost:8001", "link")
@@ -536,6 +550,7 @@ func test_link1() {
 		fmt.Println("\ncl : ", cl1)
 		fmt.Println("\ncl : ", cl2)
 		fmt.Println("\ncl : ", cl3)
+		fmt.Println("\ncl : ", cl4)
 		fmt.Println("\nag : ", aga1)
 		fmt.Println("\nag : ", aga2)
 	}
@@ -554,6 +569,10 @@ func test_link2() {
 	cl3.Bind("localhost:8003")
 	cl3.Protocol("localhost:8002", "join")
 
+	cl4 := shoset.NewShoset("cl", "cl")
+	cl4.Bind("localhost:8004")
+	cl4.Protocol("localhost:8001", "join")
+
 	aga1 := shoset.NewShoset("aga", "a") // agregateur
 	aga1.Bind("localhost:8111")
 	aga1.Protocol("localhost:8001", "link")
@@ -566,6 +585,7 @@ func test_link2() {
 		time.Sleep(time.Second * time.Duration(1))
 		fmt.Println("\ncl : ", cl2)
 		fmt.Println("\ncl : ", cl3)
+		fmt.Println("\ncl : ", cl4)
 		fmt.Println("\nag : ", aga1)
 		fmt.Println("\nag : ", aga2)
 	}
@@ -587,6 +607,10 @@ func test_link3() {
 	cl3.Bind("localhost:8003")
 	cl3.Protocol("localhost:8002", "join")
 
+	cl4 := shoset.NewShoset("cl", "cl")
+	cl4.Bind("localhost:8004")
+	cl4.Protocol("localhost:8001", "join")
+
 	aga1 := shoset.NewShoset("aga", "a") // agregateur
 	aga1.Bind("localhost:8111")
 	aga1.Protocol("localhost:8001", "link")
@@ -600,6 +624,7 @@ func test_link3() {
 		fmt.Println("\ncl : ", cl1)
 		fmt.Println("\ncl : ", cl2)
 		fmt.Println("\ncl : ", cl3)
+		fmt.Println("\ncl : ", cl4)
 		fmt.Println("\nag : ", aga1)
 		fmt.Println("\nag : ", aga2)
 	}
@@ -618,6 +643,10 @@ func test_link4() {
 	cl3.Bind("localhost:8003")
 	cl3.Protocol("localhost:8002", "join")
 
+	cl4 := shoset.NewShoset("cl", "cl")
+	cl4.Bind("localhost:8004")
+	cl4.Protocol("localhost:8001", "join")
+
 	aga1 := shoset.NewShoset("aga", "a") // agregateur
 	aga1.Bind("localhost:8111")
 	aga1.Protocol("localhost:8001", "link")
@@ -630,6 +659,7 @@ func test_link4() {
 		time.Sleep(time.Second * time.Duration(1))
 		fmt.Println("\ncl : ", cl2)
 		fmt.Println("\ncl : ", cl3)
+		fmt.Println("\ncl : ", cl4)
 		fmt.Println("\nag : ", aga1)
 		fmt.Println("\nag : ", aga2)
 	}
@@ -651,9 +681,9 @@ func test_link5() {
 	cl3.Bind("localhost:8003")
 	cl3.Protocol("localhost:8002", "join")
 
-	cl5 := shoset.NewShoset("cl", "cl")
-	cl5.Bind("localhost:8005")
-	cl5.Protocol("localhost:8001", "join")
+	cl4 := shoset.NewShoset("cl", "cl")
+	cl4.Bind("localhost:8004")
+	cl4.Protocol("localhost:8001", "join")
 
 	aga1 := shoset.NewShoset("aga", "a") // agregateur
 	aga1.Bind("localhost:8111")
@@ -676,7 +706,7 @@ func test_link5() {
 		fmt.Println("\ncl : ", cl1) 
 		fmt.Println("\ncl : ", cl2)
 		fmt.Println("\ncl : ", cl3)
-		fmt.Println("\ncl : ", cl5)
+		fmt.Println("\ncl : ", cl4)
 		fmt.Println("\nag : ", aga1)
 		fmt.Println("\nag : ", aga2)
 		fmt.Println("\nca : ", Ca1)
@@ -696,6 +726,10 @@ func test_link6() {
 	cl3 := shoset.NewShoset("cl", "cl")
 	cl3.Bind("localhost:8003")
 	cl3.Protocol("localhost:8002", "join")
+
+	cl4 := shoset.NewShoset("cl", "cl")
+	cl4.Bind("localhost:8004")
+	cl4.Protocol("localhost:8001", "join")
 
 	aga1 := shoset.NewShoset("aga", "a") // agregateur
 	aga1.Bind("localhost:8111")
@@ -717,6 +751,7 @@ func test_link6() {
 		time.Sleep(time.Second * time.Duration(1))
 		fmt.Println("\ncl : ", cl2)
 		fmt.Println("\ncl : ", cl3)
+		fmt.Println("\ncl : ", cl4)
 		fmt.Println("\nag : ", aga1)
 		fmt.Println("\nag : ", aga2)
 		fmt.Println("\nca : ", Ca1)
@@ -740,6 +775,10 @@ func test_link7() {
 	cl3.Bind("localhost:8003")
 	cl3.Protocol("localhost:8002", "join")
 
+	cl4 := shoset.NewShoset("cl", "cl")
+	cl4.Bind("localhost:8004")
+	cl4.Protocol("localhost:8001", "join")
+
 	aga2 := shoset.NewShoset("aga", "a") // agregateur
 	aga2.Bind("localhost:8112")
 	aga2.Protocol("localhost:8002", "link")
@@ -757,6 +796,7 @@ func test_link7() {
 		fmt.Println("\ncl : ", cl1)
 		fmt.Println("\ncl : ", cl2)
 		fmt.Println("\ncl : ", cl3)
+		fmt.Println("\ncl : ", cl4)
 		fmt.Println("\nag : ", aga2)
 		fmt.Println("\nca : ", Ca1)
 		fmt.Println("\nca : ", Ca2)
@@ -779,6 +819,10 @@ func test_link8() {
 	cl3.Bind("localhost:8003")
 	cl3.Protocol("localhost:8002", "join")
 
+	cl4 := shoset.NewShoset("cl", "cl")
+	cl4.Bind("localhost:8004")
+	cl4.Protocol("localhost:8001", "join")
+
 	aga1 := shoset.NewShoset("aga", "a") // agregateur
 	aga1.Bind("localhost:8111")
 	aga1.Protocol("localhost:8001", "link")
@@ -796,6 +840,7 @@ func test_link8() {
 		fmt.Println("\ncl : ", cl1)
 		fmt.Println("\ncl : ", cl2)
 		fmt.Println("\ncl : ", cl3)
+		fmt.Println("\ncl : ", cl4)
 		fmt.Println("\nag : ", aga1)
 		fmt.Println("\nag : ", aga2)
 		fmt.Println("\nca : ", Ca2)
@@ -817,13 +862,13 @@ func main() {
 		// test_link2()
 		// test_link3()
 		// test_link4()
-		test_link5()
+		// test_link5()
 		// test_link6()
-		// test_link7()
+		test_link7()
 		// test_link8()
 	} else if arg == "2" {
-		simpleCluster()
-		// simpleAgregator()
+		// simpleCluster()
+		simpleAgregator()
 		// simpleConnector()
 	} else {
 		fmt.Println("You must specify one parameter")

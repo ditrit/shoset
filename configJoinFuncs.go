@@ -2,7 +2,7 @@ package shoset
 
 import (
 	"errors"
-	"fmt"
+	// "fmt"
 
 	"github.com/ditrit/shoset/msg"
 )
@@ -21,7 +21,7 @@ func HandleConfigJoin(c *ShosetConn, message msg.Message) error {
 	dir := c.GetDir()
 	remoteAddress := cfg.GetAddress()
 
-	fmt.Println(c.ch.GetBindAddress(), " enter handleconfiglink for ", remoteAddress)
+	// fmt.Println(c.ch.GetBindAddress(), " enter handleconfigjoin for ", remoteAddress)
 
 	switch cfg.GetCommandName() {
 	case "join":
