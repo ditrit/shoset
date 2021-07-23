@@ -2,7 +2,7 @@ package shoset
 
 import (
 	"errors"
-	// "fmt"
+	"fmt"
 
 	"github.com/ditrit/shoset/msg"
 )
@@ -16,13 +16,12 @@ func GetConfigJoin(c *ShosetConn) (msg.Message, error) {
 
 // HandleConfigJoin :
 func HandleConfigJoin(c *ShosetConn, message msg.Message) error {
-	// fmt.Println("########### enter handleconfigjoin")
 	cfg := message.(msg.ConfigProtocol) // compute config from message
 	ch := c.GetCh()
 	dir := c.GetDir()
 	remoteAddress := cfg.GetAddress()
 
-	// fmt.Println(c.ch.GetBindAddress(), " enter handleconfiglink for ", remoteAddress)
+	fmt.Println(c.ch.GetBindAddress(), " enter handleconfiglink for ", remoteAddress)
 
 	switch cfg.GetCommandName() {
 	case "join":
@@ -67,16 +66,21 @@ func HandleConfigJoin(c *ShosetConn, message msg.Message) error {
 		return errors.New("error : connection not ok")
 
 	case "member":
-		ch.Protocol(remoteAddress, "join")
+		if connsJoin := c.ch.ConnsByName.Get(c.ch.GetLogicalName()); connsJoin != nil { //already joined
+			if connsJoin.Get(remoteAddress) == nil {
+				ch.Protocol(remoteAddress, "join")
 
-		cfgNewMember := msg.NewCfg(remoteAddress, ch.GetLogicalName(), ch.GetShosetType(), "member")
-		ch.ConnsByName.Get(ch.GetLogicalName()).Iterate(
-			func(address string, bro *ShosetConn) {
-				if address != remoteAddress {
-					bro.SendMessage(cfgNewMember) //tell to the other members that there is a new member to join
-				}
-			},
-		)
+				cfgNewMember := msg.NewCfg(remoteAddress, ch.GetLogicalName(), ch.GetShosetType(), "member")
+				ch.ConnsByName.Get(ch.GetLogicalName()).Iterate(
+					func(address string, bro *ShosetConn) {
+						if address != remoteAddress {
+							bro.SendMessage(cfgNewMember) //tell to the other members that there is a new member to join
+						}
+					},
+				)
+			}
+		}
+
 	}
 	return nil
 }
