@@ -379,28 +379,27 @@ func testJoin2() {
 func testJoin3() {
 	done := make(chan bool)
 
-	cl1 := shoset.NewShoset("cl", "cl")
+	cl1 := shoset.NewShoset("cl", "cl") // cluster
 	cl1.Bind("localhost:8001")
 
-	cl2 := shoset.NewShoset("cl", "cl")    // always "cl" "cl" for gandalf
-	cl2.Bind("localhost:8002")             //we take the port 8002 for our first socket
-	cl2.Protocol("localhost:8001", "join") // we join it to our first socket
+	cl2 := shoset.NewShoset("cl", "cl")
+	cl2.Bind("localhost:8002")
+	cl2.Protocol("localhost:8001", "join")
 
 	cl3 := shoset.NewShoset("cl", "cl")
 	cl3.Bind("localhost:8003")
-	// cl3.Protocol("localhost:8001", "join")
 	cl3.Protocol("localhost:8002", "join")
 
-	cl4 := shoset.NewShoset("cl", "cl")
-	cl4.Bind("localhost:8004")
-	cl4.Protocol("localhost:8001", "join") // we join it to our first socket
+	cl5 := shoset.NewShoset("cl", "cl")
+	cl5.Bind("localhost:8005")
+	cl5.Protocol("localhost:8001", "join")
 
 	for {
 		time.Sleep(time.Second * time.Duration(1))
 		fmt.Println("\ncl : ", cl1)
 		fmt.Println("\ncl : ", cl2)
 		fmt.Println("\ncl : ", cl3)
-		fmt.Println("\ncl : ", cl4)
+		fmt.Println("\ncl : ", cl5)
 	}
 
 	<-done
@@ -652,6 +651,10 @@ func test_link5() {
 	cl3.Bind("localhost:8003")
 	cl3.Protocol("localhost:8002", "join")
 
+	cl5 := shoset.NewShoset("cl", "cl")
+	cl5.Bind("localhost:8005")
+	cl5.Protocol("localhost:8001", "join")
+
 	aga1 := shoset.NewShoset("aga", "a") // agregateur
 	aga1.Bind("localhost:8111")
 	aga1.Protocol("localhost:8001", "link")
@@ -670,9 +673,10 @@ func test_link5() {
 
 	for {
 		time.Sleep(time.Second * time.Duration(1))
-		fmt.Println("\ncl : ", cl1)
+		fmt.Println("\ncl : ", cl1) 
 		fmt.Println("\ncl : ", cl2)
 		fmt.Println("\ncl : ", cl3)
+		fmt.Println("\ncl : ", cl5)
 		fmt.Println("\nag : ", aga1)
 		fmt.Println("\nag : ", aga2)
 		fmt.Println("\nca : ", Ca1)
@@ -807,13 +811,13 @@ func main() {
 	if arg == "1" {
 		// testJoin1()
 		// testJoin2()
-		testJoin3()
+		// testJoin3()
 		// testJoin4()
 		// test_link1()
 		// test_link2()
 		// test_link3()
 		// test_link4()
-		// test_link5()
+		test_link5()
 		// test_link6()
 		// test_link7()
 		// test_link8()
@@ -825,3 +829,5 @@ func main() {
 		fmt.Println("You must specify one parameter")
 	}
 }
+
+// linkOk

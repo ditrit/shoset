@@ -164,9 +164,7 @@ func (c *ShosetConn) runOutConn() {
 // RunJoinConn : handler for the socket, for Join()
 func (c *ShosetConn) runJoinConn() {
 	// fmt.Println("########### enter runjoinconn")
-	ch := c.GetCh()
-	// fmt.Println(ch.GetBindAddr())
-	joinConfig := msg.NewCfg(ch.GetBindAddress(), ch.GetLogicalName(), ch.GetShosetType(), "join") //we create a new message config
+	joinConfig := msg.NewCfg(c.ch.GetBindAddress(), c.ch.GetLogicalName(), c.ch.GetShosetType(), "join") //we create a new message config
 	for {
 		// fmt.Println("in for loop from runjoinconn")
 		if !c.GetIsValid() { // sockets are not from the same type or don't have the same name
@@ -176,7 +174,7 @@ func (c *ShosetConn) runJoinConn() {
 		// 	ch.ConnsJoin.Set(c.addr, c)       // à déplacer une fois
 		// 	ch.NameBrothers.Set(c.addr, true) // les connexions établies (fin de fonction)
 
-		conn, err := tls.Dial("tcp", c.GetRemoteAddress(), ch.tlsConfig) // we wait for a socket to connect each loop
+		conn, err := tls.Dial("tcp", c.GetRemoteAddress(), c.ch.tlsConfig) // we wait for a socket to connect each loop
 
 		if err != nil { // no connection occured
 			time.Sleep(time.Millisecond * time.Duration(100))

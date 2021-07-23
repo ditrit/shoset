@@ -33,7 +33,7 @@ func HandleConfigLink(c *ShosetConn, message msg.Message) error {
 				}
 			}
 
-			c.SetRemoteAddress(remoteAddress)                            // avoid tcp port name
+			c.SetRemoteAddress(remoteAddress)                                    // avoid tcp port name
 			c.ch.ConnsByName.Set(cfg.GetLogicalName(), remoteAddress, "link", c) // set conn in this socket
 			c.SetRemoteLogicalName(cfg.GetLogicalName())
 
@@ -62,9 +62,7 @@ func HandleConfigLink(c *ShosetConn, message msg.Message) error {
 			brothers := msg.NewCfgBrothers(localBrothersArray, remoteBrothersArray, c.ch.GetLogicalName(), "brothers")
 			remoteBrothers.Iterate(
 				func(address string, remoteBro *ShosetConn) {
-					if address != c.GetLocalAddress() {
-						remoteBro.SendMessage(brothers) //send config to others
-					}
+					remoteBro.SendMessage(brothers) //send config to others
 				},
 			)
 		}
