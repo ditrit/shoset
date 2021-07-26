@@ -31,9 +31,9 @@ type MessageHandlers interface {
 //Shoset :
 type Shoset struct {
 	//	id          string
-	ConnsByAddr  *MapSafeConn    // map[string]*ShosetConn    ensemble des connexions
-	ConnsByName  *MapSafeMapConn // map[string]map[string]*ShosetConn   connexions par nom logique
-	ConnsByType  *MapSafeMapConn // map[string]map[string]*ShosetConn   connexions par type
+	ConnsByAddr *MapSafeConn    // map[string]*ShosetConn    ensemble des connexions
+	ConnsByName *MapSafeMapConn // map[string]map[string]*ShosetConn   connexions par nom logique
+	ConnsByType *MapSafeMapConn // map[string]map[string]*ShosetConn   connexions par type
 
 	lName       string // Nom logique de la shoset
 	ShosetType  string // Type logique de la shoset

@@ -29,7 +29,7 @@ func shosetClient(logicalName, ShosetType, address string) {
 			defer events.Close()
 			rec := c.WaitEvent(events, "bus", "started", 20)
 			if rec != nil {
-				fmt.Printf(">Received Event: \n%#v\n", *rec)
+				fmt.Println(">Received Event: \n%#v\n", *rec)
 			} else {
 				fmt.Print("Timeout expired !")
 			}
@@ -37,7 +37,7 @@ func shosetClient(logicalName, ShosetType, address string) {
 			defer events.Close()
 			rec2 := c.WaitEvent(events2, "bus", "starting", 20)
 			if rec2 != nil {
-				fmt.Printf(">Received Event 2: \n%#v\n", *rec2)
+				fmt.Println(">Received Event 2: \n%#v\n", *rec2)
 			} else {
 				fmt.Print("Timeout expired  2 !")
 			}
@@ -120,16 +120,16 @@ func shosetTest() {
 	a2.Protocol("localhost:8202", "link")
 
 	time.Sleep(time.Second * time.Duration(1))
-	fmt.Printf("a1 : %s", a1.String())
-	fmt.Printf("a2 : %s", a2.String())
-	fmt.Printf("b1 : %s", b1.String())
-	fmt.Printf("b2 : %s", b2.String())
-	fmt.Printf("b3 : %s", b3.String())
-	fmt.Printf("c1 : %s", c1.String())
-	fmt.Printf("c2 : %s", c2.String())
-	fmt.Printf("c3 : %s", c3.String())
-	fmt.Printf("d1 : %s", d1.String())
-	fmt.Printf("d2 : %s", d2.String())
+	fmt.Println("a1 : ", a1.String())
+	fmt.Println("a2 : ", a2.String())
+	fmt.Println("b1 : ", b1.String())
+	fmt.Println("b2 : ", b2.String())
+	fmt.Println("b3 : ", b3.String())
+	fmt.Println("c1 : ", c1.String())
+	fmt.Println("c2 : ", c2.String())
+	fmt.Println("c3 : ", c3.String())
+	fmt.Println("d1 : ", d1.String())
+	fmt.Println("d2 : ", d2.String())
 	<-done
 }
 
@@ -227,41 +227,41 @@ func shosetTestEtoile() {
 	Ch1.Protocol("localhost:8111", "link")
 
 	time.Sleep(time.Second * time.Duration(2))
-	fmt.Printf("cl1 : %s", cl2.String())
-	fmt.Printf("cl2 : %s", cl2.String())
-	fmt.Printf("cl3 : %s", cl3.String())
-	fmt.Printf("cl4 : %s", cl4.String())
-	fmt.Printf("cl5 : %s", cl5.String())
+	fmt.Println("cl1 : ", cl2.String())
+	fmt.Println("cl2 : ", cl2.String())
+	fmt.Println("cl3 : ", cl3.String())
+	fmt.Println("cl4 : ", cl4.String())
+	fmt.Println("cl5 : ", cl5.String())
 
-	fmt.Printf("aga1 : %s", aga1.String())
-	fmt.Printf("aga2 : %s", aga2.String())
+	fmt.Println("aga1 : ", aga1.String())
+	fmt.Println("aga2 : ", aga2.String())
 
-	fmt.Printf("agb1 : %s", agb1.String())
-	fmt.Printf("agb2 : %s", agb2.String())
+	fmt.Println("agb1 : ", agb1.String())
+	fmt.Println("agb2 : ", agb2.String())
 
-	fmt.Printf("Ca1 : %s", Ca1.String())
-	fmt.Printf("Ca2 : %s", Ca2.String())
-	fmt.Printf("Ca3 : %s", Ca3.String())
+	fmt.Println("Ca1 : ", Ca1.String())
+	fmt.Println("Ca2 : ", Ca2.String())
+	fmt.Println("Ca3 : ", Ca3.String())
 
-	fmt.Printf("Cb1 : %s", Cb1.String())
-	fmt.Printf("Cb2 : %s", Cb2.String())
+	fmt.Println("Cb1 : ", Cb1.String())
+	fmt.Println("Cb2 : ", Cb2.String())
 
-	fmt.Printf("Cc1 : %s", Cc1.String())
-	fmt.Printf("Cc2 : %s", Cc2.String())
+	fmt.Println("Cc1 : ", Cc1.String())
+	fmt.Println("Cc2 : ", Cc2.String())
 
-	fmt.Printf("Cd1 : %s", Cd1.String())
-	fmt.Printf("Cd2 : %s", Cd2.String())
+	fmt.Println("Cd1 : ", Cd1.String())
+	fmt.Println("Cd2 : ", Cd2.String())
 
-	fmt.Printf("Ce1 : %s", Ce1.String())
-	fmt.Printf("Ce2 : %s", Ce2.String())
+	fmt.Println("Ce1 : ", Ce1.String())
+	fmt.Println("Ce2 : ", Ce2.String())
 
-	fmt.Printf("Cf1 : %s", Cf1.String())
-	fmt.Printf("Cf2 : %s", Cf2.String())
+	fmt.Println("Cf1 : ", Cf1.String())
+	fmt.Println("Cf2 : ", Cf2.String())
 
-	fmt.Printf("Cg1 : %s", Cg1.String())
-	fmt.Printf("Cg2 : %s", Cg2.String())
+	fmt.Println("Cg1 : ", Cg1.String())
+	fmt.Println("Cg2 : ", Cg2.String())
 
-	fmt.Printf("Ch1 : %s", Ch1.String())
+	fmt.Println("Ch1 : ", Ch1.String())
 
 	<-done
 }
@@ -280,20 +280,20 @@ func testQueue() {
 		// Let's check for sockets connections
 		time.Sleep(time.Second * time.Duration(1))
 
-		fmt.Printf("C1 : %s", C1.String())
-		fmt.Printf("C2 : %s", C2.String())
+		fmt.Println("C1 : ", C1.String())
+		fmt.Println("C2 : ", C2.String())
 
 		// Make C1 send a message to C2
 		socket := C1.GetConnByAddr(C2.GetBindAddr())
 		m := msg.NewCommand("test", "test", "content")
 		m.Timeout = 10000
-		fmt.Printf("Message Pushed: %+v\n", *m)
+		fmt.Println("Message Pushed: %+v\n", *m)
 		socket.SendMessage(m)
 
 		// Let's dump C2 queue for cmd msg
 		time.Sleep(time.Second * time.Duration(1))
 		cell := C2.FQueue("cmd").First()
-		fmt.Printf("Cell in queue: %+v\n", *cell)
+		fmt.Println("Cell in queue: %+v\n", *cell)
 	*/<-done
 }
 
@@ -312,9 +312,10 @@ func simpleAgregator() {
 	done := make(chan bool)
 	aga1 := shoset.NewShoset("aga", "a") // agregateur
 	aga1.Bind("localhost:8111")
+	aga1.Protocol("localhost:8001", "link")
 	for {
 		time.Sleep(time.Second * time.Duration(1))
-		fmt.Println("\ncl : ", aga1)
+		// fmt.Println("\ncl : ", aga1)
 	}
 	<-done
 }
@@ -323,6 +324,7 @@ func simpleConnector() {
 	done := make(chan bool)
 	Ca1 := shoset.NewShoset("Ca", "c") // agregateur
 	Ca1.Bind("localhost:8211")
+	Ca1.Protocol("localhost:8111", "link")
 	for {
 		time.Sleep(time.Second * time.Duration(1))
 		fmt.Println("\ncl : ", Ca1)
@@ -793,13 +795,13 @@ func test_link7() {
 
 	for {
 		time.Sleep(time.Second * time.Duration(1))
-		fmt.Println("\ncl : ", cl1)
-		fmt.Println("\ncl : ", cl2)
-		fmt.Println("\ncl : ", cl3)
-		fmt.Println("\ncl : ", cl4)
-		fmt.Println("\nag : ", aga2)
-		fmt.Println("\nca : ", Ca1)
-		fmt.Println("\nca : ", Ca2)
+		// fmt.Println("\ncl : ", cl1)
+		// fmt.Println("\ncl : ", cl2)
+		// fmt.Println("\ncl : ", cl3)
+		// fmt.Println("\ncl : ", cl4)
+		// fmt.Println("\nag : ", aga2)
+		// fmt.Println("\nca : ", Ca1)
+		// fmt.Println("\nca : ", Ca2)
 	}
 
 	<-done
@@ -871,7 +873,7 @@ func main() {
 		simpleAgregator()
 		// simpleConnector()
 	} else {
-		fmt.Println("You must specify one parameter")
+		shosetTestEtoile()
 	}
 }
 

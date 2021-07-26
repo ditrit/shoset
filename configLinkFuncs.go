@@ -63,7 +63,7 @@ func HandleConfigLink(c *ShosetConn, message msg.Message) error {
 			remoteBrothers.Iterate(
 				func(address string, remoteBro *ShosetConn) {
 					remoteBro.SendMessage(brothers) //send config to others
-				},
+				}, 
 			)
 		}
 
