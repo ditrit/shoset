@@ -151,7 +151,6 @@ func (c Shoset) String() string {
 
 //Bind : Connect to another Shoset
 func (c *Shoset) Bind(address string) error {
-	// fmt.Println("######## enter bind")
 	if c.GetBindAddress() != "" { //socket already bounded to a port (already passed this Bind function once)
 		fmt.Println("Shoset already bound")
 		return errors.New("Shoset already bound")
@@ -174,22 +173,14 @@ func (c *Shoset) Bind(address string) error {
 	c.viperConfig.SetConfigType("yaml")
 
 	if err := c.viperConfig.ReadInConfig(); err != nil {
-		// fmt.Println("Config file not created yet")
 	} else {
-		// fmt.Println("Config file created")
-		remotesToJoin, _ := c.ConnsByName.GetConfig() // get all the sockets we need to join
+		remotesToJoin := c.ConnsByName.GetJoinConfig() // get all the sockets we need to join
 		for _, remote := range remotesToJoin {
 			c.Protocol(remote, "join")
 		}
-		// for _, remote := range remotesToLink {
-		// 	c.Protocol(remote, "link")
-		// }
 	}
 
 	c.SetBindAddress(ipAddress) // bound to the port
-
-	// conn, _ := NewShosetConn(c, c.GetBindAddress(), "myself")
-	// c.ConnsByName.Set(c.GetLogicalName(), c.GetBindAddress(), conn)
 	go c.handleBind() // process runInconn()
 	return nil
 }
@@ -214,13 +205,12 @@ func (c *Shoset) handleBind() error {
 		address := tlsConn.RemoteAddr().String()
 		conn, _ := NewShosetConn(c, address, "in") // create the securised connection
 		conn.socket = tlsConn                      //we override socket attribut with our securised protocol
-		go conn.runInConn("aieaieaie")
+		go conn.runInConn()
 	}
 	return nil
 }
 
 func (c *Shoset) Protocol(address, protocolType string) (*ShosetConn, error) {
-	// fmt.Println(c.GetBindAddress(), " enter protocol ", protocolType, " for ", address)
 	connsJoin := c.ConnsByName.Get(c.GetLogicalName())
 	if connsJoin != nil {
 		exists := connsJoin.Get(address) // check if address is already in the map
@@ -235,35 +225,30 @@ func (c *Shoset) Protocol(address, protocolType string) (*ShosetConn, error) {
 
 	switch protocolType {
 	case "join":
-		// config := msg.NewCfg(c.GetBindAddress(), c.GetLogicalName(), c.GetShosetType(), "join")
-		// fmt.Println("config : ", config)
 		go conn.runJoinConn()
-		// go conn.runConn(config, "join")
 	case "link":
-		// config := msg.NewCfg(c.GetBindAddress(), c.GetLogicalName(), c.GetShosetType(), "link")
 		go conn.runOutConn()
-		// go conn.runConn(config, "link")
 	case "bye":
 		fmt.Println("case note treated yet")
 	default:
 		fmt.Println("Wrong input protocolType")
-		return nil, errors.New("Wrong input protocolType")
+		return nil, errors.New("wrong input protocolType")
 	}
 	return conn, nil
 }
 
-func (c *Shoset) deleteConn(connAddr, connLname, protocolType string) {
+func (c *Shoset) deleteConn(connAddr, connLname string) {
 	conn := c.ConnsByAddr.Get(connAddr)
 	if conn != nil {
-		c.ConnsByName.Delete(conn.GetRemoteLogicalName(), connAddr, protocolType)
-		c.ConnsByType.Delete(conn.GetRemoteShosetType(), connAddr, protocolType)
+		c.ConnsByName.Delete(conn.GetRemoteLogicalName(), connAddr)
+		c.ConnsByType.Delete(conn.GetRemoteShosetType(), connAddr)
 		c.ConnsByAddr.Delete(connAddr)
 
 	}
 
 	if connsJoin := c.ConnsByName.Get(connLname); connsJoin != nil {
 		if connsJoin.Get(connAddr) != nil {
-			c.ConnsByName.Delete(connLname, connAddr, protocolType)
+			c.ConnsByName.Delete(connLname, connAddr)
 		}
 	}
 }

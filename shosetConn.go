@@ -101,7 +101,6 @@ func (c *ShosetConn) String() string {
 
 // ReadString :
 func (c *ShosetConn) ReadString() (string, error) {
-	fmt.Println("enter readstring ~~~~")
 	return c.rb.ReadString()
 }
 
@@ -130,7 +129,6 @@ func (c *ShosetConn) runOutConn() {
 	myConfig := msg.NewCfg(c.ch.bindAddress, c.ch.lName, c.ch.ShosetType, "link")
 	for {
 		conn, err := tls.Dial("tcp", c.GetRemoteAddress(), c.ch.tlsConfig)
-		defer conn.Close()
 		if err != nil {
 			time.Sleep(time.Millisecond * time.Duration(100))
 			continue
@@ -138,6 +136,7 @@ func (c *ShosetConn) runOutConn() {
 			c.socket = conn
 			c.rb = msg.NewReader(c.socket)
 			c.wb = msg.NewWriter(c.socket)
+			defer conn.Close()
 
 			// receive messages
 			for {
@@ -145,8 +144,8 @@ func (c *ShosetConn) runOutConn() {
 					c.SendMessage(*myConfig)
 				}
 
-				err := c.receiveMsg("link")
-				time.Sleep(time.Second * time.Duration(1))
+				err := c.receiveMsg()
+				time.Sleep(time.Millisecond * time.Duration(100))
 				if err != nil {
 					c.SetRemoteLogicalName("") // reinitialize conn
 					break
@@ -158,7 +157,7 @@ func (c *ShosetConn) runOutConn() {
 
 // RunJoinConn : handler for the socket, for Join()
 func (c *ShosetConn) runJoinConn() {
-	joinConfig := msg.NewCfg(c.ch.GetBindAddress(), c.ch.GetLogicalName(), c.ch.GetShosetType(), "join") //we create a new message config
+	joinConfig := msg.NewCfg(c.ch.bindAddress, c.ch.lName, c.ch.ShosetType, "join") //we create a new message config
 	for {
 		if !c.GetIsValid() { // sockets are not from the same type or don't have the same name
 			break
@@ -177,12 +176,12 @@ func (c *ShosetConn) runJoinConn() {
 
 			// receive messages
 			for {
-				if c.GetRemoteLogicalName() == "" { // remote logical Name // same problem than runJoinConn()
+				if c.GetRemoteLogicalName() == "" {
 					c.SendMessage(*joinConfig)
 				}
 
-				err := c.receiveMsg("join")
-				time.Sleep(time.Second * time.Duration(1))
+				err := c.receiveMsg()
+				time.Sleep(time.Millisecond * time.Duration(100))
 				if err != nil {
 					c.SetRemoteLogicalName("") // reinitialize conn
 					break
@@ -193,14 +192,14 @@ func (c *ShosetConn) runJoinConn() {
 }
 
 // runInConn : handler for the connection, for handleBind()
-func (c *ShosetConn) runInConn(protocolType string) {
+func (c *ShosetConn) runInConn() {
 	c.rb = msg.NewReader(c.socket)
 	c.wb = msg.NewWriter(c.socket)
 	defer c.socket.Close()
 
 	// receive messages
 	for {
-		err := c.receiveMsg(protocolType)
+		err := c.receiveMsg()
 		time.Sleep(time.Millisecond * time.Duration(10))
 		if err != nil {
 			return
@@ -214,9 +213,9 @@ func (c *ShosetConn) SendMessage(msg msg.Message) {
 	c.WriteMessage(msg)
 }
 
-func (c *ShosetConn) receiveMsg(protocolType string) error {
+func (c *ShosetConn) receiveMsg() error {
 	if !c.GetIsValid() {
-		c.ch.deleteConn(c.GetRemoteAddress(), c.GetRemoteLogicalName(), protocolType)
+		c.ch.deleteConn(c.GetRemoteAddress(), c.GetRemoteLogicalName())
 		return errors.New("error : Invalid connection for join - not the same type/name")
 	}
 
@@ -225,12 +224,12 @@ func (c *ShosetConn) receiveMsg(protocolType string) error {
 	switch {
 	case err == io.EOF:
 		if c.GetDir() == "in" {
-			c.ch.deleteConn(c.GetRemoteAddress(), c.GetRemoteLogicalName(), protocolType)
+			c.ch.deleteConn(c.GetRemoteAddress(), c.GetRemoteLogicalName())
 		}
 		return errors.New("receiveMsg : reached EOF - close this connection")
 	case err != nil:
 		if c.GetDir() == "in" {
-			c.ch.deleteConn(c.GetRemoteAddress(), c.GetRemoteLogicalName(), protocolType)
+			c.ch.deleteConn(c.GetRemoteAddress(), c.GetRemoteLogicalName())
 		}
 		return errors.New("error : receiveMsg : failed to read - close this connection")
 	}
@@ -247,17 +246,17 @@ func (c *ShosetConn) receiveMsg(protocolType string) error {
 			}
 		} else {
 			if c.GetDir() == "in" {
-				c.ch.deleteConn(c.GetRemoteAddress(), c.GetRemoteLogicalName(), protocolType)
+				c.ch.deleteConn(c.GetRemoteAddress(), c.GetRemoteLogicalName())
 			}
 			return errors.New("receiveMsg : can not read value of " + msgType)
 		}
 	}
 	if !ok {
 		if c.GetDir() == "in" {
-			c.ch.deleteConn(c.GetRemoteAddress(), c.GetRemoteLogicalName(), protocolType)
+			c.ch.deleteConn(c.GetRemoteAddress(), c.GetRemoteLogicalName())
 		}
 		return errors.New("receiveMsg : non implemented type of message " + msgType)
 	}
-	time.Sleep(time.Second * time.Duration(1))
+	time.Sleep(time.Millisecond * time.Duration(100)) // maybe we can remove this sleep time
 	return nil
 }

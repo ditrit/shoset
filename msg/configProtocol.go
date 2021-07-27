@@ -11,13 +11,6 @@ type ConfigProtocol struct {
 	YourBrothers []string
 }
 
-// func (c *ConfigProtocol) String() string {
-// 	if c == nil {
-// 		fmt.Printf("\nError : *ConfigProtocol.String : nil\n")
-// 	}
-// 	return fmt.Sprintf("[ CommandName: %s, LogicalName: %s, BindAddress: %s, Address: %s\n", c.CommandName, c.LogicalName, c.Address, c.Address)
-// }
-
 // for link and join
 func NewCfg(address, lName, shosetType, commandName string) *ConfigProtocol {
 	c := new(ConfigProtocol)

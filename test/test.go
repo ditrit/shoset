@@ -315,7 +315,7 @@ func simpleAgregator() {
 	aga1.Protocol("localhost:8001", "link")
 	for {
 		time.Sleep(time.Second * time.Duration(1))
-		// fmt.Println("\ncl : ", aga1)
+		fmt.Println("\ncl : ", aga1)
 	}
 	<-done
 }
@@ -795,13 +795,13 @@ func test_link7() {
 
 	for {
 		time.Sleep(time.Second * time.Duration(1))
-		// fmt.Println("\ncl : ", cl1)
-		// fmt.Println("\ncl : ", cl2)
-		// fmt.Println("\ncl : ", cl3)
-		// fmt.Println("\ncl : ", cl4)
-		// fmt.Println("\nag : ", aga2)
-		// fmt.Println("\nca : ", Ca1)
-		// fmt.Println("\nca : ", Ca2)
+		fmt.Println("\ncl : ", cl1)
+		fmt.Println("\ncl : ", cl2)
+		fmt.Println("\ncl : ", cl3)
+		fmt.Println("\ncl : ", cl4)
+		fmt.Println("\nag : ", aga2)
+		fmt.Println("\nca : ", Ca1)
+		fmt.Println("\nca : ", Ca2)
 	}
 
 	<-done
@@ -859,18 +859,18 @@ func main() {
 		// testJoin1()
 		// testJoin2()
 		// testJoin3()
-		// testJoin4()
+		testJoin4()
 		// test_link1()
 		// test_link2()
 		// test_link3()
 		// test_link4()
 		// test_link5()
 		// test_link6()
-		test_link7()
+		// test_link7()
 		// test_link8()
 	} else if arg == "2" {
-		// simpleCluster()
-		simpleAgregator()
+		simpleCluster()
+		// simpleAgregator()
 		// simpleConnector()
 	} else {
 		shosetTestEtoile()

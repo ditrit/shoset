@@ -2,7 +2,6 @@ package shoset
 
 import (
 	"sync"
-	// "fmt"
 )
 
 // MapSafeConn : simple key map safe for goroutines...
@@ -27,7 +26,6 @@ func (m *MapSafeConn) GetM() map[string]*ShosetConn {
 
 // Get : Get a value from a MapSafeConn
 func (m *MapSafeConn) GetByType(shosetType string) []*ShosetConn {
-
 	var result []*ShosetConn
 	m.Lock()
 	for _, val := range m.m {
@@ -56,9 +54,7 @@ func (m *MapSafeConn) Set(key string, value *ShosetConn) *MapSafeConn {
 }
 
 func (m *MapSafeConn) Keys(dir string) []string { // list of addresses
-	// m.Lock()
-	// defer m.Unlock()
-	addresses := make([]string, m.Len())
+	addresses := make([]string, m.Len()+1)
 	i := 0
 	for key := range m.m {
 		if dir != "all" {
@@ -71,7 +67,6 @@ func (m *MapSafeConn) Keys(dir string) []string { // list of addresses
 				i++
 		}
 	}
-	// fmt.Println(addresses)
 	return addresses[:i]
 }
 
@@ -96,8 +91,5 @@ func (m *MapSafeConn) Iterate(iter func(string, *ShosetConn)) {
 
 // Len : return length of the map
 func (m *MapSafeConn) Len() int {
-	// fmt.Println("enter len")
-	// fmt.Println(m)
-	// fmt.Println("len : ", len(m.GetM()))
 	return len(m.m)
 }
