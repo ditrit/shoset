@@ -174,9 +174,12 @@ func (c *Shoset) Bind(address string) error {
 
 	if err := c.viperConfig.ReadInConfig(); err != nil {
 	} else {
-		remotesToJoin := c.ConnsByName.GetJoinConfig() // get all the sockets we need to join
+		remotesToJoin, remotesToLink := c.ConnsByName.GetConfig() // get all the sockets we need to join
 		for _, remote := range remotesToJoin {
 			c.Protocol(remote, "join")
+		}
+		for _, remote := range remotesToLink {
+			c.Protocol(remote, "link")
 		}
 	}
 

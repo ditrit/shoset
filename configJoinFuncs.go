@@ -31,7 +31,7 @@ func HandleConfigJoin(c *ShosetConn, message msg.Message) error {
 
 			if ch.GetLogicalName() == cfg.GetLogicalName() && ch.GetShosetType() == cfg.GetShosetType() {
 				c.SetRemoteAddress(remoteAddress)
-				ch.ConnsByName.Set(ch.GetLogicalName(), remoteAddress, c) // set conn in this socket
+				ch.ConnsByName.Set(ch.GetLogicalName(), remoteAddress, "join", c) // set conn in this socket
 				c.SetRemoteLogicalName(cfg.GetLogicalName())
 
 				configOk := msg.NewCfg(remoteAddress, ch.GetLogicalName(), ch.GetShosetType(), "aknowledge_join")
@@ -55,7 +55,7 @@ func HandleConfigJoin(c *ShosetConn, message msg.Message) error {
 		)
 
 	case "aknowledge_join":
-		ch.ConnsByName.Set(ch.GetLogicalName(), c.GetRemoteAddress(), c) // set conns in the other socket
+		ch.ConnsByName.Set(ch.GetLogicalName(), c.GetRemoteAddress(), "join", c) // set conns in the other socket
 		c.SetRemoteLogicalName(cfg.GetLogicalName())
 
 	case "unaknowledge_join":

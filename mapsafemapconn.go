@@ -28,14 +28,14 @@ func (m *MapSafeMapConn) Get(key string) *MapSafeConn {
 	return m.m[key]
 }
 
-func (m *MapSafeMapConn) GetJoinConfig() []string {
+func (m *MapSafeMapConn) GetConfig() ([]string, []string) {
 	m.Lock()
 	defer m.Unlock()
-	return m.viperConfig.GetStringSlice("join")
+	return m.viperConfig.GetStringSlice("join"), m.viperConfig.GetStringSlice("link")
 }
 
 // Set : assign a value to a MapSafeMapConn
-func (m *MapSafeMapConn) Set(lname, key string, value *ShosetConn) *MapSafeMapConn {
+func (m *MapSafeMapConn) Set(lname, key, protocolType string, value *ShosetConn) *MapSafeMapConn {
 	m.Lock()
 	defer m.Unlock()
 
@@ -47,8 +47,8 @@ func (m *MapSafeMapConn) Set(lname, key string, value *ShosetConn) *MapSafeMapCo
 	}
 
 	keys := m.m[lname].Keys("out")
-	if m.ConfigName != "" && value.ch.GetShosetType() == "cl" {
-		m.viperConfig.Set("join", keys)
+	if m.ConfigName != "" && len(keys) != 0 {
+		m.viperConfig.Set(protocolType, keys)
 		m.viperConfig.WriteConfigAs("./" + m.ConfigName + ".yaml")
 	}
 	return m

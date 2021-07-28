@@ -27,7 +27,7 @@ func HandleConfigLink(c *ShosetConn, message msg.Message) error {
 			}
 
 			c.SetRemoteAddress(remoteAddress)                                    // avoid tcp port name
-			c.ch.ConnsByName.Set(cfg.GetLogicalName(), remoteAddress, c) // set conn in this socket
+			c.ch.ConnsByName.Set(cfg.GetLogicalName(), remoteAddress, "link", c) // set conn in this socket
 			c.SetRemoteLogicalName(cfg.GetLogicalName())
 
 			localBrothers := c.ch.ConnsByName.Get(c.ch.GetLogicalName())
@@ -52,7 +52,7 @@ func HandleConfigLink(c *ShosetConn, message msg.Message) error {
 
 	case "brothers":
 		if dir == "out" { // this socket wants to link to another
-			c.ch.ConnsByName.Set(cfg.GetLogicalName(), c.GetRemoteAddress(), c) // set conns in the other socket
+			c.ch.ConnsByName.Set(cfg.GetLogicalName(), c.GetRemoteAddress(), "link", c) // set conns in the other socket
 			c.SetRemoteLogicalName(cfg.GetLogicalName())
 
 			localBrothers := cfg.GetYourBrothers()
@@ -63,7 +63,7 @@ func HandleConfigLink(c *ShosetConn, message msg.Message) error {
 					conn, err := NewShosetConn(c.ch, bro, "me") // create empty socket so that the two aga/Ca know each other
 					conn.SetRemoteLogicalName(c.ch.GetLogicalName())
 					if err == nil {
-						c.ch.ConnsByName.Set(c.ch.GetLogicalName(), bro, conn)
+						c.ch.ConnsByName.Set(c.ch.GetLogicalName(), bro, "link", conn) // musn't be linked !
 					}
 
 					newLocalBrothers := c.ch.ConnsByName.Get(c.ch.GetLogicalName()).Keys("me")

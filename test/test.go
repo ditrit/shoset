@@ -332,6 +332,17 @@ func simpleConnector() {
 	<-done
 }
 
+func simplesimpleConnector() {
+	done := make(chan bool)
+	Ca1 := shoset.NewShoset("Ca", "c") // agregateur
+	Ca1.Bind("localhost:8211")
+	for {
+		time.Sleep(time.Second * time.Duration(1))
+		fmt.Println("\ncl : ", Ca1)
+	}
+	<-done
+}
+
 func testJoin1() {
 	done := make(chan bool)
 
@@ -859,7 +870,7 @@ func main() {
 		// testJoin1()
 		// testJoin2()
 		// testJoin3()
-		testJoin4()
+		// testJoin4()
 		// test_link1()
 		// test_link2()
 		// test_link3()
@@ -867,11 +878,13 @@ func main() {
 		// test_link5()
 		// test_link6()
 		// test_link7()
-		// test_link8()
+		test_link8()
 	} else if arg == "2" {
-		simpleCluster()
+		// simpleCluster()
 		// simpleAgregator()
-		// simpleConnector()
+		simpleConnector()
+	} else if arg == "3"{
+		simplesimpleConnector()
 	} else {
 		shosetTestEtoile()
 	}
