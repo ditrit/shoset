@@ -30,6 +30,8 @@ type MessageHandlers interface {
 
 //Shoset :
 type Shoset struct {
+	Context map[string]interface{} //TOTO
+
 	//	id          string
 	ConnsByAddr *MapSafeConn    // map[string]*ShosetConn    ensemble des connexions
 	ConnsByName *MapSafeMapConn // map[string]map[string]*ShosetConn   connexions par nom logique
@@ -72,7 +74,9 @@ func NewShoset(lName, ShosetType string) *Shoset { //l
 	// Creation
 	shoset := Shoset{}
 
+
 	// Initialisation
+	shoset.Context = make(map[string]interface{})
 
 	shoset.lName = lName
 	shoset.ShosetType = ShosetType
