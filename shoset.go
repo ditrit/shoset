@@ -281,3 +281,16 @@ func (c *Shoset) GetConnsByType(shosetType string) map[string]*ShosetConn {
 	}
 	return connsByType
 }
+
+func (c *Shoset) GetConnsByTypeArray(shosetType string) []*ShosetConn {
+	lNames := c.LnamesByType.Keys(shosetType)
+	var connsByType []*ShosetConn
+	for _, lName := range lNames {
+		lNameMap := c.ConnsByName.Get(lName)
+		keys := lNameMap.Keys("all")
+		for _, key := range keys {
+			connsByType = append(connsByType, lNameMap.Get(key))
+		}
+	}
+	return connsByType
+}
