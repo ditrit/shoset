@@ -26,9 +26,11 @@ func HandleConfigLink(c *ShosetConn, message msg.Message) error {
 				}
 			}
 
-			c.SetRemoteAddress(remoteAddress)                                    // avoid tcp port name
+			c.SetRemoteAddress(remoteAddress)
+			c.SetRemoteLogicalName(cfg.GetLogicalName())                         // avoid tcp port name
 			c.ch.ConnsByName.Set(cfg.GetLogicalName(), remoteAddress, "link", c) // set conn in this socket
-			c.SetRemoteLogicalName(cfg.GetLogicalName())
+			// c.ch.LnamesByProtocol.Set("link", c.GetRemoteLogicalName())
+			// c.ch.LnamesByType.Set(c.ch.GetShosetType(), c.GetRemoteLogicalName())
 
 			localBrothers := c.ch.ConnsByName.Get(c.ch.GetLogicalName())
 			localBrothersArray := []string{}
@@ -46,14 +48,16 @@ func HandleConfigLink(c *ShosetConn, message msg.Message) error {
 			remoteBrothers.Iterate(
 				func(address string, remoteBro *ShosetConn) {
 					remoteBro.SendMessage(brothers) //send config to others
-				}, 
+				},
 			)
 		}
 
 	case "brothers":
 		if dir == "out" { // this socket wants to link to another
-			c.ch.ConnsByName.Set(cfg.GetLogicalName(), c.GetRemoteAddress(), "link", c) // set conns in the other socket
 			c.SetRemoteLogicalName(cfg.GetLogicalName())
+			c.ch.ConnsByName.Set(cfg.GetLogicalName(), c.GetRemoteAddress(), "link", c) // set conns in the other socket
+			// c.ch.LnamesByProtocol.Set("link", c.GetRemoteLogicalName())
+			// c.ch.LnamesByType.Set(c.ch.GetShosetType(), c.GetRemoteLogicalName())
 
 			localBrothers := cfg.GetYourBrothers()
 			remoteBrothers := cfg.GetMyBrothers()
@@ -64,6 +68,8 @@ func HandleConfigLink(c *ShosetConn, message msg.Message) error {
 					conn.SetRemoteLogicalName(c.ch.GetLogicalName())
 					if err == nil {
 						c.ch.ConnsByName.Set(c.ch.GetLogicalName(), bro, "link", conn) // musn't be linked !
+						// c.ch.LnamesByProtocol.Set("link", c.GetRemoteLogicalName())
+						// c.ch.LnamesByType.Set(c.ch.GetShosetType(), c.GetRemoteLogicalName())
 					}
 
 					newLocalBrothers := c.ch.ConnsByName.Get(c.ch.GetLogicalName()).Keys("me")

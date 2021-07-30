@@ -33,9 +33,9 @@ type Shoset struct {
 	Context map[string]interface{} //TOTO
 
 	//	id          string
-	ConnsByAddr *MapSafeConn    // map[string]*ShosetConn    ensemble des connexions
-	ConnsByName *MapSafeMapConn // map[string]map[string]*ShosetConn   connexions par nom logique
-	ConnsByType *MapSafeMapConn // map[string]map[string]*ShosetConn   connexions par type
+	ConnsByName      *MapSafeMapConn // map[string]map[string]*ShosetConn   connexions par nom logique
+	LnamesByType     *MapSafeStrings // for gandalf
+	LnamesByProtocol *MapSafeStrings
 
 	lName       string // Nom logique de la shoset
 	ShosetType  string // Type logique de la shoset
@@ -74,16 +74,15 @@ func NewShoset(lName, ShosetType string) *Shoset { //l
 	// Creation
 	shoset := Shoset{}
 
-
 	// Initialisation
 	shoset.Context = make(map[string]interface{})
 
 	shoset.lName = lName
 	shoset.ShosetType = ShosetType
 	shoset.viperConfig = viper.New()
-	shoset.ConnsByAddr = NewMapSafeConn()
 	shoset.ConnsByName = NewMapSafeMapConn()
-	shoset.ConnsByType = NewMapSafeMapConn()
+	shoset.LnamesByType = NewMapSafeStrings()
+	shoset.LnamesByProtocol = NewMapSafeStrings()
 	shoset.ConnsByName.SetViper(shoset.viperConfig)
 
 	// Dictionnaire des queues de message (par type de message)
@@ -188,7 +187,7 @@ func (c *Shoset) Bind(address string) error {
 	}
 
 	c.SetBindAddress(ipAddress) // bound to the port
-	go c.handleBind() // process runInconn()
+	go c.handleBind()           // process runInconn()
 	return nil
 }
 
@@ -245,14 +244,6 @@ func (c *Shoset) Protocol(address, protocolType string) (*ShosetConn, error) {
 }
 
 func (c *Shoset) deleteConn(connAddr, connLname string) {
-	conn := c.ConnsByAddr.Get(connAddr)
-	if conn != nil {
-		c.ConnsByName.Delete(conn.GetRemoteLogicalName(), connAddr)
-		c.ConnsByType.Delete(conn.GetRemoteShosetType(), connAddr)
-		c.ConnsByAddr.Delete(connAddr)
-
-	}
-
 	if connsJoin := c.ConnsByName.Get(connLname); connsJoin != nil {
 		if connsJoin.Get(connAddr) != nil {
 			c.ConnsByName.Delete(connLname, connAddr)
@@ -276,4 +267,17 @@ func pathCheck(path string) bool {
 		return false
 	}
 	return true
+}
+
+func (c *Shoset) GetConnsByType(shosetType string) map[string]*ShosetConn {
+	lNames := c.LnamesByType.Keys(shosetType)
+	connsByType := make(map[string]*ShosetConn) 
+	for _, lName := range lNames {
+		lNameMap := c.ConnsByName.Get(lName)
+		keys := lNameMap.Keys("all")
+		for _, key := range keys {
+			connsByType[key] = lNameMap.Get(key)
+		}
+	}
+	return connsByType
 }

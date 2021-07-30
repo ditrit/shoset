@@ -1,6 +1,7 @@
 package shoset
 
 import (
+	// "fmt"
 	"sync"
 
 	"github.com/spf13/viper"
@@ -38,6 +39,8 @@ func (m *MapSafeMapConn) GetConfig() ([]string, []string) {
 func (m *MapSafeMapConn) Set(lname, key, protocolType string, value *ShosetConn) *MapSafeMapConn {
 	m.Lock()
 	defer m.Unlock()
+	value.ch.LnamesByProtocol.Set(protocolType, lname)
+	value.ch.LnamesByType.Set(value.ch.GetShosetType(), lname)
 
 	if lname != "" && key != "" {
 		if m.m[lname] == nil {
@@ -46,11 +49,7 @@ func (m *MapSafeMapConn) Set(lname, key, protocolType string, value *ShosetConn)
 		m.m[lname].Set(key, value)
 	}
 
-	keys := m.m[lname].Keys("out")
-	if m.ConfigName != "" && len(keys) != 0 {
-		m.viperConfig.Set(protocolType, keys)
-		m.viperConfig.WriteConfigAs("./" + m.ConfigName + ".yaml")
-	}
+	m.updateFile(lname, protocolType)
 	return m
 }
 
@@ -58,8 +57,30 @@ func (m *MapSafeMapConn) Set(lname, key, protocolType string, value *ShosetConn)
 func (m *MapSafeMapConn) Delete(lname, key string) {
 	m.Lock()
 	_, ok := m.m[lname]
+	var lNamesByProtocol *MapSafeStrings
 	if ok {
+		shosetConn := m.m[lname].Get(key)
+		if shosetConn != nil {
+			lNamesByProtocol = shosetConn.ch.LnamesByProtocol
+		}
 		m.m[lname].Delete(key)
+	}
+
+	if lNamesByProtocol != nil {
+		lNamesByProtocol.Iterate(
+			func(protocol string, lNames map[string]bool) {
+				// if lname in lNames
+				// lNamesArray := make([]string, m.Len())
+				// i := 0
+				// for key := range lNames {
+				// 	lNamesArray[i] = key
+				// 	i++
+				// }
+				if lNames[lname] {
+					m.updateFile(lname, protocol)
+				}
+			},
+		)
 	}
 	m.Unlock()
 }
@@ -80,6 +101,17 @@ func (m *MapSafeMapConn) Iterate(lname string, iter func(string, *ShosetConn)) {
 	m.Unlock()
 }
 
+func (m *MapSafeMapConn) IterateAll(iter func(string, *ShosetConn)) {
+	m.Lock()
+	for _, lname := range m.Keys() {
+		mapConn := m.m[lname]
+		if mapConn != nil {
+			mapConn.Iterate(iter)
+		}
+	}
+	m.Unlock()
+}
+
 // Len : return length of the map
 func (m *MapSafeMapConn) Len() int {
 	return len(m.m)
@@ -89,7 +121,7 @@ func (m *MapSafeMapConn) SetViper(viperConfig *viper.Viper) {
 	m.viperConfig = viperConfig
 }
 
-func (m *MapSafeMapConn) Keys() []string { // list of logical names inside ConnsByName
+func (m *MapSafeMapConn) _keys() []string { // list of logical names inside ConnsByName
 	lName := make([]string, m.Len())
 	i := 0
 	for key := range m.m {
@@ -97,4 +129,18 @@ func (m *MapSafeMapConn) Keys() []string { // list of logical names inside Conns
 		i++
 	}
 	return lName[:i]
+}
+
+func (m *MapSafeMapConn) Keys() []string { // list of logical names inside ConnsByName
+	m.Lock()
+	defer m.Unlock()
+	return m._keys()
+}
+
+func (m *MapSafeMapConn) updateFile(lname, protocolType string) {
+	keys := m.m[lname].Keys("out")
+	if m.ConfigName != "" && len(keys) != 0 {
+		m.viperConfig.Set(protocolType, keys)
+		m.viperConfig.WriteConfigAs("./" + m.ConfigName + ".yaml")
+	}
 }

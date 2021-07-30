@@ -24,7 +24,7 @@ func HandleCommand(c *ShosetConn, message msg.Message) error {
 // SendCommand :
 func SendCommand(c *Shoset, cmd msg.Message) {
 	fmt.Print("Sending Command.\n")
-	c.ConnsByAddr.Iterate(
+	c.ConnsByName.IterateAll(
 		func(key string, conn *ShosetConn) {
 			conn.SendMessage(cmd)
 		},

@@ -25,7 +25,7 @@ func HandleConfig(c *ShosetConn, message msg.Message) error {
 // SendConfig :
 func SendConfig(c *Shoset, cmd msg.Message) {
 	fmt.Print("Sending Config.\n")
-	c.ConnsByAddr.Iterate(
+	c.ConnsByName.IterateAll(
 		func(key string, conn *ShosetConn) {
 			conn.SendMessage(cmd)
 		},

@@ -2,6 +2,7 @@ package shoset
 
 import (
 	"errors"
+	// "fmt"
 
 	"github.com/ditrit/shoset/msg"
 )
@@ -31,8 +32,10 @@ func HandleConfigJoin(c *ShosetConn, message msg.Message) error {
 
 			if ch.GetLogicalName() == cfg.GetLogicalName() && ch.GetShosetType() == cfg.GetShosetType() {
 				c.SetRemoteAddress(remoteAddress)
-				ch.ConnsByName.Set(ch.GetLogicalName(), remoteAddress, "join", c) // set conn in this socket
 				c.SetRemoteLogicalName(cfg.GetLogicalName())
+				ch.ConnsByName.Set(ch.GetLogicalName(), remoteAddress, "join", c) // set conn in this socket
+				// ch.LnamesByProtocol.Set("join", c.GetRemoteLogicalName())
+				// ch.LnamesByType.Set(c.ch.GetShosetType(), c.GetRemoteLogicalName())
 
 				configOk := msg.NewCfg(remoteAddress, ch.GetLogicalName(), ch.GetShosetType(), "aknowledge_join")
 				c.SendMessage(configOk)
@@ -55,8 +58,10 @@ func HandleConfigJoin(c *ShosetConn, message msg.Message) error {
 		)
 
 	case "aknowledge_join":
-		ch.ConnsByName.Set(ch.GetLogicalName(), c.GetRemoteAddress(), "join", c) // set conns in the other socket
 		c.SetRemoteLogicalName(cfg.GetLogicalName())
+		ch.ConnsByName.Set(ch.GetLogicalName(), c.GetRemoteAddress(), "join", c) // set conns in the other socket
+		// c.ch.LnamesByProtocol.Set("join", c.GetRemoteLogicalName())
+		// c.ch.LnamesByType.Set(c.ch.GetShosetType(), c.GetRemoteLogicalName())
 
 	case "unaknowledge_join":
 		c.SetIsValid(false)

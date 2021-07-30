@@ -53,7 +53,7 @@ func (m *MapSafeConn) Set(key string, value *ShosetConn) *MapSafeConn {
 	return m
 }
 
-func (m *MapSafeConn) Keys(dir string) []string { // list of addresses
+func (m *MapSafeConn) _keys(dir string) []string { // list of addresses
 	addresses := make([]string, m.Len()+1)
 	i := 0
 	for key := range m.m {
@@ -68,6 +68,13 @@ func (m *MapSafeConn) Keys(dir string) []string { // list of addresses
 		}
 	}
 	return addresses[:i]
+}
+
+func (m *MapSafeConn) Keys(dir string) []string { // list of addresses
+	m.Lock()
+	defer m.Unlock()
+	return m._keys(dir)
+	
 }
 
 // Delete : delete a value in a MapSafeConn
