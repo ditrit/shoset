@@ -27,7 +27,7 @@ func HandleConfigBye(c *ShosetConn, message msg.Message) error {
 
 			c.SetRemoteAddress(remoteAddress)
 			c.SetRemoteLogicalName(cfg.GetLogicalName())
-			ch.ConnsByName.Set(ch.GetLogicalName(), remoteAddress, "bye", c) // set conn in this socket
+			// ch.ConnsByName.Set(ch.GetLogicalName(), remoteAddress, "bye", c) // set conn in this socket
 
 			configOk := msg.NewCfg(remoteAddress, ch.GetLogicalName(), ch.GetShosetType(), "aknowledge_Bye")
 			c.SendMessage(configOk)
@@ -44,7 +44,7 @@ func HandleConfigBye(c *ShosetConn, message msg.Message) error {
 
 	case "aknowledge_Bye":
 		c.SetRemoteLogicalName(cfg.GetLogicalName())
-		ch.ConnsByName.Set(ch.GetLogicalName(), c.GetRemoteAddress(), "bye", c) // set conns in the other socket
+		// ch.ConnsByName.Set(ch.GetLogicalName(), c.GetRemoteAddress(), "bye", c) // set conns in the other socket
 
 	case "member":
 		if connsBye := c.ch.ConnsByName.Get(c.ch.GetLogicalName()); connsBye != nil { //already Byeed

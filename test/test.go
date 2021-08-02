@@ -857,6 +857,7 @@ func test_link8() {
 		fmt.Println("\nag : ", aga1)
 		fmt.Println("\nag : ", aga2)
 		fmt.Println("\nca : ", Ca2)
+		// fmt.Println("ConnsByTypeArray('cl')", aga1.GetConnsByTypeArray("c"))
 	}
 
 	<-done

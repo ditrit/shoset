@@ -142,13 +142,23 @@ func NewShoset(lName, ShosetType string) *Shoset { //l
 
 // Display with fmt - override the print of the object
 func (c Shoset) String() string {
-	descr := fmt.Sprintf("Shoset -  lName: %s,\n\t\tbindAddr : %s,\n\t\ttype : %s,\n\t\tConnsByName :", c.GetLogicalName(), c.GetBindAddress(), c.GetShosetType())
+	descr := fmt.Sprintf("Shoset -  lName: %s,\n\t\tbindAddr : %s,\n\t\ttype : %s, \n\t\tConnsByName : ", c.GetLogicalName(), c.GetBindAddress(), c.GetShosetType())
 	for _, lName := range c.ConnsByName.Keys() {
 		c.ConnsByName.Iterate(lName,
 			func(key string, val *ShosetConn) {
 				descr = fmt.Sprintf("%s %s\n\t\t\t     ", descr, val)
 			})
 	}
+	descr = fmt.Sprintf("%s \n\t\tLnamesByProtocol : MapSafeStrings{%s\n\t       ", descr, c.LnamesByProtocol)
+	descr = fmt.Sprintf("%s LnamesByType : MapSafeStrings{%s\n\t      ", descr, c.LnamesByType)
+	// c.LnamesByType.Iterate(
+	// 	func(key string, val map[string]bool) {
+	// 		descr = fmt.Sprintf("%s %s\n\t\t\t     ", descr, val)
+	// 	})
+	// c.LnamesByProtocol.Iterate(
+	// 	func(key string, val map[string]bool) {
+	// 		descr = fmt.Sprintf("%s %s\n\t\t\t     ", descr, val)
+	// 	})
 	return descr
 }
 
@@ -284,6 +294,7 @@ func (c *Shoset) GetConnsByType(shosetType string) map[string]*ShosetConn {
 
 func (c *Shoset) GetConnsByTypeArray(shosetType string) []*ShosetConn {
 	lNames := c.LnamesByType.Keys(shosetType)
+	// fmt.Println("lNames : ", lNames)
 	var connsByType []*ShosetConn
 	for _, lName := range lNames {
 		lNameMap := c.ConnsByName.Get(lName)

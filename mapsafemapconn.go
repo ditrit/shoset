@@ -36,11 +36,11 @@ func (m *MapSafeMapConn) GetConfig() ([]string, []string) {
 }
 
 // Set : assign a value to a MapSafeMapConn
-func (m *MapSafeMapConn) Set(lname, key, protocolType string, value *ShosetConn) *MapSafeMapConn {
+func (m *MapSafeMapConn) Set(lname, key, protocolType, shosetType string, value *ShosetConn) *MapSafeMapConn {
 	m.Lock()
 	defer m.Unlock()
 	value.ch.LnamesByProtocol.Set(protocolType, lname)
-	value.ch.LnamesByType.Set(value.ch.GetShosetType(), lname)
+	value.ch.LnamesByType.Set(shosetType, lname)
 
 	if lname != "" && key != "" {
 		if m.m[lname] == nil {

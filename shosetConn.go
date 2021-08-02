@@ -37,6 +37,8 @@ func (c *ShosetConn) GetLocalLogicalName() string { return c.ch.GetLogicalName()
 // GetName : // remote logical Name
 func (c *ShosetConn) GetRemoteLogicalName() string { return c.remoteLname }
 
+func (c *ShosetConn) GetLocalShosetType() string { return c.ch.GetShosetType() }
+
 // GetShosetType : // remote ShosetTypeName
 func (c *ShosetConn) GetRemoteShosetType() string { return c.remoteShosetType }
 
@@ -61,7 +63,7 @@ func (c *ShosetConn) SetLocalAddress(bindAddress string) {
 }
 
 // SetShosetType : // remote ShosetType
-func (c *ShosetConn) SetShosetType(ShosetType string) {
+func (c *ShosetConn) SetRemoteShosetType(ShosetType string) {
 	if ShosetType != "" {
 		c.remoteShosetType = ShosetType
 	}
@@ -96,7 +98,7 @@ func NewShosetConn(c *Shoset, address string, dir string) (*ShosetConn, error) {
 }
 
 func (c *ShosetConn) String() string {
-	return fmt.Sprintf("ShosetConn{ name : %s, way : %s, remoteAddress : %s}", c.GetRemoteLogicalName(), c.GetDir(), c.GetRemoteAddress())
+	return fmt.Sprintf("ShosetConn{ name : %s, type : %s, way : %s, remoteAddress : %s}", c.GetRemoteLogicalName(), c.GetRemoteShosetType(), c.GetDir(), c.GetRemoteAddress())
 }
 
 // ReadString :

@@ -2,12 +2,13 @@ package shoset
 
 import (
 	// "fmt"
+	// "fmt"
 	"sync"
 )
 
 // MapSafeStrings : simple key map safe for goroutines...
 type MapSafeStrings struct {
-	m map[string]map[string]bool 
+	m map[string]map[string]bool
 	sync.Mutex
 }
 
@@ -18,13 +19,24 @@ func NewMapSafeStrings() *MapSafeStrings {
 	return m
 }
 
+// func (m *MapSafeStrings) String() string {
+// 	var descr string
+// 	for key, lNames := range m.m {
+// 		descr = descr + fmt.Sprintf("%s key : %s, lName : ", descr, key)
+// 		for lName := range lNames {
+// 			descr = fmt.Sprintf("%s %s", descr, lName)
+// 		}
+// 		descr = descr + "} \n\t\t\t"
+// 	}
+// 	return descr
+// }
+
 // Get : Get a value from a MapSafeStrings
 func (m *MapSafeStrings) Get(key string) map[string]bool {
 	m.Lock()
 	defer m.Unlock()
 	return m.m[key]
 }
-
 
 func (m *MapSafeStrings) Set(key, value string) {
 	m.Lock()
@@ -65,14 +77,13 @@ func (m *MapSafeStrings) Keys(key string) []string {
 	return m._keys(key)
 }
 
-func (m *MapSafeStrings) _keys(key string) []string {	
+func (m *MapSafeStrings) _keys(key string) []string {
 	lNamesByType := m.m[key]
 	lNames := make([]string, m.Len())
 	i := 0
-	for key := range lNamesByType {
-		lNames[i] = key
+	for lName := range lNamesByType {
+		lNames[i] = lName
 		i++
 	}
 	return lNames[:i]
 }
-

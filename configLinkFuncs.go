@@ -1,6 +1,8 @@
 package shoset
 
 import (
+	// "fmt"
+
 	"github.com/ditrit/shoset/msg"
 )
 
@@ -27,8 +29,9 @@ func HandleConfigLink(c *ShosetConn, message msg.Message) error {
 			}
 
 			c.SetRemoteAddress(remoteAddress)
-			c.SetRemoteLogicalName(cfg.GetLogicalName())                         // avoid tcp port name
-			c.ch.ConnsByName.Set(cfg.GetLogicalName(), remoteAddress, "link", c) // set conn in this socket
+			c.SetRemoteLogicalName(cfg.GetLogicalName()) // avoid tcp port name
+			c.SetRemoteShosetType(cfg.GetShosetType())
+			c.ch.ConnsByName.Set(cfg.GetLogicalName(), remoteAddress, "link", cfg.GetShosetType(), c) // set conn in this socket
 			// c.ch.LnamesByProtocol.Set("link", c.GetRemoteLogicalName())
 			// c.ch.LnamesByType.Set(c.ch.GetShosetType(), c.GetRemoteLogicalName())
 
@@ -44,7 +47,7 @@ func HandleConfigLink(c *ShosetConn, message msg.Message) error {
 				remoteBrothersArray = remoteBrothers.Keys("all")
 			}
 
-			brothers := msg.NewCfgBrothers(localBrothersArray, remoteBrothersArray, c.ch.GetLogicalName(), "brothers")
+			brothers := msg.NewCfgBrothers(localBrothersArray, remoteBrothersArray, c.ch.GetLogicalName(), "brothers", c.ch.GetShosetType())
 			remoteBrothers.Iterate(
 				func(address string, remoteBro *ShosetConn) {
 					remoteBro.SendMessage(brothers) //send config to others
@@ -55,7 +58,8 @@ func HandleConfigLink(c *ShosetConn, message msg.Message) error {
 	case "brothers":
 		if dir == "out" { // this socket wants to link to another
 			c.SetRemoteLogicalName(cfg.GetLogicalName())
-			c.ch.ConnsByName.Set(cfg.GetLogicalName(), c.GetRemoteAddress(), "link", c) // set conns in the other socket
+			c.SetRemoteShosetType(cfg.GetShosetType())
+			c.ch.ConnsByName.Set(cfg.GetLogicalName(), c.GetRemoteAddress(), "link", cfg.GetShosetType(), c) // set conns in the other socket
 			// c.ch.LnamesByProtocol.Set("link", c.GetRemoteLogicalName())
 			// c.ch.LnamesByType.Set(c.ch.GetShosetType(), c.GetRemoteLogicalName())
 
@@ -65,18 +69,17 @@ func HandleConfigLink(c *ShosetConn, message msg.Message) error {
 			for _, bro := range localBrothers {
 				if bro != c.ch.GetBindAddress() {
 					conn, err := NewShosetConn(c.ch, bro, "me") // create empty socket so that the two aga/Ca know each other
-					conn.SetRemoteLogicalName(c.ch.GetLogicalName())
 					if err == nil {
-						c.ch.ConnsByName.Set(c.ch.GetLogicalName(), bro, "link", conn) // musn't be linked !
-						// c.ch.LnamesByProtocol.Set("link", c.GetRemoteLogicalName())
-						// c.ch.LnamesByType.Set(c.ch.GetShosetType(), c.GetRemoteLogicalName())
+						conn.SetRemoteLogicalName(c.ch.GetLogicalName())
+						conn.SetRemoteShosetType(c.ch.GetShosetType())
+						c.ch.ConnsByName.Set(c.ch.GetLogicalName(), bro, "link", conn.GetRemoteShosetType(), conn) // musn't be linked !
 					}
 
 					newLocalBrothers := c.ch.ConnsByName.Get(c.ch.GetLogicalName()).Keys("me")
 					for _, lName := range c.ch.ConnsByName.Keys() {
 						lNameConns := c.ch.ConnsByName.Get(lName)
 						addresses := lNameConns.Keys("in")
-						brothers := msg.NewCfgBrothers(newLocalBrothers, addresses, c.ch.GetLogicalName(), "brothers")
+						brothers := msg.NewCfgBrothers(newLocalBrothers, addresses, c.ch.GetLogicalName(), "brothers", c.ch.GetShosetType())
 						lNameConns.Iterate(
 							func(key string, val *ShosetConn) {
 								val.SendMessage(brothers)

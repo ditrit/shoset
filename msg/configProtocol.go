@@ -23,13 +23,14 @@ func NewCfg(address, lName, shosetType, commandName string) *ConfigProtocol {
 }
 
 // for link
-func NewCfgBrothers(myBrothers, yourBrothers []string, lName, commandName string) *ConfigProtocol {
+func NewCfgBrothers(myBrothers, yourBrothers []string, lName, commandName, shosetType string) *ConfigProtocol {
 	c := new(ConfigProtocol)
 	c.InitMessageBase()
 	c.CommandName = commandName
 	c.MyBrothers = myBrothers
 	c.YourBrothers = yourBrothers
 	c.LogicalName = lName
+	c.ShosetType = shosetType
 	return c
 }
 
