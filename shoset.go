@@ -100,6 +100,10 @@ func NewShoset(lName, ShosetType string) *Shoset { //l
 	shoset.Get["cfgjoin"] = GetConfigJoin
 	shoset.Handle["cfgjoin"] = HandleConfigJoin
 
+	shoset.Queue["cfgbye"] = msg.NewQueue()
+	shoset.Get["cfgbye"] = GetConfigBye
+	shoset.Handle["cfgbye"] = HandleConfigBye
+
 	shoset.Queue["evt"] = msg.NewQueue()
 	shoset.Get["evt"] = GetEvent
 	shoset.Handle["evt"] = HandleEvent
@@ -227,25 +231,37 @@ func (c *Shoset) handleBind() error {
 }
 
 func (c *Shoset) Protocol(address, protocolType string) (*ShosetConn, error) {
-	connsJoin := c.ConnsByName.Get(c.GetLogicalName())
-	if connsJoin != nil {
-		exists := connsJoin.Get(address) // check if address is already in the map
-		if exists != nil {               //connection already established for this socket
-			return exists, nil
-		}
-	}
-	if address == c.GetBindAddress() { // connection impossible with itself
-		return nil, nil
-	}
-	conn, _ := NewShosetConn(c, address, "out")
-
+	var conn *ShosetConn
 	switch protocolType {
 	case "join":
+		conns := c.ConnsByName.Get(c.GetLogicalName())
+		if conns != nil {
+			exists := conns.Get(address) // check if address is already in the map
+			if exists != nil {           //connection already established for this socket
+				return exists, nil
+			}
+		}
+		if address == c.GetBindAddress() { // connection impossible with itself
+			return nil, nil
+		}
+		conn, _ := NewShosetConn(c, address, "out")
 		go conn.runJoinConn()
 	case "link":
+		conns := c.ConnsByName.Get(c.GetLogicalName())
+		if conns != nil {
+			exists := conns.Get(address) // check if address is already in the map
+			if exists != nil {           //connection already established for this socket
+				return exists, nil
+			}
+		}
+		if address == c.GetBindAddress() { // connection impossible with itself
+			return nil, nil
+		}
+		conn, _ := NewShosetConn(c, address, "out")
 		go conn.runOutConn()
 	case "bye":
-		fmt.Println("case note treated yet")
+		conn, _ := NewShosetConn(c, address, "out")
+		go conn.runEndConn()
 	default:
 		fmt.Println("Wrong input protocolType")
 		return nil, errors.New("wrong input protocolType")
@@ -254,8 +270,8 @@ func (c *Shoset) Protocol(address, protocolType string) (*ShosetConn, error) {
 }
 
 func (c *Shoset) deleteConn(connAddr, connLname string) {
-	if connsJoin := c.ConnsByName.Get(connLname); connsJoin != nil {
-		if connsJoin.Get(connAddr) != nil {
+	if conns := c.ConnsByName.Get(connLname); conns != nil {
+		if conns.Get(connAddr) != nil {
 			c.ConnsByName.Delete(connLname, connAddr)
 		}
 	}
@@ -281,7 +297,7 @@ func pathCheck(path string) bool {
 
 func (c *Shoset) GetConnsByType(shosetType string) map[string]*ShosetConn {
 	lNames := c.LnamesByType.Keys(shosetType)
-	connsByType := make(map[string]*ShosetConn) 
+	connsByType := make(map[string]*ShosetConn)
 	for _, lName := range lNames {
 		lNameMap := c.ConnsByName.Get(lName)
 		keys := lNameMap.Keys("all")

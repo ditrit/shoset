@@ -1,8 +1,7 @@
 package shoset
 
 import (
-
-	// "fmt"
+	"fmt"
 
 	"github.com/ditrit/shoset/msg"
 )
@@ -16,6 +15,7 @@ func GetConfigBye(c *ShosetConn) (msg.Message, error) {
 
 // HandleConfigBye :
 func HandleConfigBye(c *ShosetConn, message msg.Message) error {
+	fmt.Println("enter byeeeee")
 	cfg := message.(msg.ConfigProtocol) // compute config from message
 	ch := c.GetCh()
 	dir := c.GetDir()
@@ -23,45 +23,29 @@ func HandleConfigBye(c *ShosetConn, message msg.Message) error {
 
 	switch cfg.GetCommandName() {
 	case "bye":
+		fmt.Println("bye")
 		if dir == "in" {
+			cfgNewDelete := msg.NewCfg(remoteAddress, ch.GetLogicalName(), ch.GetShosetType(), "delete")
+			fmt.Println("cfg ok")
+			ch.ConnsByName.IterateAll(
+				func(address string, bro *ShosetConn) {
+					fmt.Println("+")
+					if address != remoteAddress {
+						fmt.Println("sendmessage")
+						bro.SendMessage(cfgNewDelete)
+					}
+				},
+			)
 
-			c.SetRemoteAddress(remoteAddress)
-			c.SetRemoteLogicalName(cfg.GetLogicalName())
-			// ch.ConnsByName.Set(ch.GetLogicalName(), remoteAddress, "bye", c) // set conn in this socket
+			// setIsValid(false) ??
 
-			configOk := msg.NewCfg(remoteAddress, ch.GetLogicalName(), ch.GetShosetType(), "aknowledge_Bye")
-			c.SendMessage(configOk)
 		}
 
-		cfgNewMember := msg.NewCfg(remoteAddress, ch.GetLogicalName(), ch.GetShosetType(), "member")
-		ch.ConnsByName.Get(ch.GetLogicalName()).Iterate(
-			func(address string, bro *ShosetConn) {
-				if address != remoteAddress {
-					bro.SendMessage(cfgNewMember) //tell to the other members that there is a new member to Bye
-				}
-			},
-		)
-
-	case "aknowledge_Bye":
-		c.SetRemoteLogicalName(cfg.GetLogicalName())
-		// ch.ConnsByName.Set(ch.GetLogicalName(), c.GetRemoteAddress(), "bye", c) // set conns in the other socket
-
-	case "member":
-		if connsBye := c.ch.ConnsByName.Get(c.ch.GetLogicalName()); connsBye != nil { //already Byeed
-			if connsBye.Get(remoteAddress) == nil {
-				ch.Protocol(remoteAddress, "bye")
-
-				cfgNewMember := msg.NewCfg(remoteAddress, ch.GetLogicalName(), ch.GetShosetType(), "member")
-				ch.ConnsByName.Get(ch.GetLogicalName()).Iterate(
-					func(address string, bro *ShosetConn) {
-						if address != remoteAddress {
-							bro.SendMessage(cfgNewMember) //tell to the other members that there is a new member to Bye
-						}
-					},
-				)
-			}
+	case "delete":
+		fmt.Println("delete")
+		if dir == "out" {
+			ch.deleteConn(cfg.GetAddress(), cfg.GetLogicalName())
 		}
-
 	}
 	return nil
 }

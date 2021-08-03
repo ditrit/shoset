@@ -1,7 +1,7 @@
 package shoset
 
 import (
-	// "fmt"
+	"fmt"
 	"sync"
 
 	"github.com/spf13/viper"
@@ -48,7 +48,6 @@ func (m *MapSafeMapConn) Set(lname, key, protocolType, shosetType string, value 
 		}
 		m.m[lname].Set(key, value)
 	}
-
 	m.updateFile(lname, protocolType)
 	return m
 }
@@ -103,7 +102,9 @@ func (m *MapSafeMapConn) Iterate(lname string, iter func(string, *ShosetConn)) {
 
 func (m *MapSafeMapConn) IterateAll(iter func(string, *ShosetConn)) {
 	m.Lock()
-	for _, lname := range m.Keys() {
+	fmt.Println("enter iterateall")
+	for _, lname := range m._keys() {
+		fmt.Println("key")
 		mapConn := m.m[lname]
 		if mapConn != nil {
 			mapConn.Iterate(iter)

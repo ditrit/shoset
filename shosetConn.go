@@ -130,6 +130,10 @@ func (c *ShosetConn) WriteMessage(data interface{}) error {
 func (c *ShosetConn) runOutConn() {
 	myConfig := msg.NewCfg(c.ch.bindAddress, c.ch.lName, c.ch.ShosetType, "link")
 	for {
+		if !c.GetIsValid() { // sockets are not from the same type or don't have the same name / conn ended
+			break
+		}
+
 		conn, err := tls.Dial("tcp", c.GetRemoteAddress(), c.ch.tlsConfig)
 		if err != nil {
 			time.Sleep(time.Millisecond * time.Duration(100))
@@ -161,7 +165,7 @@ func (c *ShosetConn) runOutConn() {
 func (c *ShosetConn) runJoinConn() {
 	joinConfig := msg.NewCfg(c.ch.bindAddress, c.ch.lName, c.ch.ShosetType, "join") //we create a new message config
 	for {
-		if !c.GetIsValid() { // sockets are not from the same type or don't have the same name
+		if !c.GetIsValid() { // sockets are not from the same type or don't have the same name / conn ended
 			break
 		}
 
@@ -180,6 +184,42 @@ func (c *ShosetConn) runJoinConn() {
 			for {
 				if c.GetRemoteLogicalName() == "" {
 					c.SendMessage(*joinConfig)
+				}
+
+				err := c.receiveMsg()
+				time.Sleep(time.Millisecond * time.Duration(100))
+				if err != nil {
+					c.SetRemoteLogicalName("") // reinitialize conn
+					break
+				}
+			}
+		}
+	}
+}
+
+// runEndConn : handler for the socket, for Bye()
+func (c *ShosetConn) runEndConn() {
+	byeConfig := msg.NewCfg(c.ch.bindAddress, c.ch.lName, c.ch.ShosetType, "bye") //we create a new message config
+	for {
+		if !c.GetIsValid() { // sockets are not from the same type or don't have the same name / conn ended
+			break
+		}
+
+		conn, err := tls.Dial("tcp", c.GetRemoteAddress(), c.ch.tlsConfig) // we wait for a socket to connect each loop
+
+		if err != nil { // no connection occured
+			time.Sleep(time.Millisecond * time.Duration(100))
+			continue
+		} else { // a connection occured
+			c.socket = conn
+			c.rb = msg.NewReader(c.socket)
+			c.wb = msg.NewWriter(c.socket)
+			defer conn.Close()
+
+			// receive messages
+			for {
+				if c.GetRemoteLogicalName() == "" {
+					c.SendMessage(*byeConfig)
 				}
 
 				err := c.receiveMsg()

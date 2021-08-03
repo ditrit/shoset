@@ -50,7 +50,9 @@ func (c ConfigProtocol) GetMsgType() string {
 	case "brothers":
 		return "cfglink"
 	case "bye":
-		return "case note treated yet"
+		return "cfgbye"
+	case "delete":
+		return "cfgbye"
 	}
 	return "Wrong input protocolType"
 }
