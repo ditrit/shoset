@@ -145,11 +145,11 @@ func NewShoset(lName, ShosetType string) *Shoset { //l
 
 	////////////////////////////////////////////////////////////////////
 	dirname, err := os.UserHomeDir()
-    if err != nil {
-        log.Fatal( err )
-    }
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	file, err := os.OpenFile(dirname + "/logs.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
+	file, err := os.OpenFile(dirname+"/logs.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -202,7 +202,11 @@ func (c *Shoset) Bind(address string) error {
 	c.ConnsByName.SetConfigName(viperAddress)
 
 	// viper config
-	c.viperConfig.AddConfigPath(".")
+	dirname, err := os.UserHomeDir()
+	if err != nil {
+		log.Fatal(err)
+	}
+	c.viperConfig.AddConfigPath(dirname)
 	c.viperConfig.SetConfigName(viperAddress)
 	c.viperConfig.SetConfigType("yaml")
 

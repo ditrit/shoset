@@ -2,6 +2,8 @@ package shoset
 
 import (
 	"fmt"
+	"log"
+	"os"
 	"sync"
 
 	"github.com/spf13/viper"
@@ -144,11 +146,15 @@ func (m *MapSafeMapConn) Keys() []string { // list of logical names inside Conns
 
 func (m *MapSafeMapConn) updateFile(lname, protocolType, address string) {
 	keys := m.m[lname]._keys("out")
-	if address == "127.0.0.1:8004" || address == "127.0.0.1:8002"{
+	if address == "127.0.0.1:8004" || address == "127.0.0.1:8002" {
 		fmt.Println("keys : ", keys)
 	}
 	if m.ConfigName != "" && len(keys) != 0 {
 		m.viperConfig.Set(protocolType, keys)
-		m.viperConfig.WriteConfigAs("./" + m.ConfigName + ".yaml")
+		dirname, err := os.UserHomeDir()
+		if err != nil {
+			log.Fatal(err)
+		}
+		m.viperConfig.WriteConfigAs(dirname+"/" + m.ConfigName + ".yaml")
 	}
 }
