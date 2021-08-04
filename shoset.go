@@ -144,13 +144,12 @@ func NewShoset(lName, ShosetType string) *Shoset { //l
 	}
 
 	////////////////////////////////////////////////////////////////////
+	dirname, err := os.UserHomeDir()
+    if err != nil {
+        log.Fatal( err )
+    }
 
-	path, err := os.Getwd()
-	if err != nil {
-		log.Println(err)
-	}
-
-	file, err := os.OpenFile(path + "/logs.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
+	file, err := os.OpenFile(dirname + "/logs.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
 	if err != nil {
 		log.Fatal(err)
 	}
