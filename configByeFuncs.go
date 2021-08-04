@@ -15,7 +15,6 @@ func GetConfigBye(c *ShosetConn) (msg.Message, error) {
 
 // HandleConfigBye :
 func HandleConfigBye(c *ShosetConn, message msg.Message) error {
-	fmt.Println("enter byeeeee")
 	cfg := message.(msg.ConfigProtocol) // compute config from message
 	ch := c.GetCh()
 	dir := c.GetDir()
@@ -23,29 +22,24 @@ func HandleConfigBye(c *ShosetConn, message msg.Message) error {
 
 	switch cfg.GetCommandName() {
 	case "bye":
-		fmt.Println("bye")
 		if dir == "in" {
 			cfgNewDelete := msg.NewCfg(remoteAddress, ch.GetLogicalName(), ch.GetShosetType(), "delete")
-			fmt.Println("cfg ok")
 			ch.ConnsByName.IterateAll(
 				func(address string, bro *ShosetConn) {
-					fmt.Println("+")
 					if address != remoteAddress {
-						fmt.Println("sendmessage")
 						bro.SendMessage(cfgNewDelete)
 					}
 				},
 			)
 
-			// setIsValid(false) ??
+			// c.SetIsValid(false)
+			// c.ch = nil // don't know if it's the best way
 
 		}
 
 	case "delete":
-		fmt.Println("delete")
-		if dir == "out" {
-			ch.deleteConn(cfg.GetAddress(), cfg.GetLogicalName())
-		}
+		fmt.Println(c.ch.GetBindAddress(), " enter delete")
+		ch.deleteConn(cfg.GetAddress(), cfg.GetLogicalName())
 	}
 	return nil
 }

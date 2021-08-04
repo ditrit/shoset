@@ -48,18 +48,21 @@ func (m *MapSafeMapConn) Set(lname, key, protocolType, shosetType string, value 
 		}
 		m.m[lname].Set(key, value)
 	}
-	m.updateFile(lname, protocolType)
+	m.updateFile(lname, protocolType, "")
 	return m
 }
 
 // Delete : delete a value in a MapSafeMapConn
 func (m *MapSafeMapConn) Delete(lname, key string) {
 	m.Lock()
+	var address string
 	_, ok := m.m[lname]
 	var lNamesByProtocol *MapSafeStrings
 	if ok {
 		shosetConn := m.m[lname].Get(key)
 		if shosetConn != nil {
+			address = shosetConn.ch.GetBindAddress()
+			// fmt.Println(address, " enter delete")
 			lNamesByProtocol = shosetConn.ch.LnamesByProtocol
 		}
 		m.m[lname].Delete(key)
@@ -76,7 +79,10 @@ func (m *MapSafeMapConn) Delete(lname, key string) {
 				// 	i++
 				// }
 				if lNames[lname] {
-					m.updateFile(lname, protocol)
+					if address == "127.0.0.1:8004" || address == "127.0.0.1:8002" {
+						fmt.Println(address, " update file")
+					}
+					m.updateFile(lname, protocol, address)
 				}
 			},
 		)
@@ -102,9 +108,7 @@ func (m *MapSafeMapConn) Iterate(lname string, iter func(string, *ShosetConn)) {
 
 func (m *MapSafeMapConn) IterateAll(iter func(string, *ShosetConn)) {
 	m.Lock()
-	fmt.Println("enter iterateall")
 	for _, lname := range m._keys() {
-		fmt.Println("key")
 		mapConn := m.m[lname]
 		if mapConn != nil {
 			mapConn.Iterate(iter)
@@ -138,8 +142,11 @@ func (m *MapSafeMapConn) Keys() []string { // list of logical names inside Conns
 	return m._keys()
 }
 
-func (m *MapSafeMapConn) updateFile(lname, protocolType string) {
-	keys := m.m[lname].Keys("out")
+func (m *MapSafeMapConn) updateFile(lname, protocolType, address string) {
+	keys := m.m[lname]._keys("out")
+	if address == "127.0.0.1:8004" || address == "127.0.0.1:8002"{
+		fmt.Println("keys : ", keys)
+	}
 	if m.ConfigName != "" && len(keys) != 0 {
 		m.viperConfig.Set(protocolType, keys)
 		m.viperConfig.WriteConfigAs("./" + m.ConfigName + ".yaml")

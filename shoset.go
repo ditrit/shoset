@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
+	"log"
 	"net"
 	"os"
 	"strings"
@@ -141,6 +142,23 @@ func NewShoset(lName, ShosetType string) *Shoset { //l
 		fmt.Println("! Unable to Load certificate !")
 		shoset.tlsServerOK = false
 	}
+
+	////////////////////////////////////////////////////////////////////
+
+	path, err := os.Getwd()
+	if err != nil {
+		log.Println(err)
+	}
+
+	file, err := os.OpenFile(path + "/logs.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	log.SetOutput(file)
+
+	log.Println("Hello world!")
+	////////////////////////////////////////////////////////////////////
 	return &shoset
 }
 
@@ -270,8 +288,10 @@ func (c *Shoset) Protocol(address, protocolType string) (*ShosetConn, error) {
 }
 
 func (c *Shoset) deleteConn(connAddr, connLname string) {
+	// fmt.Println(c.GetBindAddress(), " enter deleteConn")
 	if conns := c.ConnsByName.Get(connLname); conns != nil {
 		if conns.Get(connAddr) != nil {
+			// fmt.Println(c.GetBindAddress(), " is ok in deleteConn")
 			c.ConnsByName.Delete(connLname, connAddr)
 		}
 	}

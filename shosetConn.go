@@ -258,7 +258,7 @@ func (c *ShosetConn) SendMessage(msg msg.Message) {
 func (c *ShosetConn) receiveMsg() error {
 	if !c.GetIsValid() {
 		c.ch.deleteConn(c.GetRemoteAddress(), c.GetRemoteLogicalName())
-		return errors.New("error : Invalid connection for join - not the same type/name")
+		return errors.New("error : Invalid connection for join - not the same type/name or shosetConn ended")
 	}
 
 	// read message type
