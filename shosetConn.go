@@ -237,7 +237,6 @@ func (c *ShosetConn) runEndConn() {
 
 // runInConn : handler for the connection, for handleBind()
 func (c *ShosetConn) runInConn() {
-	fmt.Println(c.ch.GetBindAddress(), "in runinconn")
 	c.rb = msg.NewReader(c.socket)
 	c.wb = msg.NewWriter(c.socket)
 	defer c.socket.Close()

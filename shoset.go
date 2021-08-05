@@ -192,15 +192,15 @@ func (c *Shoset) Bind(address string) error {
 	c.ConnsByName.SetConfigName(viperAddress)
 
 	// viper config
-	dirname, err := os.Getwd()
+	dirname, err := os.UserHomeDir()
 	if err != nil {
 		fmt.Println(err)
 	}
-	if !pathCheck(dirname + "/config/") {
-		os.Mkdir(dirname+"/config/", 0777)
+	if !pathCheck(dirname + "/.shoset_config/") {
+		os.Mkdir(dirname+"/.shoset_config/", 0700)
 	}
 
-	c.viperConfig.AddConfigPath(dirname+"/config/")
+	c.viperConfig.AddConfigPath(dirname + "/.shoset_config/")
 	c.viperConfig.SetConfigName(viperAddress)
 	c.viperConfig.SetConfigType("yaml")
 
@@ -232,7 +232,7 @@ func (c *Shoset) handleBind() error {
 
 	for {
 		if !c.GetIsValid() { // sockets are not from the same type or don't have the same name / conn ended
-			break
+			return errors.New("error : Invalid connection for join - not the same type/name or shosetConn ended")
 		}
 		unencConn, err := listener.Accept()
 		if err != nil {
@@ -340,4 +340,13 @@ func (c *Shoset) GetConnsByTypeArray(shosetType string) []*ShosetConn {
 		}
 	}
 	return connsByType
+}
+
+func contains(s []string, str string) bool {
+	for _, v := range s {
+		if v == str {
+			return true
+		}
+	}
+	return false
 }

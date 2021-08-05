@@ -850,7 +850,7 @@ func test_link8() {
 	Ca2.Bind("localhost:8212")
 	Ca2.Protocol("localhost:8112", "link")
 
-	time.Sleep(time.Second * time.Duration(1))
+	time.Sleep(time.Second * time.Duration(5))
 	
 	// fmt.Println("\ncl : ", cl1)
 	// fmt.Println("\ncl : ", cl2)

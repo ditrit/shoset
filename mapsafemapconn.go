@@ -33,6 +33,10 @@ func (m *MapSafeMapConn) Get(key string) *MapSafeConn {
 func (m *MapSafeMapConn) GetConfig() ([]string, []string) {
 	m.Lock()
 	defer m.Unlock()
+	return m._getConfig()
+}
+
+func (m *MapSafeMapConn) _getConfig() ([]string, []string) {
 	return m.viperConfig.GetStringSlice("join"), m.viperConfig.GetStringSlice("link")
 }
 
@@ -49,38 +53,55 @@ func (m *MapSafeMapConn) Set(lname, key, protocolType, shosetType string, value 
 		}
 		m.m[lname].Set(key, value)
 	}
-	m.updateFile(lname, protocolType, "")
+	keys := m.m[lname].Keys("out")
+	if len(keys) != 0 {
+		m.updateFile(lname, protocolType, keys)
+	}
 	return m
 }
 
 // Delete : delete a value in a MapSafeMapConn
 func (m *MapSafeMapConn) Delete(lname, key string) {
 	m.Lock()
-	var address string
+	// var address string
 	_, ok := m.m[lname]
 	var lNamesByProtocol *MapSafeStrings
 	if ok {
 		shosetConn := m.m[lname].Get(key)
 		if shosetConn != nil {
-			address = shosetConn.ch.GetBindAddress()
+			// address = shosetConn.ch.GetBindAddress()
 			// fmt.Println(address, " enter delete")
 			lNamesByProtocol = shosetConn.ch.LnamesByProtocol
 		}
-		if address == "127.0.0.1:8004" || address == "127.0.0.1:8002" {
-			fmt.Println(address, " delete : ", key)
-		}
+		// if address == "127.0.0.1:8004" || address == "127.0.0.1:8002" {
+		// fmt.Println(address, " delete : ", key)
+		// }
 		m.m[lname].Delete(key)
 	}
 
+	var protocolTypes []string
 	if lNamesByProtocol != nil {
 		lNamesByProtocol.Iterate(
 			func(protocol string, lNames map[string]bool) {
 				// if lname in lNames
-				if lNames[lname] {
-					if address == "127.0.0.1:8004" || address == "127.0.0.1:8002" {
-						fmt.Println(address, " update file")
+				if lNames[lname] && protocol == "bye" {
+					// if address == "127.0.0.1:8004" || address == "127.0.0.1:8002" {
+					// 	fmt.Println(address, " update file")
+					// }
+					remotesToJoin, remotesToLink := m._getConfig()
+					// fmt.Println(remotesToJoin, remotesToLink)
+					if contains(remotesToJoin, key) {
+						protocolTypes = append(protocolTypes, "join")
 					}
-					m.updateFile(lname, protocol, address)
+					if contains(remotesToLink, key) {
+						protocolTypes = append(protocolTypes, "link")
+					}
+
+					keys := m.m[lname].Keys("out")
+					for _, protocolType := range protocolTypes {
+						m.updateFile(lname, protocolType, keys)
+					}
+
 				}
 			},
 		)
@@ -88,18 +109,17 @@ func (m *MapSafeMapConn) Delete(lname, key string) {
 	m.Unlock()
 }
 
-func (m *MapSafeMapConn) updateFile(lname, protocolType, address string) {
-	keys := m.m[lname]._keys("out")
-	if address == "127.0.0.1:8004" || address == "127.0.0.1:8002" {
-		fmt.Println("keys : ", keys)
-	}
-	if m.ConfigName != "" && len(keys) != 0{
+func (m *MapSafeMapConn) updateFile(lname, protocolType string, keys []string) {
+	// if address == "127.0.0.1:8004" || address == "127.0.0.1:8002" {
+	// fmt.Println(address, "keys : ", keys)
+	// }
+	if m.ConfigName != "" {
 		m.viperConfig.Set(protocolType, keys)
-		dirname, err := os.Getwd()
+		dirname, err := os.UserHomeDir()
 		if err != nil {
 			fmt.Println(err)
 		}
-		m.viperConfig.WriteConfigAs(dirname + "/config/" + m.ConfigName + ".yaml")
+		m.viperConfig.WriteConfigAs(dirname + "/.shoset_config/" + m.ConfigName + ".yaml")
 	}
 }
 
@@ -154,5 +174,3 @@ func (m *MapSafeMapConn) Keys() []string { // list of logical names inside Conns
 	defer m.Unlock()
 	return m._keys()
 }
-
-
