@@ -1,6 +1,8 @@
 package shoset
 
-import "sync"
+import (
+	"sync"
+)
 
 // MapSafeConn : simple key map safe for goroutines...
 type MapSafeConn struct {
@@ -24,11 +26,10 @@ func (m *MapSafeConn) GetM() map[string]*ShosetConn {
 
 // Get : Get a value from a MapSafeConn
 func (m *MapSafeConn) GetByType(shosetType string) []*ShosetConn {
-
 	var result []*ShosetConn
 	m.Lock()
 	for _, val := range m.m {
-		if val.ShosetType == shosetType {
+		if val.GetRemoteShosetType() == shosetType {
 			result = append(result, val)
 		}
 	}
@@ -46,9 +47,34 @@ func (m *MapSafeConn) Get(key string) *ShosetConn {
 // Set : assign a value to a MapSafeConn
 func (m *MapSafeConn) Set(key string, value *ShosetConn) *MapSafeConn {
 	m.Lock()
+	// fmt.Println("Address set")
 	m.m[key] = value
 	m.Unlock()
 	return m
+}
+
+func (m *MapSafeConn) _keys(dir string) []string { // list of addresses
+	addresses := make([]string, m.Len()+1)
+	i := 0
+	for key := range m.m {
+		if dir != "all" {
+			if m.m[key].GetDir() == dir { // on ne veut pas le in du join
+				addresses[i] = key
+				i++ 
+			}
+		} else {
+				addresses[i] = key
+				i++
+		}
+	}
+	return addresses[:i]
+}
+
+func (m *MapSafeConn) Keys(dir string) []string { // list of addresses
+	m.Lock()
+	defer m.Unlock()
+	return m._keys(dir)
+	
 }
 
 // Delete : delete a value in a MapSafeConn

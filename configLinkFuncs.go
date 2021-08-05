@@ -1,142 +1,102 @@
 package shoset
 
 import (
+	// "fmt"
+
 	"github.com/ditrit/shoset/msg"
 )
 
 // GetConfigLink :
 func GetConfigLink(c *ShosetConn) (msg.Message, error) {
-	var cfg msg.ConfigLink
+	var cfg msg.ConfigProtocol
 	err := c.ReadMessage(&cfg)
 	return cfg, err
 }
 
 // HandleConfigLink :
 func HandleConfigLink(c *ShosetConn, message msg.Message) error {
-	cfg := message.(msg.ConfigLink)
-	ch := c.GetCh()
+	cfg := message.(msg.ConfigProtocol)
+	remoteAddress := cfg.GetAddress()
 	dir := c.GetDir()
-	//	err := c.ReadMessage(&cfg)
+
 	switch cfg.GetCommandName() {
-	case "handshake":
-		if c.GetName() == "" {
-			if dir == "in" {
-				myConfigLink := NewHandshake(ch)
-				c.SendMessage(*myConfigLink)
-			}
-			c.SetName(cfg.GetLogicalName())
-			c.SetShosetType(cfg.GetShosetType())
-		}
-		if c.GetBindAddr() == "" {
-			c.SetBindAddr(cfg.GetBindAddress())
-		}
-		if dir == "in" {
-			ch.SetConn(c.GetBindAddr(), c.GetShosetType(), c)
-			if ch.NameBrothers.Len() > 0 {
-				ch.NameBrothers.Iterate(
-					func(bro string, val bool) {
-						c.SendMessage(msg.NewConnectTo(bro))
-					},
-				)
-			}
-		}
-		if dir == "out" {
-			cfgBros := NewCfgOut(ch)
-			c.SendMessage(*cfgBros)
-		}
-	case "out":
-		if dir == "in" {
-			for _, bro := range cfg.Conns {
-				ch.Brothers.Set(bro, true)
-			}
-			//???? pas d'envoi depuis ou vers conn ????
-			cfgIn := NewCfgIn(ch)
-			ch.ConnsByAddr.Iterate(
-				func(key string, conn *ShosetConn) {
-					c.SendMessage(cfgIn)
-				},
-			)
-			sendCfgToBrothers(c)
-		}
-	case "in":
-		if dir == "out" {
-			for _, bro := range cfg.Conns {
-				if ch.ConnsByAddr.Get(bro) == nil {
-					ch.Link(bro)
+	case "link":
+		if dir == "in" { // a socket wants to link to this one
+			if connsLink := c.ch.ConnsByName.Get(c.ch.GetLogicalName()); connsLink != nil { //already linked
+				if connsLink.Get(remoteAddress) != nil {
+					return nil
 				}
 			}
-			sendCfgToBrothers(c)
-		}
-	case "nameBrothers":
-		for _, addr := range cfg.GetConns() {
-			if !ch.NameBrothers.Get(addr) {
-				ch.ConnsByAddr.Iterate(
-					func(key string, val *ShosetConn) {
-						conn := val
-						if conn.GetDir() == "in" {
-							conn.SendMessage(msg.NewConnectTo(addr))
-						}
-					},
-				)
-				ch.NameBrothers.Set(addr, true)
-			}
-		}
-	case "connectTo":
-		if dir == "out" {
 
-			if ch.ConnsByAddr.Get(cfg.Address) == nil {
-				ch.Link(cfg.Address)
+			c.SetRemoteAddress(remoteAddress)
+			c.SetRemoteLogicalName(cfg.GetLogicalName()) // avoid tcp port name
+			c.SetRemoteShosetType(cfg.GetShosetType())
+			c.ch.ConnsByName.Set(cfg.GetLogicalName(), remoteAddress, "link", cfg.GetShosetType(), c) // set conn in this socket
+			// c.ch.LnamesByProtocol.Set("link", c.GetRemoteLogicalName())
+			// c.ch.LnamesByType.Set(c.ch.GetShosetType(), c.GetRemoteLogicalName())
+
+			localBrothers := c.ch.ConnsByName.Get(c.ch.GetLogicalName())
+			localBrothersArray := []string{}
+			if localBrothers != nil {
+				localBrothersArray = localBrothers.Keys("all")
+			}
+
+			remoteBrothers := c.ch.ConnsByName.Get(cfg.GetLogicalName())
+			remoteBrothersArray := []string{}
+			if remoteBrothers != nil {
+				remoteBrothersArray = remoteBrothers.Keys("all")
+			}
+
+			brothers := msg.NewCfgBrothers(localBrothersArray, remoteBrothersArray, c.ch.GetLogicalName(), "brothers", c.ch.GetShosetType())
+			remoteBrothers.Iterate(
+				func(address string, remoteBro *ShosetConn) {
+					remoteBro.SendMessage(brothers) //send config to others
+				},
+			)
+		}
+
+	case "brothers":
+		if dir == "out" { // this socket wants to link to another
+			c.SetRemoteLogicalName(cfg.GetLogicalName())
+			c.SetRemoteShosetType(cfg.GetShosetType())
+			c.ch.ConnsByName.Set(cfg.GetLogicalName(), c.GetRemoteAddress(), "link", cfg.GetShosetType(), c) // set conns in the other socket
+			// c.ch.LnamesByProtocol.Set("link", c.GetRemoteLogicalName())
+			// c.ch.LnamesByType.Set(c.ch.GetShosetType(), c.GetRemoteLogicalName())
+
+			localBrothers := cfg.GetYourBrothers()
+			remoteBrothers := cfg.GetMyBrothers()
+
+			for _, bro := range localBrothers {
+				if bro != c.ch.GetBindAddress() {
+					conn, err := NewShosetConn(c.ch, bro, "me") // create empty socket so that the two aga/Ca know each other
+					if err == nil {
+						conn.SetRemoteLogicalName(c.ch.GetLogicalName())
+						conn.SetRemoteShosetType(c.ch.GetShosetType())
+						c.ch.ConnsByName.Set(c.ch.GetLogicalName(), bro, "link", conn.GetRemoteShosetType(), conn) // musn't be linked !
+					}
+
+					newLocalBrothers := c.ch.ConnsByName.Get(c.ch.GetLogicalName()).Keys("me")
+					for _, lName := range c.ch.ConnsByName.Keys() {
+						lNameConns := c.ch.ConnsByName.Get(lName)
+						addresses := lNameConns.Keys("in")
+						brothers := msg.NewCfgBrothers(newLocalBrothers, addresses, c.ch.GetLogicalName(), "brothers", c.ch.GetShosetType())
+						lNameConns.Iterate(
+							func(key string, val *ShosetConn) {
+								val.SendMessage(brothers)
+							})
+					}
+				}
+			}
+
+			for _, remoteBro := range remoteBrothers { // link to the brothers of the socket it's linked with
+				remoteBrothers := c.ch.ConnsByName.Get(cfg.GetLogicalName())
+				if remoteBrothers != nil {
+					if remoteBrothers.Get(remoteBro) == nil {
+						c.ch.Protocol(remoteBro, "link")
+					}
+				}
 			}
 		}
 	}
 	return nil
-}
-
-func sendCfgToBrothers(currentConn *ShosetConn) {
-	ch := currentConn.GetCh()
-	currentAddr := currentConn.GetBindAddr()
-	currentName := currentConn.GetName()
-	cfgNameBrothers := msg.NewNameBrothers([]string{currentAddr})
-	oldNameBrothers := []string{}
-	ch.ConnsByName.Iterate(currentName,
-		func(key string, conn *ShosetConn) {
-			if conn.GetDir() == "in" && conn.bindAddr != currentAddr {
-				conn.SendMessage(cfgNameBrothers)
-				oldNameBrothers = append(oldNameBrothers, conn.bindAddr)
-			}
-		},
-	)
-	if len(oldNameBrothers) > 0 {
-		currentConn.SendMessage(msg.NewNameBrothers(oldNameBrothers))
-	}
-}
-
-//NewHandshake : Build a configLink Message
-func NewHandshake(ch *Shoset) *msg.ConfigLink {
-	return msg.NewHandshake(ch.bindAddr, ch.lName, ch.ShosetType)
-}
-
-//NewCfgOut : Build a configLink Message
-func NewCfgOut(ch *Shoset) *msg.ConfigLink {
-	var bros []string
-	ch.ConnsByAddr.Iterate(
-		func(key string, val *ShosetConn) {
-			conn := val
-			if conn.dir == "out" {
-				bros = append(bros, conn.addr)
-			}
-		},
-	)
-	return msg.NewConns("out", bros)
-}
-
-//NewCfgIn : Build a configLink Message
-func NewCfgIn(ch *Shoset) *msg.ConfigLink {
-	var bros []string
-	ch.Brothers.Iterate(
-		func(key string, val bool) {
-			bros = append(bros, key)
-		},
-	)
-	return msg.NewConns("in", bros)
 }

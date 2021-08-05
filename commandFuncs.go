@@ -17,14 +17,14 @@ func GetCommand(c *ShosetConn) (msg.Message, error) {
 // HandleCommand :
 func HandleCommand(c *ShosetConn, message msg.Message) error {
 	cmd := message.(msg.Command)
-	c.GetCh().Queue["cmd"].Push(cmd, c.ShosetType, c.bindAddr)
+	c.GetCh().Queue["cmd"].Push(cmd, c.GetRemoteShosetType(), c.GetLocalAddress())
 	return nil
 }
 
 // SendCommand :
 func SendCommand(c *Shoset, cmd msg.Message) {
 	fmt.Print("Sending Command.\n")
-	c.ConnsByAddr.Iterate(
+	c.ConnsByName.IterateAll(
 		func(key string, conn *ShosetConn) {
 			conn.SendMessage(cmd)
 		},

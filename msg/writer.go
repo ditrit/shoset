@@ -51,6 +51,7 @@ func (r *Writer) WriteMessage(data interface{}) error {
 		err := enc.Encode(data)
 		r.b.Flush()
 		if err != nil {
+			fmt.Println(data)
 			fmt.Printf("error in Writing Message : %s\n", err)
 		}
 		return err

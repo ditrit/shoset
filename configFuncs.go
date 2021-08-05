@@ -18,14 +18,14 @@ func GetConfig(c *ShosetConn) (msg.Message, error) {
 // HandleConfig :config
 func HandleConfig(c *ShosetConn, message msg.Message) error {
 	conf := message.(msg.Config)
-	c.GetCh().Queue["cmd"].Push(conf, c.ShosetType, c.bindAddr)
+	c.GetCh().Queue["cmd"].Push(conf, c.GetRemoteShosetType(), c.GetLocalAddress())
 	return nil
 }
 
 // SendConfig :
 func SendConfig(c *Shoset, cmd msg.Message) {
 	fmt.Print("Sending Config.\n")
-	c.ConnsByAddr.Iterate(
+	c.ConnsByName.IterateAll(
 		func(key string, conn *ShosetConn) {
 			conn.SendMessage(cmd)
 		},
