@@ -56,14 +56,14 @@ type Shoset struct {
 	Done chan bool
 
 	viperConfig *viper.Viper
-	isValid bool
+	isValid     bool
 }
 
 /*           Accessors            */
 func (c Shoset) GetBindAddress() string { return c.bindAddress }
 func (c Shoset) GetLogicalName() string { return c.lName }
 func (c Shoset) GetShosetType() string  { return c.ShosetType }
-func (c *Shoset) GetIsValid() bool { return c.isValid }
+func (c *Shoset) GetIsValid() bool      { return c.isValid }
 
 func (c *Shoset) SetBindAddress(bindAddress string) {
 	if bindAddress != "" {
@@ -196,7 +196,11 @@ func (c *Shoset) Bind(address string) error {
 	if err != nil {
 		fmt.Println(err)
 	}
-	c.viperConfig.AddConfigPath(dirname)
+	if !pathCheck(dirname + "/config/") {
+		os.Mkdir(dirname+"/config/", 0777)
+	}
+
+	c.viperConfig.AddConfigPath(dirname+"/config/")
 	c.viperConfig.SetConfigName(viperAddress)
 	c.viperConfig.SetConfigType("yaml")
 

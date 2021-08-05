@@ -93,13 +93,13 @@ func (m *MapSafeMapConn) updateFile(lname, protocolType, address string) {
 	if address == "127.0.0.1:8004" || address == "127.0.0.1:8002" {
 		fmt.Println("keys : ", keys)
 	}
-	if m.ConfigName != ""{
+	if m.ConfigName != "" && len(keys) != 0{
 		m.viperConfig.Set(protocolType, keys)
 		dirname, err := os.Getwd()
 		if err != nil {
 			fmt.Println(err)
 		}
-		m.viperConfig.WriteConfigAs(dirname + "/" + m.ConfigName + ".yaml")
+		m.viperConfig.WriteConfigAs(dirname + "/config/" + m.ConfigName + ".yaml")
 	}
 }
 
