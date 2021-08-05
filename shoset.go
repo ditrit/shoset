@@ -4,7 +4,6 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
-	"log"
 	"net"
 	"os"
 	"strings"
@@ -57,17 +56,23 @@ type Shoset struct {
 	Done chan bool
 
 	viperConfig *viper.Viper
+	isValid bool
 }
 
 /*           Accessors            */
 func (c Shoset) GetBindAddress() string { return c.bindAddress }
 func (c Shoset) GetLogicalName() string { return c.lName }
 func (c Shoset) GetShosetType() string  { return c.ShosetType }
+func (c *Shoset) GetIsValid() bool { return c.isValid }
 
 func (c *Shoset) SetBindAddress(bindAddress string) {
 	if bindAddress != "" {
 		c.bindAddress = bindAddress
 	}
+}
+
+func (c *Shoset) SetIsValid(state bool) {
+	c.isValid = state
 }
 
 /*       Constructor     */
@@ -85,6 +90,7 @@ func NewShoset(lName, ShosetType string) *Shoset { //l
 	shoset.LnamesByType = NewMapSafeStrings()
 	shoset.LnamesByProtocol = NewMapSafeStrings()
 	shoset.ConnsByName.SetViper(shoset.viperConfig)
+	shoset.isValid = true
 
 	// Dictionnaire des queues de message (par type de message)
 	shoset.Queue = make(map[string]*msg.Queue)
@@ -142,22 +148,6 @@ func NewShoset(lName, ShosetType string) *Shoset { //l
 		fmt.Println("! Unable to Load certificate !")
 		shoset.tlsServerOK = false
 	}
-
-	////////////////////////////////////////////////////////////////////
-	dirname, err := os.UserHomeDir()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	file, err := os.OpenFile(dirname+"/logs.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	log.SetOutput(file)
-
-	log.Println("Hello world!")
-	////////////////////////////////////////////////////////////////////
 	return &shoset
 }
 
@@ -202,9 +192,9 @@ func (c *Shoset) Bind(address string) error {
 	c.ConnsByName.SetConfigName(viperAddress)
 
 	// viper config
-	dirname, err := os.UserHomeDir()
+	dirname, err := os.Getwd()
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println(err)
 	}
 	c.viperConfig.AddConfigPath(dirname)
 	c.viperConfig.SetConfigName(viperAddress)
@@ -237,6 +227,9 @@ func (c *Shoset) handleBind() error {
 	defer listener.Close()
 
 	for {
+		if !c.GetIsValid() { // sockets are not from the same type or don't have the same name / conn ended
+			break
+		}
 		unencConn, err := listener.Accept()
 		if err != nil {
 			fmt.Printf("serverShoset accept error: %s", err)

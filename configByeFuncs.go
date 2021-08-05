@@ -1,7 +1,8 @@
 package shoset
 
 import (
-	"fmt"
+	// "fmt"
+
 
 	"github.com/ditrit/shoset/msg"
 )
@@ -32,13 +33,12 @@ func HandleConfigBye(c *ShosetConn, message msg.Message) error {
 				},
 			)
 
-			// c.SetIsValid(false)
+			c.SetIsValid(false)
 			// c.ch = nil // don't know if it's the best way
 
 		}
 
 	case "delete":
-		fmt.Println(c.ch.GetBindAddress(), " enter delete")
 		ch.deleteConn(cfg.GetAddress(), cfg.GetLogicalName())
 	}
 	return nil

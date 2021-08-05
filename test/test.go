@@ -3,6 +3,7 @@ package main // tests run in the main package
 import (
 	"fmt"
 	"os"
+
 	// "log"
 
 	"time"
@@ -849,9 +850,29 @@ func test_link8() {
 	Ca2.Bind("localhost:8212")
 	Ca2.Protocol("localhost:8112", "link")
 
-	time.Sleep(time.Second * time.Duration(2))
+	time.Sleep(time.Second * time.Duration(1))
+	
+	// fmt.Println("\ncl : ", cl1)
+	// fmt.Println("\ncl : ", cl2)
+	// fmt.Println("\ncl : ", cl3)
+	// fmt.Println("\ncl : ", cl4)
+	// fmt.Println("\nag : ", aga1)
+	// fmt.Println("\nag : ", aga2)
+	// fmt.Println("\nca : ", Ca2)
+
+	// time.Sleep(time.Second * time.Duration(5))
 
 	cl1.Protocol("localhost:8001", "bye")
+
+	// time.Sleep(time.Second * time.Duration(1))
+
+	// fmt.Println("\ncl : ", cl1)
+	// fmt.Println("\ncl : ", cl2)
+	// fmt.Println("\ncl : ", cl3)
+	// fmt.Println("\ncl : ", cl4)
+	// fmt.Println("\nag : ", aga1)
+	// fmt.Println("\nag : ", aga2)
+	// fmt.Println("\nca : ", Ca2)
 
 	for {
 		time.Sleep(time.Second * time.Duration(2))

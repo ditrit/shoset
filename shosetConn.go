@@ -199,12 +199,14 @@ func (c *ShosetConn) runJoinConn() {
 
 // runEndConn : handler for the socket, for Bye()
 func (c *ShosetConn) runEndConn() {
+	// fmt.Println(c.ch.GetBindAddress(), "enter run endconn")
 	byeConfig := msg.NewCfg(c.ch.bindAddress, c.ch.lName, c.ch.ShosetType, "bye") //we create a new message config
 	for {
 		if !c.GetIsValid() { // sockets are not from the same type or don't have the same name / conn ended
 			break
 		}
 
+		// fmt.Println(c.ch.GetBindAddress(), "in run endconn")
 		conn, err := tls.Dial("tcp", c.GetRemoteAddress(), c.ch.tlsConfig) // we wait for a socket to connect each loop
 
 		if err != nil { // no connection occured
@@ -235,6 +237,7 @@ func (c *ShosetConn) runEndConn() {
 
 // runInConn : handler for the connection, for handleBind()
 func (c *ShosetConn) runInConn() {
+	fmt.Println(c.ch.GetBindAddress(), "in runinconn")
 	c.rb = msg.NewReader(c.socket)
 	c.wb = msg.NewWriter(c.socket)
 	defer c.socket.Close()
@@ -244,9 +247,14 @@ func (c *ShosetConn) runInConn() {
 		err := c.receiveMsg()
 		time.Sleep(time.Millisecond * time.Duration(10))
 		if err != nil {
-			return
+			if err.Error() == "error : Invalid connection for join - not the same type/name or shosetConn ended" {
+				c.ch.SetIsValid(false)
+				goto Exit
+			}
+			break
 		}
 	}
+Exit:
 }
 
 // SendMessage :
@@ -284,7 +292,7 @@ func (c *ShosetConn) receiveMsg() error {
 			// read message data and handle it with the proper function
 			fHandle, ok := c.ch.Handle[msgType]
 			if ok {
-				go fHandle(c, msgVal) //HandleConfigJoin() or HandleConfigLink()
+				go fHandle(c, msgVal) //HandleConfigJoin() or HandleConfigLink() or HandleConfigBye()
 			}
 		} else {
 			if c.GetDir() == "in" {

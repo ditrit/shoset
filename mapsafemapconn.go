@@ -2,7 +2,6 @@ package shoset
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"sync"
 
@@ -67,6 +66,9 @@ func (m *MapSafeMapConn) Delete(lname, key string) {
 			// fmt.Println(address, " enter delete")
 			lNamesByProtocol = shosetConn.ch.LnamesByProtocol
 		}
+		if address == "127.0.0.1:8004" || address == "127.0.0.1:8002" {
+			fmt.Println(address, " delete : ", key)
+		}
 		m.m[lname].Delete(key)
 	}
 
@@ -74,12 +76,6 @@ func (m *MapSafeMapConn) Delete(lname, key string) {
 		lNamesByProtocol.Iterate(
 			func(protocol string, lNames map[string]bool) {
 				// if lname in lNames
-				// lNamesArray := make([]string, m.Len())
-				// i := 0
-				// for key := range lNames {
-				// 	lNamesArray[i] = key
-				// 	i++
-				// }
 				if lNames[lname] {
 					if address == "127.0.0.1:8004" || address == "127.0.0.1:8002" {
 						fmt.Println(address, " update file")
@@ -90,6 +86,21 @@ func (m *MapSafeMapConn) Delete(lname, key string) {
 		)
 	}
 	m.Unlock()
+}
+
+func (m *MapSafeMapConn) updateFile(lname, protocolType, address string) {
+	keys := m.m[lname]._keys("out")
+	if address == "127.0.0.1:8004" || address == "127.0.0.1:8002" {
+		fmt.Println("keys : ", keys)
+	}
+	if m.ConfigName != ""{
+		m.viperConfig.Set(protocolType, keys)
+		dirname, err := os.Getwd()
+		if err != nil {
+			fmt.Println(err)
+		}
+		m.viperConfig.WriteConfigAs(dirname + "/" + m.ConfigName + ".yaml")
+	}
 }
 
 func (m *MapSafeMapConn) SetConfigName(name string) {
@@ -144,17 +155,4 @@ func (m *MapSafeMapConn) Keys() []string { // list of logical names inside Conns
 	return m._keys()
 }
 
-func (m *MapSafeMapConn) updateFile(lname, protocolType, address string) {
-	keys := m.m[lname]._keys("out")
-	if address == "127.0.0.1:8004" || address == "127.0.0.1:8002" {
-		fmt.Println("keys : ", keys)
-	}
-	if m.ConfigName != "" && len(keys) != 0 {
-		m.viperConfig.Set(protocolType, keys)
-		dirname, err := os.UserHomeDir()
-		if err != nil {
-			log.Fatal(err)
-		}
-		m.viperConfig.WriteConfigAs(dirname+"/" + m.ConfigName + ".yaml")
-	}
-}
+
