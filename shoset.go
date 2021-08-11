@@ -57,6 +57,7 @@ type Shoset struct {
 
 	viperConfig *viper.Viper
 	isValid     bool
+	isInit bool
 }
 
 /*           Accessors            */
@@ -64,6 +65,7 @@ func (c Shoset) GetBindAddress() string { return c.bindAddress }
 func (c Shoset) GetLogicalName() string { return c.lName }
 func (c Shoset) GetShosetType() string  { return c.ShosetType }
 func (c *Shoset) GetIsValid() bool      { return c.isValid }
+func (c *Shoset) GetIsInit() bool      { return c.isInit }
 
 func (c *Shoset) SetBindAddress(bindAddress string) {
 	if bindAddress != "" {
@@ -73,6 +75,9 @@ func (c *Shoset) SetBindAddress(bindAddress string) {
 
 func (c *Shoset) SetIsValid(state bool) {
 	c.isValid = state
+}
+func (c *Shoset) SetIsInit(state bool) {
+	c.isInit = state
 }
 
 /*       Constructor     */
@@ -91,6 +96,7 @@ func NewShoset(lName, ShosetType string) *Shoset { //l
 	shoset.LnamesByProtocol = NewMapSafeStrings()
 	shoset.ConnsByName.SetViper(shoset.viperConfig)
 	shoset.isValid = true
+	shoset.isInit = false
 
 	// Dictionnaire des queues de message (par type de message)
 	shoset.Queue = make(map[string]*msg.Queue)
@@ -160,16 +166,8 @@ func (c Shoset) String() string {
 				descr = fmt.Sprintf("%s %s\n\t\t\t     ", descr, val)
 			})
 	}
-	descr = fmt.Sprintf("%s \n\t\tLnamesByProtocol : MapSafeStrings{%s\n\t       ", descr, c.LnamesByProtocol)
-	descr = fmt.Sprintf("%s LnamesByType : MapSafeStrings{%s\n\t      ", descr, c.LnamesByType)
-	// c.LnamesByType.Iterate(
-	// 	func(key string, val map[string]bool) {
-	// 		descr = fmt.Sprintf("%s %s\n\t\t\t     ", descr, val)
-	// 	})
-	// c.LnamesByProtocol.Iterate(
-	// 	func(key string, val map[string]bool) {
-	// 		descr = fmt.Sprintf("%s %s\n\t\t\t     ", descr, val)
-	// 	})
+	// descr = fmt.Sprintf("%s \n\t\tLnamesByProtocol : MapSafeStrings{%s\n\t       ", descr, c.LnamesByProtocol)
+	// descr = fmt.Sprintf("%s LnamesByType : MapSafeStrings{%s\n\t      ", descr, c.LnamesByType)
 	return descr
 }
 
