@@ -50,6 +50,7 @@ type Shoset struct {
 
 	// configuration TLS
 	tlsConfig   *tls.Config
+	tlsConfigDoubleWay *tls.Config
 	tlsServerOK bool
 
 	// synchronisation des goroutines
@@ -57,7 +58,7 @@ type Shoset struct {
 
 	viperConfig *viper.Viper
 	isValid     bool
-	isInit bool
+	isInit      bool
 }
 
 /*           Accessors            */
@@ -65,7 +66,7 @@ func (c Shoset) GetBindAddress() string { return c.bindAddress }
 func (c Shoset) GetLogicalName() string { return c.lName }
 func (c Shoset) GetShosetType() string  { return c.ShosetType }
 func (c *Shoset) GetIsValid() bool      { return c.isValid }
-func (c *Shoset) GetIsInit() bool      { return c.isInit }
+func (c *Shoset) GetIsInit() bool       { return c.isInit }
 
 func (c *Shoset) SetBindAddress(bindAddress string) {
 	if bindAddress != "" {
@@ -140,7 +141,7 @@ func NewShoset(lName, ShosetType string) *Shoset { //l
 	if pathCheck(certPath) && pathCheck(keyPath) {
 		cert, err := tls.LoadX509KeyPair(certPath, keyPath)
 		if err != nil { // only client in insecure mode
-			fmt.Println("! Unable to Load certificate !")
+			fmt.Println("! error in loading certificate !")
 			shoset.tlsConfig = &tls.Config{InsecureSkipVerify: true}
 			shoset.tlsServerOK = false
 		} else {
@@ -151,7 +152,7 @@ func NewShoset(lName, ShosetType string) *Shoset { //l
 			shoset.tlsServerOK = true
 		}
 	} else {
-		fmt.Println("! Unable to Load certificate !")
+		fmt.Println("! wrong path certificate !")
 		shoset.tlsServerOK = false
 	}
 	return &shoset
@@ -194,11 +195,14 @@ func (c *Shoset) Bind(address string) error {
 	if err != nil {
 		fmt.Println(err)
 	}
-	if !pathCheck(dirname + "/.shoset_config/") {
-		os.Mkdir(dirname+"/.shoset_config/", 0700)
+	if !pathCheck(dirname + "/.shoset/" + c.ConnsByName.GetConfigName() + "/") {
+		os.Mkdir(dirname+"/.shoset/", 0700)
+		os.Mkdir(dirname+"/.shoset/"+c.ConnsByName.GetConfigName()+"/", 0700)
+		os.Mkdir(dirname+"/.shoset/"+c.ConnsByName.GetConfigName()+"/config/", 0700)
+		os.Mkdir(dirname+"/.shoset/"+c.ConnsByName.GetConfigName()+"/cert/", 0700)
 	}
 
-	c.viperConfig.AddConfigPath(dirname + "/.shoset_config/")
+	c.viperConfig.AddConfigPath(dirname + "/.shoset/" + c.ConnsByName.GetConfigName() + "/config/")
 	c.viperConfig.SetConfigName(viperAddress)
 	c.viperConfig.SetConfigType("yaml")
 
@@ -306,11 +310,7 @@ func computeAddress(ipAddress string) string {
 // returns bool whether the given file or directory exists
 func pathCheck(path string) bool {
 	_, err := os.Stat(path)
-	if os.IsNotExist(err) {
-		fmt.Println("File does not exist.")
-		return false
-	}
-	return true
+	return !os.IsNotExist(err)
 }
 
 func (c *Shoset) GetConnsByType(shosetType string) map[string]*ShosetConn {

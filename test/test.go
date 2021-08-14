@@ -825,6 +825,7 @@ func test_link8() {
 
 	cl1 := shoset.NewShoset("cl", "cl") // cluster
 	cl1.Bind("localhost:8001")
+	cl1.Init()
 
 	cl2 := shoset.NewShoset("cl", "cl")
 	cl2.Bind("localhost:8002")
@@ -850,7 +851,7 @@ func test_link8() {
 	Ca2.Bind("localhost:8212")
 	Ca2.Protocol("localhost:8112", "link")
 
-	time.Sleep(time.Second * time.Duration(5))
+	// time.Sleep(time.Second * time.Duration(5))
 	
 	// fmt.Println("\ncl : ", cl1)
 	// fmt.Println("\ncl : ", cl2)
@@ -862,7 +863,7 @@ func test_link8() {
 
 	// time.Sleep(time.Second * time.Duration(5))
 
-	cl1.Protocol("localhost:8001", "bye")
+	// cl1.Protocol("localhost:8001", "bye")
 
 	// time.Sleep(time.Second * time.Duration(1))
 
