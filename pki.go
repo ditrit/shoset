@@ -14,16 +14,17 @@ import (
 )
 
 func (c *Shoset) Init() error {
-	fmt.Println("enter init")
 	// elle sort immédiatement si :
 	if c.GetBindAddress() == "" { // il n'y a pas encore eu de bind (bindadress est vide)
+		fmt.Println("shoset not bound")
 		return errors.New("shoset not bound")
 	} else if c.ConnsByName.Len() != 0 { // j'ai déjà fait un link ou un join ou j'ai un fichier de configuration (ce qui veut dire que j'ai des connsbyname)
+		fmt.Println("a protocol already happened on this shoset")
 		return errors.New("a protocol already happened on this shoset")
 	} else if c.GetIsInit() { // il y a eu déjà un init ou j'ai déjà un certificat (mon certificat existe déjà)
+		fmt.Println("shoset already initialized")
 		return errors.New("shoset already initialized")
 	}
-	fmt.Println("conditions ok")
 
 	c.SetIsInit(true)
 
@@ -32,23 +33,30 @@ func (c *Shoset) Init() error {
 	// créer clef privée CA
 	CAkey, err := pkix.CreateRSAKey(4096)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "Create RSA Key error:", err)
-		os.Exit(1)
+		fmt.Println("Create CA RSA Key error : ", err)
+		return err
 	}
 
-	CAkeyBytes, _ := CAkey.ExportPrivate()
+	CAkeyBytes, err := CAkey.ExportPrivate()
+	if err != nil {
+		fmt.Println("Export CA RSA Key error : ", err)
+		return err
+	}
 	dirname, err := os.UserHomeDir()
 	if err != nil {
-		fmt.Println(err)
+		fmt.Println("Get UserHomeDir error : ", err)
+		return err
 	}
-	fmt.Println("gonna create file")
+
 	CAkeyFile, err := os.Create(dirname + "/.shoset/" + c.ConnsByName.GetConfigName() + "/cert/privateCAKey.pem")
 	if err != nil {
-		panic(err)
+		fmt.Println("Create CA RSA Key file error : ", err)
+		return err
 	}
 	_, err = CAkeyFile.Write(CAkeyBytes)
 	if err != nil {
-		panic(err)
+		fmt.Println("Write in CA RSA Key file error : ", err)
+		return err
 	}
 
 	// request de certificat pour la CA (à partir de ces clefs)
@@ -59,38 +67,43 @@ func (c *Shoset) Init() error {
 
 	expiresTime, err := parseExpiry(expires)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Invalid expiry: %s\n", err)
-		os.Exit(1)
+		fmt.Println("Invalid expiry : ", err)
+		return err
 	}
-	CAcrt, err := pkix.CreateCertificateAuthority(CAkey, "ditrit", expiresTime, "ditrit", "France", "", "Paris", "CA") // à voir pour des variables d'environnement plus tard
+	CAcert, err := pkix.CreateCertificateAuthority(CAkey, "ditrit", expiresTime, "ditrit", "France", "", "Paris", "CA") // à voir pour des variables d'environnement plus tard
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "Create certificate error:", err)
-		os.Exit(1)
+		fmt.Println("Create CA certificate error : ", err)
+		return err
 	}
 
-	CAcrtBytes, err := CAcrt.Export()
+	CAcertBytes, err := CAcert.Export()
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "Print CA certificate error:", err)
-		os.Exit(1)
+		fmt.Println("Export CA certificate error : ", err)
+		return err
 	}
 
 	CAcertFile, err := os.Create(dirname + "/.shoset/" + c.ConnsByName.GetConfigName() + "/cert/CAcert.pem")
 	if err != nil {
-		panic(err)
+		fmt.Println("Create CA certificate file error : ", err)
+		return err
 	}
-	CAcertFile.Write(CAcrtBytes)
+
+	_, err = CAcertFile.Write(CAcertBytes)
+	if err != nil {
+		fmt.Println("Write in CA certificate file error : ", err)
+		return err
+	}
 
 	// 2. Le certificat de la shoset
 	// récupérer le certificat de la CA
 	// génération des clefs privée, publique et request pour la shoset
-	// création du certificat signé avec la clef privée de la CA
 	hostKey := c.CreateKey()
-	hostCsr := c.CreateRequest(hostKey)
-	c.SignRequest(CAcrt, hostCsr, hostKey)
+	// création du certificat signé avec la clef privée de la CA
+	hostCsr := c.CreateSignRequest(hostKey)
+	c.SignRequest(CAcert, hostCsr, hostKey)
 
 	// 3. Elle associe le rôle 'pki' au nom logique de la shoset
 
-	fmt.Println("finish init !!!!!!!!!!")
 	return nil
 }
 
@@ -121,67 +134,66 @@ func (c *Shoset) GenerateSecret(login, password string) string {
 func (c *Shoset) CreateKey() *pkix.Key {
 	key, err := pkix.CreateRSAKey(4096)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "Create RSA Key error:", err)
-		os.Exit(1)
+		fmt.Println("Create RSA Key error:", err)
+		return nil
 	}
 
-	keyBytes, _ := key.ExportPrivate()
+	keyBytes, err := key.ExportPrivate()
+	if err != nil {
+		fmt.Println("Export RSA Key error : ", err)
+		return nil
+	}
 	dirname, err := os.UserHomeDir()
 	if err != nil {
-		fmt.Println(err)
+		fmt.Println("Get UserHomeDir error : ", err)
+		return nil
 	}
 	keyFile, err := os.Create(dirname + "/.shoset/" + c.ConnsByName.GetConfigName() + "/cert/privateKey.pem")
 	if err != nil {
-		panic(err)
+		fmt.Println("Create RSA Key file error : ", err)
+		return nil
 	}
 	_, err = keyFile.Write(keyBytes)
 	if err != nil {
-		panic(err)
+		fmt.Println("Write in RSA Key file error : ", err)
+		return nil
 	}
 	return key
 }
 
-func (c *Shoset) CreateRequest(hostKey *pkix.Key) *pkix.CertificateSigningRequest {
-	// var hostCsr *pkix.CertificateSigningRequest
-
+func (c *Shoset) CreateSignRequest(hostKey *pkix.Key) *pkix.CertificateSigningRequest {
 	//We sign the certificate request
-	hostKeyBytes, _ := hostKey.ExportPrivate()
-	// hostKeyFile, err := os.Create("") ////////////////////////////////////
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// _, err = hostKeyFile.WriteString(string(hostKeyBytes))
-	// if err != nil {
-	// 	panic(err)
-	// }
-
-	hostCsr, err := pkix.NewCertificateSigningRequestFromPEM(hostKeyBytes)
+	hostCsr, err := pkix.CreateCertificateSigningRequest(hostKey, "ditrit", nil, nil, nil, "ditrit", "France", "", "Paris", "csr")
+	// hostCsr, err := pkix.NewCertificateSigningRequestFromPEM(hostKeyBytes)
 	if err != nil {
-		fmt.Printf("err")
+		fmt.Println("Create Sign Request error : ", err)
+		return nil
 	}
 	return hostCsr
-
 }
 
-func (c *Shoset) SignRequest(CAcrt *pkix.Certificate, hostCsr *pkix.CertificateSigningRequest, hostKey *pkix.Key) {
-	// var hostCert *pkix.Certificate
-	// var err error
+func (c *Shoset) SignRequest(CAcert *pkix.Certificate, hostCsr *pkix.CertificateSigningRequest, hostKey *pkix.Key) {
 	expire_time, _ := time.Parse("020106 150405", "220902 050316")
-	fmt.Println("cacert", CAcrt, "hostkey", hostKey, "hostcsr", hostCsr, "expiretime", expire_time)
-	hostCert, err := pkix.CreateCertificateHost(CAcrt, hostKey, hostCsr, expire_time)
-
-	hostCrtBytes, _ := hostCert.Export()
+	hostCert, err := pkix.CreateCertificateHost(CAcert, hostKey, hostCsr, expire_time)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "Print certificate error:", err)
-		os.Exit(1)
+		fmt.Println("Sign Request error : ", err)
+	}
+
+	hostCertBytes, err := hostCert.Export()
+	if err != nil {
+		fmt.Println("Export hostCert error : ", err)
 	}
 	dirname, err := os.UserHomeDir()
 	if err != nil {
-		fmt.Println(err)
+		fmt.Println("Get UserHomeDir error : ", err)
 	}
 	hostCertFile, err := os.Create(dirname + "/.shoset/" + c.ConnsByName.GetConfigName() + "/cert/cert.pem")
 	if err != nil {
-		panic(err)
+		fmt.Println("Create hostCert file error : ", err)
 	}
-	hostCertFile.Write(hostCrtBytes)
+
+	_, err = hostCertFile.Write(hostCertBytes)
+	if err != nil {
+		fmt.Println("Write in hostCert file error : ", err)
+	}
 }
