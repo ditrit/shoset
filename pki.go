@@ -118,18 +118,19 @@ func (c *Shoset) GenerateSecret(login, password string) string {
 	return ""
 }
 
-// // getCAcert() => { certificat de la CA }
-// func (c *Shoset) GetCAcert() {
-// 	if c.GetIsInit() {
+// getCAcert() => { certificat de la CA }
+func (c *Shoset) GetCAcert() {
+	if c.GetIsInit() {
+		return
+	}
+}
 
-// 	}
-// }
-
-// // getCert(certRequest) => { certificat }
-// func (c *Shoset) GetCert() {
-// 	if c.GetIsInit() {
-// 	}
-// }
+// getCert(certRequest) => { certificat }
+func (c *Shoset) GetCert() {
+	if c.GetIsInit() {
+		return
+	}
+}
 
 func (c *Shoset) CreateKey() *pkix.Key {
 	key, err := pkix.CreateRSAKey(4096)
