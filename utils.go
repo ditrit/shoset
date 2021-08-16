@@ -220,6 +220,15 @@ func fileExists(filepath string) bool {
 	return !os.IsNotExist(err)
 }
 
+func contains(s []string, str string) bool {
+	for _, v := range s {
+		if v == str {
+			return true
+		}
+	}
+	return false
+}
+
 var nowFunc = time.Now
 
 func parseExpiry(fromNow string) (time.Time, error) {

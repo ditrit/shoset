@@ -2,8 +2,10 @@ package shoset
 
 import (
 	"crypto/tls"
+	// "crypto/x509"
 	"errors"
 	"fmt"
+	// "io/ioutil"
 	"net"
 	"os"
 	"strings"
@@ -49,9 +51,9 @@ type Shoset struct {
 	Wait   map[string]func(*Shoset, *msg.Iterator, map[string]string, int) *msg.Message
 
 	// configuration TLS
-	tlsConfig   *tls.Config
+	tlsConfig          *tls.Config
 	tlsConfigDoubleWay *tls.Config
-	tlsServerOK bool
+	tlsServerOK        bool
 
 	// synchronisation des goroutines
 	Done chan bool
@@ -138,7 +140,7 @@ func NewShoset(lName, ShosetType string) *Shoset { //l
 	shoset.Wait["config"] = WaitConfig
 
 	// Configuration TLS //////////////////////////////////// à améliorer
-	if pathCheck(certPath) && pathCheck(keyPath) {
+	if fileExists(certPath) && fileExists(keyPath) {
 		cert, err := tls.LoadX509KeyPair(certPath, keyPath)
 		if err != nil { // only client in insecure mode
 			fmt.Println("! error in loading certificate !")
@@ -155,12 +157,23 @@ func NewShoset(lName, ShosetType string) *Shoset { //l
 		fmt.Println("! wrong path certificate !")
 		shoset.tlsServerOK = false
 	}
+
+	// caCert, _ := ioutil.ReadFile("ca.crt")
+	// caCertPool := x509.NewCertPool()
+	// caCertPool.AppendCertsFromPEM(caCert)
+
+	// tlsConfig := &tls.Config{
+	// 	ClientCAs:  caCertPool,
+	// 	ClientAuth: tls.RequireAndVerifyClientCert,
+	// }
+	// tlsConfig.BuildNameToCertificate()
+
 	return &shoset
 }
 
 // Display with fmt - override the print of the object
 func (c Shoset) String() string {
-	descr := fmt.Sprintf("Shoset -  lName: %s,\n\t\tbindAddr : %s,\n\t\ttype : %s, \n\t\tConnsByName : ", c.GetLogicalName(), c.GetBindAddress(), c.GetShosetType())
+	descr := fmt.Sprintf("Shoset -  lName: %s,\n\t\tbindAddr : %s,\n\t\ttype : %s, \n\t\tisInit : %t, \n\t\tConnsByName : ", c.GetLogicalName(), c.GetBindAddress(), c.GetShosetType(), c.GetIsInit())
 	for _, lName := range c.ConnsByName.Keys() {
 		c.ConnsByName.Iterate(lName,
 			func(key string, val *ShosetConn) {
@@ -187,7 +200,10 @@ func (c *Shoset) Bind(address string) error {
 		return err
 	}
 
-	viperAddress := computeAddress(ipAddress)
+	_ipAddress := strings.Replace(ipAddress, ":", "_", -1)
+	_ipAddress = strings.Replace(_ipAddress, ".", "~", -1)
+	viperAddress := "shoset_" + _ipAddress
+
 	c.ConnsByName.SetConfigName(viperAddress)
 
 	// viper config
@@ -195,7 +211,7 @@ func (c *Shoset) Bind(address string) error {
 	if err != nil {
 		fmt.Println(err)
 	}
-	if !pathCheck(dirname + "/.shoset/" + c.ConnsByName.GetConfigName() + "/") {
+	if !fileExists(dirname + "/.shoset/" + c.ConnsByName.GetConfigName() + "/") {
 		os.Mkdir(dirname+"/.shoset/", 0700)
 		os.Mkdir(dirname+"/.shoset/"+c.ConnsByName.GetConfigName()+"/", 0700)
 		os.Mkdir(dirname+"/.shoset/"+c.ConnsByName.GetConfigName()+"/config/", 0700)
@@ -299,36 +315,8 @@ func (c *Shoset) deleteConn(connAddr, connLname string) {
 	}
 }
 
-// compute the name for the .yaml file corresponding to each socket
-func computeAddress(ipAddress string) string {
-	_ipAddress := strings.Replace(ipAddress, ":", "_", 1)
-	_ipAddress = strings.Replace(_ipAddress, ".", "~", 3)
-	name := "shoset_" + _ipAddress
-	return name
-}
-
-// returns bool whether the given file or directory exists
-func pathCheck(path string) bool {
-	_, err := os.Stat(path)
-	return !os.IsNotExist(err)
-}
-
-func (c *Shoset) GetConnsByType(shosetType string) map[string]*ShosetConn {
-	lNames := c.LnamesByType.Keys(shosetType)
-	connsByType := make(map[string]*ShosetConn)
-	for _, lName := range lNames {
-		lNameMap := c.ConnsByName.Get(lName)
-		keys := lNameMap.Keys("all")
-		for _, key := range keys {
-			connsByType[key] = lNameMap.Get(key)
-		}
-	}
-	return connsByType
-}
-
 func (c *Shoset) GetConnsByTypeArray(shosetType string) []*ShosetConn {
 	lNames := c.LnamesByType.Keys(shosetType)
-	// fmt.Println("lNames : ", lNames)
 	var connsByType []*ShosetConn
 	for _, lName := range lNames {
 		lNameMap := c.ConnsByName.Get(lName)
@@ -340,11 +328,4 @@ func (c *Shoset) GetConnsByTypeArray(shosetType string) []*ShosetConn {
 	return connsByType
 }
 
-func contains(s []string, str string) bool {
-	for _, v := range s {
-		if v == str {
-			return true
-		}
-	}
-	return false
-}
+
