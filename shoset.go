@@ -3,9 +3,10 @@ package shoset
 import (
 	"crypto/tls"
 	// "crypto/x509"
+	// "io/ioutil"
+
 	"errors"
 	"fmt"
-	// "io/ioutil"
 	"net"
 	"os"
 	"strings"
@@ -60,7 +61,7 @@ type Shoset struct {
 
 	viperConfig *viper.Viper
 	isValid     bool
-	isInit      bool
+	isPki       bool
 }
 
 /*           Accessors            */
@@ -68,7 +69,7 @@ func (c Shoset) GetBindAddress() string { return c.bindAddress }
 func (c Shoset) GetLogicalName() string { return c.lName }
 func (c Shoset) GetShosetType() string  { return c.ShosetType }
 func (c *Shoset) GetIsValid() bool      { return c.isValid }
-func (c *Shoset) GetIsInit() bool       { return c.isInit }
+func (c *Shoset) GetIsPki() bool        { return c.isPki }
 
 func (c *Shoset) SetBindAddress(bindAddress string) {
 	if bindAddress != "" {
@@ -79,8 +80,8 @@ func (c *Shoset) SetBindAddress(bindAddress string) {
 func (c *Shoset) SetIsValid(state bool) {
 	c.isValid = state
 }
-func (c *Shoset) SetIsInit(state bool) {
-	c.isInit = state
+func (c *Shoset) SetIsPki(state bool) {
+	c.isPki = state
 }
 
 /*       Constructor     */
@@ -99,7 +100,7 @@ func NewShoset(lName, ShosetType string) *Shoset { //l
 	shoset.LnamesByProtocol = NewMapSafeStrings()
 	shoset.ConnsByName.SetViper(shoset.viperConfig)
 	shoset.isValid = true
-	shoset.isInit = false
+	shoset.isPki = false
 
 	// Dictionnaire des queues de message (par type de message)
 	shoset.Queue = make(map[string]*msg.Queue)
@@ -158,22 +159,26 @@ func NewShoset(lName, ShosetType string) *Shoset { //l
 		shoset.tlsServerOK = false
 	}
 
-	// caCert, _ := ioutil.ReadFile("ca.crt")
+	// caCert, _ := ioutil.ReadFile("")
 	// caCertPool := x509.NewCertPool()
 	// caCertPool.AppendCertsFromPEM(caCert)
 
-	// tlsConfig := &tls.Config{
+	// tlsConfigDoubleWay := &tls.Config{
 	// 	ClientCAs:  caCertPool,
 	// 	ClientAuth: tls.RequireAndVerifyClientCert,
 	// }
-	// tlsConfig.BuildNameToCertificate()
+	// tlsConfigDoubleWay.BuildNameToCertificate()
+
+	// shoset.tlsConfig = nil
+	// shoset.tlsConfigDoubleWay = nil
+	// shoset.tlsServerOK = true
 
 	return &shoset
 }
 
 // Display with fmt - override the print of the object
 func (c Shoset) String() string {
-	descr := fmt.Sprintf("Shoset -  lName: %s,\n\t\tbindAddr : %s,\n\t\ttype : %s, \n\t\tisInit : %t, \n\t\tConnsByName : ", c.GetLogicalName(), c.GetBindAddress(), c.GetShosetType(), c.GetIsInit())
+	descr := fmt.Sprintf("Shoset -  lName: %s,\n\t\tbindAddr : %s,\n\t\ttype : %s, \n\t\tisPki : %t, \n\t\tConnsByName : ", c.GetLogicalName(), c.GetBindAddress(), c.GetShosetType(), c.GetIsPki())
 	for _, lName := range c.ConnsByName.Keys() {
 		c.ConnsByName.Iterate(lName,
 			func(key string, val *ShosetConn) {
@@ -257,6 +262,9 @@ func (c *Shoset) handleBind() error {
 			fmt.Printf("serverShoset accept error: %s", err)
 			break
 		}
+
+		// tlsconfig /////////////////////////////////////
+
 		tlsConn := tls.Server(unencConn, c.tlsConfig) // create the securised connection protocol
 		address := tlsConn.RemoteAddr().String()
 		conn, _ := NewShosetConn(c, address, "in") // create the securised connection
@@ -264,6 +272,66 @@ func (c *Shoset) handleBind() error {
 		go conn.runInConn()
 	}
 	return nil
+
+	// listener, err := net.Listen("tcp", c.GetBindAddress()) //open a net listener
+	// if err != nil {                                        // check if listener is ok
+	// 	fmt.Println("Failed to bind:", err.Error())
+	// 	return err
+	// }
+	// // defer WriteViper()
+	// defer listener.Close()
+
+	// for {
+	// 	fmt.Println("enter loop handlebind")
+	// 	if !c.GetIsValid() { // sockets are not from the same type or don't have the same name / conn ended
+	// 		return errors.New("error : Invalid connection for join - not the same type/name or shosetConn ended")
+	// 	}
+	// 	unencConn, err := listener.Accept()
+	// 	if err != nil {
+	// 		fmt.Printf("serverShoset accept error: %s", err)
+	// 		break
+	// 	}
+
+	// 	// tlsconfig
+	// 	if c.tlsConfig == nil && c.tlsConfigDoubleWay == nil {
+	// 		fmt.Println("tls configs not ok")
+
+	// 		if fileExists(certPath) && fileExists(keyPath) {
+	// 			cert, err := tls.LoadX509KeyPair(certPath, keyPath)
+	// 			if err != nil { // only client in insecure mode
+	// 				fmt.Println("! error in loading certificate !")
+	// 				c.tlsConfig = &tls.Config{InsecureSkipVerify: true}
+	// 				c.tlsServerOK = false
+	// 			} else {
+	// 				c.tlsConfig = &tls.Config{
+	// 					Certificates:       []tls.Certificate{cert},
+	// 					InsecureSkipVerify: true,
+	// 				}
+	// 				c.tlsServerOK = true
+	// 			}
+	// 		} else {
+	// 			fmt.Println("! wrong path certificate !")
+	// 			c.tlsServerOK = false
+	// 		}
+
+	// 		continue
+	// 	} else if c.tlsConfigDoubleWay != nil {
+	// 		fmt.Println("double way ok")
+	// 		tlsConn := tls.Server(unencConn, c.tlsConfigDoubleWay) // create the securised connection protocol
+	// 		address := tlsConn.RemoteAddr().String()
+	// 		conn, _ := NewShosetConn(c, address, "in") // create the securised connection
+	// 		conn.socket = tlsConn                      //we override socket attribut with our securised protocol
+	// 		go conn.runInConn()
+	// 	} else {
+	// 		fmt.Println("single way ok")
+	// 		tlsConn := tls.Server(unencConn, c.tlsConfig) // create the securised connection protocol
+	// 		address := tlsConn.RemoteAddr().String()
+	// 		conn, _ := NewShosetConn(c, address, "in") // create the securised connection
+	// 		conn.socket = tlsConn                      //we override socket attribut with our securised protocol
+	// 		go conn.runInConn()
+	// 	}
+	// }
+	// return nil
 }
 
 func (c *Shoset) Protocol(address, protocolType string) (*ShosetConn, error) {
@@ -327,5 +395,3 @@ func (c *Shoset) GetConnsByTypeArray(shosetType string) []*ShosetConn {
 	}
 	return connsByType
 }
-
-

@@ -824,8 +824,7 @@ func test_link8() {
 	done := make(chan bool)
 
 	cl1 := shoset.NewShoset("cl", "cl") // cluster
-	cl1.Bind("localhost:8001")
-	cl1.Init()
+	cl1.InitPKI("localhost:8001")
 
 	cl2 := shoset.NewShoset("cl", "cl")
 	cl2.Bind("localhost:8002")

@@ -3,6 +3,7 @@ package shoset
 import (
 	"errors"
 	"fmt"
+	"io/ioutil"
 
 	// "io/ioutil"
 	"os"
@@ -13,20 +14,22 @@ import (
 	"github.com/square/certstrap/pkix"
 )
 
-func (c *Shoset) Init() error {
+func (c *Shoset) InitPKI(address string) error {
 	// elle sort immédiatement si :
-	if c.GetBindAddress() == "" { // il n'y a pas encore eu de bind (bindadress est vide)
-		fmt.Println("shoset not bound")
-		return errors.New("shoset not bound")
+	if c.GetBindAddress() != "" { // il n'y a pas encore eu de bind (bindadress est vide)
+		fmt.Println("shoset bound")
+		return errors.New("shoset bound")
 	} else if c.ConnsByName.Len() != 0 { // j'ai déjà fait un link ou un join ou j'ai un fichier de configuration (ce qui veut dire que j'ai des connsbyname)
 		fmt.Println("a protocol already happened on this shoset")
 		return errors.New("a protocol already happened on this shoset")
-	} else if c.GetIsInit() { // il y a eu déjà un init ou j'ai déjà un certificat (mon certificat existe déjà)
+	} else if c.GetIsPki() { // il y a eu déjà un init ou j'ai déjà un certificat (mon certificat existe déjà)
 		fmt.Println("shoset already initialized")
 		return errors.New("shoset already initialized")
 	}
 
-	c.SetIsInit(true)
+	c.SetIsPki(true)
+
+	c.Bind(address)
 
 	// elle réalise les actions suivantes :
 	// 1. La CA
@@ -111,7 +114,7 @@ func (c *Shoset) Init() error {
 // 1. Service activé pour les deux fonctions
 // getsecret(login, password) => { secret }
 func (c *Shoset) GenerateSecret(login, password string) string {
-	if c.GetIsInit() {
+	if c.GetIsPki() {
 		// utiliser login et password
 		return uuid.New().String()
 	}
@@ -120,16 +123,24 @@ func (c *Shoset) GenerateSecret(login, password string) string {
 
 // getCAcert() => { certificat de la CA }
 func (c *Shoset) GetCAcert() {
-	if c.GetIsInit() {
+	if c.GetIsPki() {
 		return
 	}
 }
 
 // getCert(certRequest) => { certificat }
-func (c *Shoset) GetCert() {
-	if c.GetIsInit() {
-		return
+func (c *Shoset) GetCert() []byte {
+	if c.GetIsPki() {
+		dirname, err := os.UserHomeDir()
+		if err != nil {
+			fmt.Println("Get UserHomeDir error : ", err)
+		}
+		cert, err := ioutil.ReadFile(dirname + "/.shoset/" + c.ConnsByName.GetConfigName() + "/cert/cert.pem")
+		if err == nil {
+			return cert
+		}
 	}
+	return nil
 }
 
 func (c *Shoset) CreateKey() *pkix.Key {
