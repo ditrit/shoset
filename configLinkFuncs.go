@@ -92,7 +92,7 @@ func HandleConfigLink(c *ShosetConn, message msg.Message) error {
 				remoteBrothers := c.ch.ConnsByName.Get(cfg.GetLogicalName())
 				if remoteBrothers != nil {
 					if remoteBrothers.Get(remoteBro) == nil {
-						c.ch.Protocol(remoteBro, "link")
+						c.ch.Protocol(c.ch.GetBindAddress(), remoteBro, "link")
 					}
 				}
 			}

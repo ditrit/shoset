@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"strings"
 
 	// "io/ioutil"
 	"os"
@@ -29,7 +30,26 @@ func (c *Shoset) InitPKI(address string) error {
 
 	c.SetIsPki(true)
 
-	c.Bind(address)
+	ipAddress, err := GetIP(address) // parse the address from function parameter to get the IP
+	if err != nil {                  // check if IP is ok
+		return err
+	}
+	_ipAddress := strings.Replace(ipAddress, ":", "_", -1)
+	_ipAddress = strings.Replace(_ipAddress, ".", "-", -1)
+	c.SetBindAddress(_ipAddress)
+
+	dirname, err := os.UserHomeDir()
+	if err != nil {
+		fmt.Println("Get UserHomeDir error : ", err)
+		return err
+	}
+	if !fileExists(dirname + "/.shoset/" + c.GetBindAddress() + "/") {
+		os.Mkdir(dirname+"/.shoset/", 0700)
+		os.Mkdir(dirname+"/.shoset/"+c.GetBindAddress()+"/", 0700)
+		os.Mkdir(dirname+"/.shoset/"+c.GetBindAddress()+"/config/", 0700)
+		os.Mkdir(dirname+"/.shoset/"+c.GetBindAddress()+"/cert/", 0700)
+	}
+
 
 	// elle réalise les actions suivantes :
 	// 1. La CA
@@ -45,13 +65,8 @@ func (c *Shoset) InitPKI(address string) error {
 		fmt.Println("Export CA RSA Key error : ", err)
 		return err
 	}
-	dirname, err := os.UserHomeDir()
-	if err != nil {
-		fmt.Println("Get UserHomeDir error : ", err)
-		return err
-	}
 
-	CAkeyFile, err := os.Create(dirname + "/.shoset/" + c.ConnsByName.GetConfigName() + "/cert/privateCAKey.pem")
+	CAkeyFile, err := os.Create(dirname + "/.shoset/" + c.GetBindAddress() + "/cert/privateCAKey.pem")
 	if err != nil {
 		fmt.Println("Create CA RSA Key file error : ", err)
 		return err
@@ -85,7 +100,7 @@ func (c *Shoset) InitPKI(address string) error {
 		return err
 	}
 
-	CAcertFile, err := os.Create(dirname + "/.shoset/" + c.ConnsByName.GetConfigName() + "/cert/CAcert.pem")
+	CAcertFile, err := os.Create(dirname + "/.shoset/" + c.GetBindAddress() + "/cert/CAcert.pem")
 	if err != nil {
 		fmt.Println("Create CA certificate file error : ", err)
 		return err
@@ -97,6 +112,7 @@ func (c *Shoset) InitPKI(address string) error {
 		return err
 	}
 
+
 	// 2. Le certificat de la shoset
 	// récupérer le certificat de la CA
 	// génération des clefs privée, publique et request pour la shoset
@@ -106,6 +122,10 @@ func (c *Shoset) InitPKI(address string) error {
 	c.SignRequest(CAcert, hostCsr, hostKey)
 
 	// 3. Elle associe le rôle 'pki' au nom logique de la shoset
+
+	c.SetBindAddress("")
+	c.Bind(address)
+
 
 	return nil
 }
@@ -135,7 +155,7 @@ func (c *Shoset) GetCert() []byte {
 		if err != nil {
 			fmt.Println("Get UserHomeDir error : ", err)
 		}
-		cert, err := ioutil.ReadFile(dirname + "/.shoset/" + c.ConnsByName.GetConfigName() + "/cert/cert.pem")
+		cert, err := ioutil.ReadFile(dirname + "/.shoset/" + c.GetBindAddress() + "/cert/cert.pem")
 		if err == nil {
 			return cert
 		}
@@ -160,7 +180,7 @@ func (c *Shoset) CreateKey() *pkix.Key {
 		fmt.Println("Get UserHomeDir error : ", err)
 		return nil
 	}
-	keyFile, err := os.Create(dirname + "/.shoset/" + c.ConnsByName.GetConfigName() + "/cert/privateKey.pem")
+	keyFile, err := os.Create(dirname + "/.shoset/" + c.GetBindAddress() + "/cert/privateKey.pem")
 	if err != nil {
 		fmt.Println("Create RSA Key file error : ", err)
 		return nil
@@ -199,7 +219,7 @@ func (c *Shoset) SignRequest(CAcert *pkix.Certificate, hostCsr *pkix.Certificate
 	if err != nil {
 		fmt.Println("Get UserHomeDir error : ", err)
 	}
-	hostCertFile, err := os.Create(dirname + "/.shoset/" + c.ConnsByName.GetConfigName() + "/cert/cert.pem")
+	hostCertFile, err := os.Create(dirname + "/.shoset/" + c.GetBindAddress() + "/cert/cert.pem")
 	if err != nil {
 		fmt.Println("Create hostCert file error : ", err)
 	}

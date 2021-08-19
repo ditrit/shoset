@@ -75,7 +75,7 @@ func HandleConfigJoin(c *ShosetConn, message msg.Message) error {
 	case "member":
 		if connsJoin := c.ch.ConnsByName.Get(c.ch.GetLogicalName()); connsJoin != nil { //already joined
 			if connsJoin.Get(remoteAddress) == nil {
-				ch.Protocol(remoteAddress, "join")
+				ch.Protocol(c.ch.GetBindAddress(), remoteAddress, "join")
 
 				cfgNewMember := msg.NewCfg(remoteAddress, ch.GetLogicalName(), ch.GetShosetType(), "member")
 				ch.ConnsByName.Get(ch.GetLogicalName()).Iterate(
