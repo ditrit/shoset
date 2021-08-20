@@ -195,7 +195,7 @@ func (c Shoset) String() string {
 
 //Bind : Connect to another Shoset
 func (c *Shoset) Bind(address string) error {
-	if c.GetBindAddress() != "" { //socket already bounded to a port (already passed this Bind function once)
+	if c.GetBindAddress() != "" && c.GetBindAddress() != address { //socket already bounded to a port (already passed this Bind function once)
 		fmt.Println(c, "\nShoset already bound")
 		return errors.New("Shoset already bound")
 	}
