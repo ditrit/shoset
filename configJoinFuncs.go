@@ -34,9 +34,6 @@ func HandleConfigJoin(c *ShosetConn, message msg.Message) error {
 				c.SetRemoteAddress(remoteAddress)
 				c.SetRemoteLogicalName(cfg.GetLogicalName())
 				c.SetRemoteShosetType(cfg.GetShosetType())
-				if ch.GetShosetType() == "cl" {
-					ch.SetIsPki(true)
-				}
 				ch.ConnsByName.Set(ch.GetLogicalName(), remoteAddress, "join", ch.GetShosetType(), c) // set conn in this socket
 				// ch.LnamesByProtocol.Set("join", c.GetRemoteLogicalName())
 				// ch.LnamesByType.Set(c.ch.GetShosetType(), c.GetRemoteLogicalName())

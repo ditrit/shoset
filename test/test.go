@@ -814,13 +814,40 @@ func test_link8() {
 
 	for {
 		time.Sleep(time.Second * time.Duration(2))
+		// fmt.Println("\ncl : ", cl1)
+		// fmt.Println("\ncl : ", cl2)
+		// fmt.Println("\ncl : ", cl3)
+		// fmt.Println("\ncl : ", cl4)
+		// fmt.Println("\nag : ", aga1)
+		// fmt.Println("\nag : ", aga2)
+		// fmt.Println("\nca : ", Ca2)
+		// fmt.Println("ConnsByTypeArray('cl')", aga1.GetConnsByTypeArray("c"))
+	}
+
+	<-done
+}
+
+func test_pki() {
+	done := make(chan bool)
+
+	cl1 := shoset.NewShoset("cl", "cl") // cluster
+	cl1.InitPKI("localhost:8001")
+
+	cl2 := shoset.NewShoset("cl", "cl")
+	cl2.Protocol("localhost:8002", "localhost:8001", "join")
+
+	cl3 := shoset.NewShoset("cl", "cl")
+	cl3.Protocol("localhost:8003", "localhost:8002", "join")
+
+	cl4 := shoset.NewShoset("cl", "cl")
+	cl4.Protocol("localhost:8004", "localhost:8001", "join")
+	
+	for {
+		time.Sleep(time.Second * time.Duration(2))
 		fmt.Println("\ncl : ", cl1)
 		fmt.Println("\ncl : ", cl2)
 		fmt.Println("\ncl : ", cl3)
 		fmt.Println("\ncl : ", cl4)
-		fmt.Println("\nag : ", aga1)
-		fmt.Println("\nag : ", aga2)
-		fmt.Println("\nca : ", Ca2)
 		// fmt.Println("ConnsByTypeArray('cl')", aga1.GetConnsByTypeArray("c"))
 	}
 
@@ -842,7 +869,8 @@ func main() {
 		// test_link5()
 		// test_link6()
 		// test_link7()
-		test_link8()
+		// test_link8()
+		test_pki()
 	} else if arg == "2" {
 		// simpleCluster()
 		// simpleAgregator()

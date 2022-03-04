@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os"
+	//"os"
 	"strings"
 	"time"
 
@@ -127,40 +127,36 @@ func (c *ShosetConn) WriteMessage(data interface{}) error {
 	return c.wb.WriteMessage(data)
 }
 
+func (c *ShosetConn) runPkiConn() {
+	// dirname, err := os.UserHomeDir()
+	// 	if err != nil {
+	// 		fmt.Println("Get UserHomeDir error : ", err)
+	// 	}
+
+	// 	CAcertBytes, err := pkiCAcert.Export()
+	// 	if err != nil {
+	// 		fmt.Println("Export CA certificate error : ", err)
+	// 	}
+
+	// 	CAcertFile, err := os.Create(dirname + "/.shoset/" + c.ch.ConnsByName.GetConfigName() + "/cert/CAcert.pem")
+	// 	if err != nil {
+	// 		fmt.Println("Create CA certificate file error : ", err)
+	// 	}
+
+	// 	_, err = CAcertFile.Write(CAcertBytes)
+	// 	if err != nil {
+	// 		fmt.Println("Write in CA certificate file error : ", err)
+	// 	}
+
+	// 	// génération des clefs privée, publique et request pour la shoset
+	// 	hostKey := c.ch.CreateKey()
+	// 	// création du certificat signé avec la clef privée de la CA
+	// 	hostCsr := c.ch.CreateSignRequest(hostKey)
+	// 	c.ch.SignRequest(pkiCAcert, hostCsr, hostKey)
+}
+
 // RunOutConn : handler for the socket, for Link()
 func (c *ShosetConn) runOutConn() {
-	if c.ch.tlsConfig == c.ch.tlsConfigSingleWay {
-		dirname, err := os.UserHomeDir()
-		if err != nil {
-			fmt.Println("Get UserHomeDir error : ", err)
-		}
-
-		CAcertBytes, err := pkiCA.Export()
-		if err != nil {
-			fmt.Println("Export CA certificate error : ", err)
-		}
-
-		CAcertFile, err := os.Create(dirname + "/.shoset/" + c.ch.ConnsByName.GetConfigName() + "/cert/CAcert.pem")
-		if err != nil {
-			fmt.Println("Create CA certificate file error : ", err)
-		}
-
-		_, err = CAcertFile.Write(CAcertBytes)
-		if err != nil {
-			fmt.Println("Write in CA certificate file error : ", err)
-		}
-
-		// génération des clefs privée, publique et request pour la shoset
-		hostKey := c.ch.CreateKey()
-		// création du certificat signé avec la clef privée de la CA
-		hostCsr := c.ch.CreateSignRequest(hostKey)
-		c.ch.SignRequest(pkiCA, hostCsr, hostKey)
-
-		// c.ch.SetBindAddress("")
-		fmt.Println("files link ok")
-		c.ch.Bind(c.ch.GetBindAddress())
-	}
-
 	myConfig := msg.NewCfg(c.ch.bindAddress, c.ch.lName, c.ch.ShosetType, "link")
 	for {
 		if !c.GetIsValid() { // sockets are not from the same type or don't have the same name / conn ended
@@ -196,39 +192,6 @@ func (c *ShosetConn) runOutConn() {
 
 // RunJoinConn : handler for the socket, for Join()
 func (c *ShosetConn) runJoinConn() {
-	if c.ch.tlsConfig == c.ch.tlsConfigSingleWay {
-		dirname, err := os.UserHomeDir()
-		if err != nil {
-			fmt.Println("Get UserHomeDir error : ", err)
-		}
-		// CAcert := c.ch.GetCAcert()
-		// if CAcert
-		CAcertBytes, err := pkiCA.Export()
-		if err != nil {
-			fmt.Println("Export CA certificate error : ", err)
-		}
-
-		CAcertFile, err := os.Create(dirname + "/.shoset/" + c.ch.ConnsByName.GetConfigName() + "/cert/CAcert.pem")
-		if err != nil {
-			fmt.Println("Create CA certificate file error : ", err)
-		}
-
-		_, err = CAcertFile.Write(CAcertBytes)
-		if err != nil {
-			fmt.Println("Write in CA certificate file error : ", err)
-		}
-
-		// génération des clefs privée, publique et request pour la shoset
-		hostKey := c.ch.CreateKey()
-		// création du certificat signé avec la clef privée de la CA
-		hostCsr := c.ch.CreateSignRequest(hostKey)
-		c.ch.SignRequest(pkiCA, hostCsr, hostKey)
-
-		// c.ch.SetBindAddress("")
-		fmt.Println("files join ok")
-		c.ch.Bind(c.ch.GetBindAddress())
-	}
-
 	joinConfig := msg.NewCfg(c.ch.bindAddress, c.ch.lName, c.ch.ShosetType, "join") //we create a new message config
 	for {
 		if !c.GetIsValid() { // sockets are not from the same type or don't have the same name / conn ended

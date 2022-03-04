@@ -15,7 +15,7 @@ import (
 	"github.com/square/certstrap/pkix"
 )
 
-var pkiCA *pkix.Certificate
+var pkiCAcert *pkix.Certificate
 
 func (c *Shoset) InitPKI(address string) error {
 	// elle sort immédiatement si :
@@ -30,8 +30,9 @@ func (c *Shoset) InitPKI(address string) error {
 		return errors.New("shoset already initialized")
 	}
 
-	c.SetIsPki(true)
+	c.SetIsPki(true) // je prends le role de CA de la PKI
 
+	// demarche d'initialisation de bind classique (shoset.go/bind)
 	ipAddress, err := GetIP(address) // parse the address from function parameter to get the IP
 	if err != nil {                  // check if IP is ok
 		return err
@@ -53,33 +54,33 @@ func (c *Shoset) InitPKI(address string) error {
 	}
 
 
-	// elle réalise les actions suivantes :
-	// 1. La CA
-	// créer clef privée CA
-	CAkey, err := pkix.CreateRSAKey(4096)
+	// la socket réalise les actions suivantes :
+	// 1. Devient la CA
+	// -> créer clef privée CA
+	CAkey, err := pkix.CreateRSAKey(4096) // on créer une clé avec le format RSA
 	if err != nil {
 		fmt.Println("Create CA RSA Key error : ", err)
 		return err
 	}
 
-	CAkeyBytes, err := CAkey.ExportPrivate()
+	CAprivateKey, err := CAkey.ExportPrivate() // on extrait la clé privée à partir de la clé précédente sous la forme d'un tableau de bytes
 	if err != nil {
 		fmt.Println("Export CA RSA Key error : ", err)
 		return err
 	}
 
-	CAkeyFile, err := os.Create(dirname + "/.shoset/" + c.ConnsByName.GetConfigName() + "/cert/privateCAKey.pem")
+	CAprivateKeyFile, err := os.Create(dirname + "/.shoset/" + c.ConnsByName.GetConfigName() + "/cert/privateCAKey.pem") // on créer le fichier qui stocke la clé créée
 	if err != nil {
 		fmt.Println("Create CA RSA Key file error : ", err)
 		return err
 	}
-	_, err = CAkeyFile.Write(CAkeyBytes)
+	_, err = CAprivateKeyFile.Write(CAprivateKey) // on écrit la clé dans le fichier crée
 	if err != nil {
 		fmt.Println("Write in CA RSA Key file error : ", err)
 		return err
 	}
 
-	// request de certificat pour la CA (à partir de ces clefs)
+	// création du certificat publique de la CA
 	var expires string
 	if years := 10; years != 0 {
 		expires = fmt.Sprintf("%s %d years", expires, years)
@@ -96,9 +97,10 @@ func (c *Shoset) InitPKI(address string) error {
 		return err
 	}
 
-	pkiCA = CAcert
+	// à supprimer dans le futur et remplacer par une lecture de fichier
+	pkiCAcert = CAcert // variable globale à qui on affecte le certificat qui devient donc accessible à toutes les autres sockets
 
-	CAcertBytes, err := CAcert.Export()
+	CApublicCert, err := CAcert.Export()
 	if err != nil {
 		fmt.Println("Export CA certificate error : ", err)
 		return err
@@ -110,7 +112,7 @@ func (c *Shoset) InitPKI(address string) error {
 		return err
 	}
 
-	_, err = CAcertFile.Write(CAcertBytes)
+	_, err = CAcertFile.Write(CApublicCert)
 	if err != nil {
 		fmt.Println("Write in CA certificate file error : ", err)
 		return err
@@ -122,8 +124,8 @@ func (c *Shoset) InitPKI(address string) error {
 	// génération des clefs privée, publique et request pour la shoset
 	hostKey := c.CreateKey()
 	// création du certificat signé avec la clef privée de la CA
-	hostCsr := c.CreateSignRequest(hostKey)
-	c.SignRequest(CAcert, hostCsr, hostKey)
+	hostCsr := c.CreateSignRequest(hostKey) // demande de signature
+	c.SignRequest(CAcert, hostCsr, hostKey) // signature
 
 	// 3. Elle associe le rôle 'pki' au nom logique de la shoset
 
@@ -145,9 +147,9 @@ func (c *Shoset) GenerateSecret(login, password string) string {
 }
 
 // getCAcert() => { certificat de la CA }
-func (c *Shoset) GetCAcert() *pkix.Certificate {
+func (c *Shoset) GetCAcert() *pkix.Certificate { // transformer en une lecture de fichier plutôt que d'acceder à une variable globale
 	if c.GetIsPki() {
-		return pkiCA
+		return pkiCAcert
 	}
 	return nil
 }
@@ -174,7 +176,7 @@ func (c *Shoset) CreateKey() *pkix.Key {
 		return nil
 	}
 
-	keyBytes, err := key.ExportPrivate()
+	privateKey, err := key.ExportPrivate()
 	if err != nil {
 		fmt.Println("Export RSA Key error : ", err)
 		return nil
@@ -184,12 +186,12 @@ func (c *Shoset) CreateKey() *pkix.Key {
 		fmt.Println("Get UserHomeDir error : ", err)
 		return nil
 	}
-	keyFile, err := os.Create(dirname + "/.shoset/" + c.ConnsByName.GetConfigName() + "/cert/privateKey.pem")
+	privateKeyFile, err := os.Create(dirname + "/.shoset/" + c.ConnsByName.GetConfigName() + "/cert/privateKey.pem")
 	if err != nil {
 		fmt.Println("Create RSA Key file error : ", err)
 		return nil
 	}
-	_, err = keyFile.Write(keyBytes)
+	_, err = privateKeyFile.Write(privateKey)
 	if err != nil {
 		fmt.Println("Write in RSA Key file error : ", err)
 		return nil
