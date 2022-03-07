@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+
 	//"os"
 	"strings"
 	"time"
@@ -153,6 +154,39 @@ func (c *ShosetConn) runPkiConn() {
 	// 	// création du certificat signé avec la clef privée de la CA
 	// 	hostCsr := c.ch.CreateSignRequest(hostKey)
 	// 	c.ch.SignRequest(pkiCAcert, hostCsr, hostKey)
+
+	PkiConfig := msg.NewCfg(c.ch.bindAddress, c.ch.lName, c.ch.ShosetType, "pki")
+	// fmt.Println(c.ch.GetBindAddress(), "enters runpkiconn")
+	for {
+		if !c.GetIsValid() { // sockets are not from the same type or don't have the same name / conn ended
+			break
+		}
+
+		conn, err := tls.Dial("tcp", c.GetRemoteAddress(), c.ch.tlsConfig)
+		if err != nil {
+			time.Sleep(time.Millisecond * time.Duration(100))
+			continue
+		} else {
+			c.socket = conn
+			c.rb = msg.NewReader(c.socket)
+			c.wb = msg.NewWriter(c.socket)
+			defer conn.Close()
+
+			// receive messages
+			for {
+				if c.GetRemoteLogicalName() == "" {
+					c.SendMessage(*PkiConfig)
+				}
+
+				err := c.receiveMsg()
+				time.Sleep(time.Millisecond * time.Duration(100))
+				if err != nil {
+					c.SetRemoteLogicalName("") // reinitialize conn
+					break
+				}
+			}
+		}
+	}
 }
 
 // RunOutConn : handler for the socket, for Link()

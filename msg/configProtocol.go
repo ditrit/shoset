@@ -1,5 +1,6 @@
 package msg
 
+
 // ConfigProtocol : Gandalf Socket config
 type ConfigProtocol struct {
 	MessageBase
@@ -9,6 +10,7 @@ type ConfigProtocol struct {
 	Address      string
 	MyBrothers   []string
 	YourBrothers []string
+	CAcert []byte
 }
 
 // for link and join
@@ -19,6 +21,18 @@ func NewCfg(address, lName, shosetType, commandName string) *ConfigProtocol {
 	c.Address = address
 	c.LogicalName = lName
 	c.ShosetType = shosetType
+	return c
+}
+
+// for link and join
+func NewCfgPki(address, lName, shosetType, commandName string, caCert []byte) *ConfigProtocol {
+	c := new(ConfigProtocol)
+	c.InitMessageBase()
+	c.CommandName = commandName
+	c.Address = address
+	c.LogicalName = lName
+	c.ShosetType = shosetType
+	c.CAcert = caCert
 	return c
 }
 
@@ -53,6 +67,10 @@ func (c ConfigProtocol) GetMsgType() string {
 		return "cfgbye"
 	case "delete":
 		return "cfgbye"
+	case "pki":
+		return "cfgpki"
+	case "return_pki":
+		return "cfgpki"
 	}
 	return "Wrong input protocolType"
 }
@@ -74,3 +92,5 @@ func (c ConfigProtocol) GetMyBrothers() []string { return c.MyBrothers }
 
 // GetBros :
 func (c ConfigProtocol) GetYourBrothers() []string { return c.YourBrothers }
+
+func (c ConfigProtocol) GetCAcert() []byte { return c.CAcert }

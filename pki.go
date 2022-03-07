@@ -15,7 +15,6 @@ import (
 	"github.com/square/certstrap/pkix"
 )
 
-var pkiCAcert *pkix.Certificate
 
 func (c *Shoset) InitPKI(address string) error {
 	// elle sort immédiatement si :
@@ -97,9 +96,6 @@ func (c *Shoset) InitPKI(address string) error {
 		return err
 	}
 
-	// à supprimer dans le futur et remplacer par une lecture de fichier
-	pkiCAcert = CAcert // variable globale à qui on affecte le certificat qui devient donc accessible à toutes les autres sockets
-
 	CApublicCert, err := CAcert.Export()
 	if err != nil {
 		fmt.Println("Export CA certificate error : ", err)
@@ -147,9 +143,19 @@ func (c *Shoset) GenerateSecret(login, password string) string {
 }
 
 // getCAcert() => { certificat de la CA }
-func (c *Shoset) GetCAcert() *pkix.Certificate { // transformer en une lecture de fichier plutôt que d'acceder à une variable globale
+func (c *Shoset) GetCAcert() *pkix.Certificate {
 	if c.GetIsPki() {
-		return pkiCAcert
+		dirname, err := os.UserHomeDir()
+		if err != nil {
+			fmt.Println("Get UserHomeDir error : ", err)
+		}
+		cert, err := ioutil.ReadFile(dirname + "/.shoset/" + c.ConnsByName.GetConfigName() + "/cert/CAcert.pem")
+		if err == nil {
+			CAcert, err := pkix.NewCertificateFromPEM(cert)
+			if err == nil {
+				return CAcert
+			}
+		}
 	}
 	return nil
 }

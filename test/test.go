@@ -841,13 +841,19 @@ func test_pki() {
 
 	cl4 := shoset.NewShoset("cl", "cl")
 	cl4.Protocol("localhost:8004", "localhost:8001", "join")
+
+	aga1 := shoset.NewShoset("aga", "a") // agregateur
+	aga1.Protocol("localhost:8111", "localhost:8001", "link")
+
+	aga2 := shoset.NewShoset("aga", "a") // agregateur
+	aga2.Protocol("localhost:8112", "localhost:8002", "link")
 	
 	for {
 		time.Sleep(time.Second * time.Duration(2))
-		fmt.Println("\ncl : ", cl1)
-		fmt.Println("\ncl : ", cl2)
-		fmt.Println("\ncl : ", cl3)
-		fmt.Println("\ncl : ", cl4)
+		// fmt.Println("\ncl : ", cl1)
+		// fmt.Println("\ncl : ", cl2)
+		// fmt.Println("\ncl : ", cl3)
+		// fmt.Println("\ncl : ", cl4)
 		// fmt.Println("ConnsByTypeArray('cl')", aga1.GetConnsByTypeArray("c"))
 	}
 

@@ -123,6 +123,10 @@ func NewShoset(lName, ShosetType string) *Shoset { //l
 	shoset.Get["cfgbye"] = GetConfigBye
 	shoset.Handle["cfgbye"] = HandleConfigBye
 
+	shoset.Queue["cfgpki"] = msg.NewQueue()
+	shoset.Get["cfgpki"] = GetConfigPki
+	shoset.Handle["cfgpki"] = HandleConfigPki
+
 	shoset.Queue["evt"] = msg.NewQueue()
 	shoset.Get["evt"] = GetEvent
 	shoset.Handle["evt"] = HandleEvent
@@ -326,7 +330,7 @@ func (c *Shoset) Protocol(bindAddress, remoteAddress, protocolType string) (*Sho
 		c.Bind(bindAddress)
 	}
 
-	if !c.GetIsPki() {
+	if !c.GetIsPki() { // faire une variable is Certified pour gerer tout les logical name et eviter de relancer des goroutines lors d'une possible reconnexion apres un down
 		conn, _ := NewShosetConn(c, remoteAddress, "out")
 		go conn.runPkiConn()
 	}
@@ -338,13 +342,11 @@ func (c *Shoset) Protocol(bindAddress, remoteAddress, protocolType string) (*Sho
 		if conns != nil {
 			exists := conns.Get(remoteAddress) // check if remoteAddress is already in the map
 			if exists != nil {                 //connection already established for this socket
-				fmt.Println("!!!!!!!!!!")
 				return exists, nil
 
 			}
 		}
 		if remoteAddress == c.GetBindAddress() { // connection impossible with itself
-			fmt.Println("###########")
 			return nil, nil
 		}
 		conn, _ := NewShosetConn(c, remoteAddress, "out")
