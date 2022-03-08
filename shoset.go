@@ -64,6 +64,7 @@ type Shoset struct {
 	viperConfig *viper.Viper
 	isValid     bool
 	isPki       bool
+	isCertified bool
 	listener    net.Listener
 }
 
@@ -73,6 +74,7 @@ func (c Shoset) GetLogicalName() string { return c.lName }
 func (c Shoset) GetShosetType() string  { return c.ShosetType }
 func (c *Shoset) GetIsValid() bool      { return c.isValid }
 func (c *Shoset) GetIsPki() bool        { return c.isPki }
+func (c *Shoset) GetIsCertified() bool        { return c.isCertified }
 
 func (c *Shoset) SetBindAddress(bindAddress string) {
 	c.bindAddress = bindAddress
@@ -83,6 +85,9 @@ func (c *Shoset) SetIsValid(state bool) {
 }
 func (c *Shoset) SetIsPki(state bool) {
 	c.isPki = state
+}
+func (c *Shoset) SetIsCertified(state bool) {
+	c.isCertified = state
 }
 
 /*       Constructor     */
@@ -102,6 +107,7 @@ func NewShoset(lName, ShosetType string) *Shoset { //l
 	shoset.ConnsByName.SetViper(shoset.viperConfig)
 	shoset.isValid = true
 	shoset.isPki = false
+	shoset.isCertified = false
 	shoset.listener = nil
 
 	// Dictionnaire des queues de message (par type de message)
@@ -185,7 +191,7 @@ func NewShoset(lName, ShosetType string) *Shoset { //l
 
 // Display with fmt - override the print of the object
 func (c Shoset) String() string {
-	descr := fmt.Sprintf("Shoset -  lName: %s,\n\t\tbindAddr : %s,\n\t\ttype : %s, \n\t\tisPki : %t, \n\t\tConnsByName : ", c.GetLogicalName(), c.GetBindAddress(), c.GetShosetType(), c.GetIsPki())
+	descr := fmt.Sprintf("Shoset -  lName: %s,\n\t\tbindAddr : %s,\n\t\ttype : %s, \n\t\tisPki : %t, \n\t\tisCertified : %t, \n\t\tConnsByName : ", c.GetLogicalName(), c.GetBindAddress(), c.GetShosetType(), c.GetIsPki(), c.GetIsCertified())
 	for _, lName := range c.ConnsByName.Keys() {
 		c.ConnsByName.Iterate(lName,
 			func(key string, val *ShosetConn) {
@@ -330,7 +336,7 @@ func (c *Shoset) Protocol(bindAddress, remoteAddress, protocolType string) (*Sho
 		c.Bind(bindAddress)
 	}
 
-	if !c.GetIsPki() { // faire une variable is Certified pour gerer tout les logical name et eviter de relancer des goroutines lors d'une possible reconnexion apres un down
+	if !c.GetIsCertified() { // faire une variable is Certified pour gerer tout les logical name et eviter de relancer des goroutines lors d'une possible reconnexion apres un down
 		conn, _ := NewShosetConn(c, remoteAddress, "out")
 		go conn.runPkiConn()
 	}

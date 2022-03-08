@@ -847,13 +847,23 @@ func test_pki() {
 
 	aga2 := shoset.NewShoset("aga", "a") // agregateur
 	aga2.Protocol("localhost:8112", "localhost:8002", "link")
+
+	Ca1 := shoset.NewShoset("Ca", "c") //connecteur
+	Ca1.Protocol("localhost:8211", "localhost:8111", "link")
+
+	Ca2 := shoset.NewShoset("Ca", "c") //connecteur
+	Ca2.Protocol("localhost:8212", "localhost:8112", "link")
 	
 	for {
 		time.Sleep(time.Second * time.Duration(2))
-		// fmt.Println("\ncl : ", cl1)
-		// fmt.Println("\ncl : ", cl2)
-		// fmt.Println("\ncl : ", cl3)
-		// fmt.Println("\ncl : ", cl4)
+		fmt.Println("\ncl : ", cl1)
+		fmt.Println("\ncl : ", cl2)
+		fmt.Println("\ncl : ", cl3)
+		fmt.Println("\ncl : ", cl4)
+		fmt.Println("\nag : ", aga1)
+		fmt.Println("\nag : ", aga2)
+		fmt.Println("\nca : ", Ca1)
+		fmt.Println("\nca : ", Ca2)
 		// fmt.Println("ConnsByTypeArray('cl')", aga1.GetConnsByTypeArray("c"))
 	}
 

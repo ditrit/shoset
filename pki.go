@@ -123,6 +123,8 @@ func (c *Shoset) InitPKI(address string) error {
 	hostCsr := c.CreateSignRequest(hostKey) // demande de signature
 	c.SignRequest(CAcert, hostCsr, hostKey) // signature
 
+	c.SetIsCertified(true)
+
 	// 3. Elle associe le rôle 'pki' au nom logique de la shoset
 
 	c.Bind(address)

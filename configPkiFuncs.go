@@ -46,12 +46,15 @@ func HandleConfigPki(c *ShosetConn, message msg.Message) error {
 			configPki := msg.NewCfgPki(remoteAddress, ch.GetLogicalName(), ch.GetShosetType(), "return_pki", cert)
 			c.SendMessage(configPki)
 			// fmt.Println(ch.GetBindAddress(), "message sent to ", remoteAddress)
+		} else if cfg.GetLogicalName() == "Ca" {
+			fmt.Println("connector detected")
 		} else {
+			// tant que la chaussette en face n'est pas pki on demande une nouvelle config
 			newPkiConfig := msg.NewCfg(c.ch.bindAddress, c.ch.lName, c.ch.ShosetType, "pki")
 			c.SendMessage(newPkiConfig)
 		}
 	case "return_pki":
-		if !c.ch.GetIsPki() {
+		if !c.ch.GetIsCertified() {
 			dirname, err := os.UserHomeDir()
 			if err != nil {
 				fmt.Println("Get UserHomeDir error : ", err)
@@ -82,15 +85,12 @@ func HandleConfigPki(c *ShosetConn, message msg.Message) error {
 
 				c.ch.SetIsPki(true)
 				// fmt.Println(ch.GetBindAddress(), "is now pki")
-				return nil
+				// return nil
 			} else {
 				fmt.Println(ch.GetBindAddress(), "case not treated yet")
 			}
+			c.ch.SetIsCertified(true)
 		}
-
 	}
-
-	// case pki_return qui donne les données necessaires à la chaussette en face
-
 	return nil
 }
