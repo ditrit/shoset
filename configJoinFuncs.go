@@ -23,6 +23,7 @@ func HandleConfigJoin(c *ShosetConn, message msg.Message) error {
 
 	switch cfg.GetCommandName() {
 	case "join":
+		// fmt.Println(c.ch.GetBindAddress(), "enters join for ", remoteAddress)
 		if dir == "in" { // a socket wants to join this one
 			if connsJoin := c.ch.ConnsByName.Get(c.ch.GetLogicalName()); connsJoin != nil { //already joined
 				if connsJoin.Get(remoteAddress) != nil {

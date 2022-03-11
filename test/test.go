@@ -856,14 +856,14 @@ func test_pki() {
 	
 	for {
 		time.Sleep(time.Second * time.Duration(2))
-		fmt.Println("\ncl : ", cl1)
-		fmt.Println("\ncl : ", cl2)
-		fmt.Println("\ncl : ", cl3)
-		fmt.Println("\ncl : ", cl4)
-		fmt.Println("\nag : ", aga1)
-		fmt.Println("\nag : ", aga2)
-		fmt.Println("\nca : ", Ca1)
-		fmt.Println("\nca : ", Ca2)
+		// fmt.Println("\ncl : ", cl1)
+		// fmt.Println("\ncl : ", cl2)
+		// fmt.Println("\ncl : ", cl3)
+		// fmt.Println("\ncl : ", cl4)
+		// fmt.Println("\nag : ", aga1)
+		// fmt.Println("\nag : ", aga2)
+		// fmt.Println("\nca : ", Ca1)
+		// fmt.Println("\nca : ", Ca2)
 		// fmt.Println("ConnsByTypeArray('cl')", aga1.GetConnsByTypeArray("c"))
 	}
 

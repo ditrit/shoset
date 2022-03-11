@@ -18,7 +18,7 @@ import (
 // ShosetConn : client connection
 type ShosetConn struct {
 	socket           *tls.Conn
-	remoteLname      string // logical name of the socket in fornt of this one
+	remoteLname      string // logical name of the socket in front of this one
 	remoteShosetType string // shosetType of the socket in fornt of this one
 	dir              string
 	remoteAddress    string // addresse of the socket in fornt of this one
@@ -129,32 +129,6 @@ func (c *ShosetConn) WriteMessage(data interface{}) error {
 }
 
 func (c *ShosetConn) runPkiConn() {
-	// dirname, err := os.UserHomeDir()
-	// 	if err != nil {
-	// 		fmt.Println("Get UserHomeDir error : ", err)
-	// 	}
-
-	// 	CAcertBytes, err := pkiCAcert.Export()
-	// 	if err != nil {
-	// 		fmt.Println("Export CA certificate error : ", err)
-	// 	}
-
-	// 	CAcertFile, err := os.Create(dirname + "/.shoset/" + c.ch.ConnsByName.GetConfigName() + "/cert/CAcert.pem")
-	// 	if err != nil {
-	// 		fmt.Println("Create CA certificate file error : ", err)
-	// 	}
-
-	// 	_, err = CAcertFile.Write(CAcertBytes)
-	// 	if err != nil {
-	// 		fmt.Println("Write in CA certificate file error : ", err)
-	// 	}
-
-	// 	// génération des clefs privée, publique et request pour la shoset
-	// 	hostKey := c.ch.CreateKey()
-	// 	// création du certificat signé avec la clef privée de la CA
-	// 	hostCsr := c.ch.CreateSignRequest(hostKey)
-	// 	c.ch.SignRequest(pkiCAcert, hostCsr, hostKey)
-
 	PkiConfig := msg.NewCfg(c.ch.bindAddress, c.ch.lName, c.ch.ShosetType, "pki")
 	// fmt.Println(c.ch.GetBindAddress(), "enters runpkiconn")
 	for {
@@ -172,11 +146,13 @@ func (c *ShosetConn) runPkiConn() {
 			c.wb = msg.NewWriter(c.socket)
 			defer conn.Close()
 
+			c.SendMessage(*PkiConfig)
 			// receive messages
 			for {
-				if c.GetRemoteLogicalName() == "" {
-					c.SendMessage(*PkiConfig)
-				}
+				// if !c.ch.GetIsCertified() {
+				// 	c.SendMessage(*PkiConfig)
+				// 	fmt.Println(c.ch.GetBindAddress(), "######## send msg")
+				// }
 
 				err := c.receiveMsg()
 				time.Sleep(time.Millisecond * time.Duration(100))
@@ -346,6 +322,7 @@ func (c *ShosetConn) receiveMsg() error {
 		return errors.New("error : receiveMsg : failed to read - close this connection")
 	}
 	msgType = strings.Trim(msgType, "\n")
+	// fmt.Println("--------", msgType)
 	// read Message Value
 	fGet, ok := c.ch.Get[msgType]
 	if ok {

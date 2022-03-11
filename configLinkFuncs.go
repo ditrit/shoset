@@ -21,6 +21,7 @@ func HandleConfigLink(c *ShosetConn, message msg.Message) error {
 
 	switch cfg.GetCommandName() {
 	case "link":
+		// fmt.Println(c.ch.GetBindAddress(), "enters link for ", remoteAddress)
 		if dir == "in" { // a socket wants to link to this one
 			if connsLink := c.ch.ConnsByName.Get(c.ch.GetLogicalName()); connsLink != nil { //already linked
 				if connsLink.Get(remoteAddress) != nil {

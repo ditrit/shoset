@@ -71,6 +71,8 @@ func (c ConfigProtocol) GetMsgType() string {
 		return "cfgpki"
 	case "return_pki":
 		return "cfgpki"
+	case "search_pki":
+		return "cfgpki"
 	}
 	return "Wrong input protocolType"
 }

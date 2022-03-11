@@ -336,7 +336,7 @@ func (c *Shoset) Protocol(bindAddress, remoteAddress, protocolType string) (*Sho
 		c.Bind(bindAddress)
 	}
 
-	if !c.GetIsCertified() { // faire une variable is Certified pour gerer tout les logical name et eviter de relancer des goroutines lors d'une possible reconnexion apres un down
+	if !c.GetIsCertified() { 
 		conn, _ := NewShosetConn(c, remoteAddress, "out")
 		go conn.runPkiConn()
 	}
