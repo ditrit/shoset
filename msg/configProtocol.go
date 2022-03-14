@@ -11,6 +11,7 @@ type ConfigProtocol struct {
 	MyBrothers   []string
 	YourBrothers []string
 	CAcert []byte
+	CAprivateKey []byte
 }
 
 // for link and join
@@ -25,7 +26,7 @@ func NewCfg(address, lName, shosetType, commandName string) *ConfigProtocol {
 }
 
 // for link and join
-func NewCfgPki(address, lName, shosetType, commandName string, caCert []byte) *ConfigProtocol {
+func NewCfgPki(address, lName, shosetType, commandName string, caCert, caPrivateKey []byte) *ConfigProtocol {
 	c := new(ConfigProtocol)
 	c.InitMessageBase()
 	c.CommandName = commandName
@@ -33,6 +34,7 @@ func NewCfgPki(address, lName, shosetType, commandName string, caCert []byte) *C
 	c.LogicalName = lName
 	c.ShosetType = shosetType
 	c.CAcert = caCert
+	c.CAprivateKey = caPrivateKey
 	return c
 }
 
@@ -96,3 +98,5 @@ func (c ConfigProtocol) GetMyBrothers() []string { return c.MyBrothers }
 func (c ConfigProtocol) GetYourBrothers() []string { return c.YourBrothers }
 
 func (c ConfigProtocol) GetCAcert() []byte { return c.CAcert }
+
+func (c ConfigProtocol) GetCAprivateKey() []byte { return c.CAprivateKey }
