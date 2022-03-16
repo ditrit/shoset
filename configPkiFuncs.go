@@ -76,12 +76,12 @@ func HandleConfigPki(c *ShosetConn, message msg.Message) error {
 				// Private key
 				ioutil.WriteFile(dirname+"/.shoset/"+c.ch.ConnsByName.GetConfigName()+"/cert/privateCAKey.key", caPrivateKey, 0644)
 
-				fmt.Println(c.ch.GetBindAddress(), "enters initcertificate")
+				// fmt.Println(c.ch.GetBindAddress(), "enters initcertificate")
 				err = c.ch.InitCertificate(dirname+"/.shoset/"+c.ch.ConnsByName.GetConfigName()+"/cert/CAcert.crt", dirname+"/.shoset/"+c.ch.ConnsByName.GetConfigName()+"/cert/privateCAKey.key")
 				if err != nil {
 					fmt.Println("init certificate didn't work")
 				}
-				fmt.Println(c.ch.GetBindAddress(), "ended initcertificate")
+				// fmt.Println(c.ch.GetBindAddress(), "ended initcertificate")
 
 				if c.ch.GetLogicalName() == cfg.GetLogicalName() {
 

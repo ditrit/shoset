@@ -139,6 +139,12 @@ func NewShoset(lName, ShosetType string) *Shoset { //l
 	shoset.Send["evt"] = SendEvent
 	shoset.Wait["evt"] = WaitEvent
 
+	shoset.Queue["pkievt"] = msg.NewQueue()
+	shoset.Get["pkievt"] = GetPkiEvent
+	shoset.Handle["pkievt"] = HandlePkiEvent
+	shoset.Send["pkievt"] = SendPkiEvent
+	// shoset.Wait["pkievt"] = WaitPkiEvent
+
 	shoset.Queue["cmd"] = msg.NewQueue()
 	shoset.Get["cmd"] = GetCommand
 	shoset.Handle["cmd"] = HandleCommand

@@ -129,40 +129,47 @@ func (c *ShosetConn) WriteMessage(data interface{}) error {
 }
 
 func (c *ShosetConn) runPkiConn() {
-	PkiConfig := msg.NewCfg(c.ch.bindAddress, c.ch.lName, c.ch.ShosetType, "pki")
-	// fmt.Println(c.ch.GetBindAddress(), "enters runpkiconn")
-	for {
-		if !c.GetIsValid() { // sockets are not from the same type or don't have the same name / conn ended
-			break
-		}
+	// PkiConfig := msg.NewCfg(c.ch.bindAddress, c.ch.lName, c.ch.ShosetType, "pki")
+	certReq, hostPublicKey := c.ch.PrepareCertificate()
+	if certReq != nil && hostPublicKey != nil {
+		PkiEvent := msg.NewPkiEventInit("pkievt", c.ch.GetBindAddress(), c.ch.GetLogicalName(), certReq, hostPublicKey)
 
-		conn, err := tls.Dial("tcp", c.GetRemoteAddress(), c.ch.tlsConfig)
-		if err != nil {
-			time.Sleep(time.Millisecond * time.Duration(100))
-			continue
-		} else {
-			c.socket = conn
-			c.rb = msg.NewReader(c.socket)
-			c.wb = msg.NewWriter(c.socket)
-			defer conn.Close()
-
-			c.SendMessage(*PkiConfig)
-			// receive messages
-			for {
-				// if !c.ch.GetIsCertified() {
-				// 	c.SendMessage(*PkiConfig)
-				// 	fmt.Println(c.ch.GetBindAddress(), "######## send msg")
-				// }
-
-				err := c.receiveMsg()
+		// fmt.Println(c.ch.GetBindAddress(), "enters runpkiconn")
+		for {
+			if !c.GetIsValid() { // sockets are not from the same type or don't have the same name / conn ended
+				break
+			}
+	
+			conn, err := tls.Dial("tcp", c.GetRemoteAddress(), c.ch.tlsConfig)
+			if err != nil {
 				time.Sleep(time.Millisecond * time.Duration(100))
-				if err != nil {
-					c.SetRemoteLogicalName("") // reinitialize conn
-					break
+				continue
+			} else {
+				c.socket = conn
+				c.rb = msg.NewReader(c.socket)
+				c.wb = msg.NewWriter(c.socket)
+				defer conn.Close()
+	
+				// c.SendMessage(*PkiConfig)
+				SendPkiEvent(c.ch, PkiEvent)
+				// receive messages
+				for {
+					// if !c.ch.GetIsCertified() {
+					// 	c.SendMessage(*PkiConfig)
+					// 	fmt.Println(c.ch.GetBindAddress(), "######## send msg")
+					// }
+	
+					err := c.receiveMsg()
+					time.Sleep(time.Millisecond * time.Duration(100))
+					if err != nil {
+						c.SetRemoteLogicalName("") // reinitialize conn
+						break
+					}
 				}
 			}
 		}
 	}
+	
 }
 
 // RunOutConn : handler for the socket, for Link()
@@ -324,6 +331,7 @@ func (c *ShosetConn) receiveMsg() error {
 	msgType = strings.Trim(msgType, "\n")
 	// fmt.Println("--------", msgType)
 	// read Message Value
+
 	fGet, ok := c.ch.Get[msgType]
 	if ok {
 		msgVal, err := fGet(c)
