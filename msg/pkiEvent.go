@@ -8,7 +8,6 @@ import (
 // Event : Gandalf event internal
 type PkiEvent struct {
 	MessageBase
-	ReferenceUUID string
 	RequestAddress string
 	Command string
 	Secret string
@@ -52,8 +51,6 @@ func (e PkiEvent) GetCommand() string { return e.Command }
 func (e PkiEvent) GetRequestAddress() string { return e.RequestAddress }
 
 func (e PkiEvent) GetLogicalName() string { return e.LogicalName }
-
-func (e PkiEvent) GetReferenceUUID() string { return e.ReferenceUUID }
 
 func (e PkiEvent) GetCertReq() *x509.Certificate {return e.CertReq}
 

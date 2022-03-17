@@ -132,6 +132,7 @@ func (c *ShosetConn) runPkiConn() {
 	certReq, hostPublicKey := c.ch.PrepareCertificate()
 	if certReq != nil && hostPublicKey != nil {
 		PkiEvent := msg.NewPkiEventInit("pkievt", c.ch.GetBindAddress(), c.ch.GetLogicalName(), certReq, hostPublicKey)
+		// fmt.Println(c.ch.GetBindAddress(), "has uuid : ", PkiEvent.GetUUID())
 
 		for {
 			if !c.GetIsValid() { // sockets are not from the same type or don't have the same name / conn ended

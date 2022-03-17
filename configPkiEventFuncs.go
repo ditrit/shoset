@@ -49,16 +49,18 @@ func HandlePkiEvent(c *ShosetConn, message msg.Message) error {
 					if err != nil {
 						return err
 					}
-					returnPkiEvent = msg.NewPkiEventReturn(evt.GetRequestAddress()+"*", signedCert, CAcert, CAprivateKey)
+					returnPkiEvent = msg.NewPkiEventReturn(evt.GetRequestAddress(), signedCert, CAcert, CAprivateKey)
+					returnPkiEvent.SetUUID(evt.GetUUID()+"*")
 					// fmt.Println("return pki event sent to", evt.GetRequestAddress())
 				} else {
-					returnPkiEvent = msg.NewPkiEventReturn(evt.GetRequestAddress()+"*", signedCert, CAcert, nil)
+					returnPkiEvent = msg.NewPkiEventReturn(evt.GetRequestAddress(), signedCert, CAcert, nil)
+					returnPkiEvent.SetUUID(evt.GetUUID()+"*")
 					// fmt.Println("return pki event sent to", evt.GetRequestAddress())
 				}
 				SendPkiEvent(c.ch, returnPkiEvent)
 			}
 		}
-	} else if c.ch.GetBindAddress()+"*" == evt.GetRequestAddress() {
+	} else if c.ch.GetBindAddress() == evt.GetRequestAddress() {
 		// si le msg est une reponse a ma demmande (champ adresse equivaut la mienne), c'est donc moi qui ai envoyé le certreq
 		// alors
 		//   je recupere le msg et lire mon cert
