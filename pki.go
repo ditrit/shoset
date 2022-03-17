@@ -9,6 +9,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"math/big"
 	"os"
 	"strings"
@@ -97,7 +98,18 @@ func (c *Shoset) InitPKI(address string) error {
 	CAprivateKeyFile.Close()
 
 	// Create and sign additional certificates - here the certificate of the socket from the CA
-	c.InitCertificate(dirname+"/.shoset/"+c.ConnsByName.GetConfigName()+"/cert/CAcert.crt", dirname+"/.shoset/"+c.ConnsByName.GetConfigName()+"/cert/privateCAKey.key")
+	certReq, hostPublicKey := c.PrepareCertificate()
+	if certReq != nil && hostPublicKey != nil {
+		signedHostCert := c.SignCertificate(certReq, hostPublicKey)
+		if signedHostCert != nil {
+			// Public key
+			ioutil.WriteFile(dirname+"/.shoset/"+c.ConnsByName.GetConfigName()+"/cert/cert.crt", signedHostCert, 0644)
+		} else {
+			return errors.New("prepare certificate didn't work")
+		}
+	} else {
+		return errors.New("prepare certificate didn't work")
+	}
 
 	// 3. Elle associe le rôle 'pki' au nom logique de la shoset
 	c.SetIsCertified(true)
@@ -115,69 +127,6 @@ func (c *Shoset) GenerateSecret(login, password string) string {
 		return uuid.New().String()
 	}
 	return ""
-}
-
-func (c *Shoset) InitCertificate(certFile, keyFile string) error {
-	dirname, err := os.UserHomeDir()
-	if err != nil {
-		return err
-	}
-
-	// Load CA
-	catls, err := tls.LoadX509KeyPair(certFile, keyFile)
-	if err != nil {
-		return err
-	}
-
-	ca, err := x509.ParseCertificate(catls.Certificate[0]) // we parse the previous certificate
-	if err != nil {
-		return err
-	}
-
-	// Prepare new certificate
-	cert := &x509.Certificate{
-		SerialNumber: big.NewInt(1658),
-		Subject: pkix.Name{
-			Organization:  []string{"Ditrit"},
-			Country:       []string{"33"},
-			Province:      []string{"France"},
-			Locality:      []string{"Paris"},
-			StreetAddress: []string{"19 Rue Bergère"},
-			PostalCode:    []string{"75009"},
-		},
-		NotBefore:    time.Now(),
-		NotAfter:     time.Now().AddDate(10, 0, 0),
-		SubjectKeyId: []byte{1, 2, 3, 4, 6},
-		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth},
-		KeyUsage:     x509.KeyUsageDigitalSignature,
-	}
-
-	// Private and public keys
-	hostPrivateKey, _ := rsa.GenerateKey(rand.Reader, 2048)
-	hostPublicKey := &hostPrivateKey.PublicKey
-
-	// Sign the certificate
-	signedHostCert, err := x509.CreateCertificate(rand.Reader, cert, ca, hostPublicKey, catls.PrivateKey)
-	if err != nil {
-		return err
-	}
-
-	// Public key
-	hostCertFile, err := os.Create(dirname + "/.shoset/" + c.ConnsByName.GetConfigName() + "/cert/cert.crt")
-	if err != nil {
-		return err
-	}
-	pem.Encode(hostCertFile, &pem.Block{Type: "CERTIFICATE", Bytes: signedHostCert})
-	hostCertFile.Close()
-
-	// Private key
-	hostPrivateKeyFile, err := os.OpenFile(dirname+"/.shoset/"+c.ConnsByName.GetConfigName()+"/cert/privateKey.key", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
-	if err != nil {
-		return err
-	}
-	pem.Encode(hostPrivateKeyFile, &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(hostPrivateKey)})
-	hostPrivateKeyFile.Close()
-	return nil
 }
 
 func (c *Shoset) PrepareCertificate() (*x509.Certificate, *rsa.PublicKey) {
@@ -235,12 +184,7 @@ func (c *Shoset) SignCertificate(certReq *x509.Certificate, hostPublicKey *rsa.P
 		if err != nil {
 			return nil
 		}
-
-		// cert, err := x509.ParseCertificate(certReq)
-		// if err != nil {
-		// 	return nil
-		// }
-
+	
 		// Sign the certificate
 		signedHostCert, err := x509.CreateCertificate(rand.Reader, certReq, ca, hostPublicKey, catls.PrivateKey)
 		if err != nil {

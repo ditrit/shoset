@@ -1,7 +1,11 @@
 package shoset
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////
+///////// this file does not longer work since it has been handled by Events instead of config ////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////
+
 import (
-	"fmt"
+	// "fmt"
 	"io/ioutil"
 	"os"
 
@@ -26,8 +30,6 @@ func HandleConfigPki(c *ShosetConn, message msg.Message) error {
 
 	switch cfg.GetCommandName() {
 	case "pki":
-		// fmt.Println(c.ch.GetBindAddress(), "enters pki for ", remoteAddress)
-		// if dir == "in" {
 		if c.ch.GetIsPki() && c.ch.GetLogicalName() == cfg.GetLogicalName() {
 			dirname, err := os.UserHomeDir()
 			if err != nil {
@@ -46,22 +48,13 @@ func HandleConfigPki(c *ShosetConn, message msg.Message) error {
 
 			configPki := msg.NewCfgPki(remoteAddress, ch.GetLogicalName(), ch.GetShosetType(), "return_pki", CAcert, CAprivateKey)
 			c.SendMessage(configPki)
-			// fmt.Println(ch.GetBindAddress(), "message sent to ", remoteAddress)
 		} else {
 			if c.ch.GetLogicalName() == cfg.GetLogicalName() {
 				// tant que la chaussette en face n'est pas pki on demande une nouvelle config
 				newPkiConfig := msg.NewCfg(c.ch.bindAddress, c.ch.lName, c.ch.ShosetType, "pki")
-				// fmt.Println(c.ch.GetBindAddress(), "creates cfg for ", remoteAddress)
 				c.SendMessage(newPkiConfig)
 			}
-
-			// fmt.Println("create event")
-			// pkiEvent := msg.NewEventClassic("pki", "pki_event", "ask_cert")
-			// // SendEventConn(c, pkiEvent)
-			// SendEvent(c.ch, pkiEvent)
-			// fmt.Println("event sent")
 		}
-
 	case "return_pki":
 		if dir == "out" {
 			if !c.ch.GetIsCertified() {
@@ -76,12 +69,10 @@ func HandleConfigPki(c *ShosetConn, message msg.Message) error {
 				// Private key
 				ioutil.WriteFile(dirname+"/.shoset/"+c.ch.ConnsByName.GetConfigName()+"/cert/privateCAKey.key", caPrivateKey, 0644)
 
-				// fmt.Println(c.ch.GetBindAddress(), "enters initcertificate")
-				err = c.ch.InitCertificate(dirname+"/.shoset/"+c.ch.ConnsByName.GetConfigName()+"/cert/CAcert.crt", dirname+"/.shoset/"+c.ch.ConnsByName.GetConfigName()+"/cert/privateCAKey.key")
-				if err != nil {
-					fmt.Println("init certificate didn't work")
-				}
-				// fmt.Println(c.ch.GetBindAddress(), "ended initcertificate")
+				// err = c.ch.InitCertificate(dirname+"/.shoset/"+c.ch.ConnsByName.GetConfigName()+"/cert/CAcert.crt", dirname+"/.shoset/"+c.ch.ConnsByName.GetConfigName()+"/cert/privateCAKey.key")
+				// if err != nil {
+				// 	fmt.Println("init certificate didn't work")
+				// }
 
 				if c.ch.GetLogicalName() == cfg.GetLogicalName() {
 

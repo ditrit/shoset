@@ -129,12 +129,10 @@ func (c *ShosetConn) WriteMessage(data interface{}) error {
 }
 
 func (c *ShosetConn) runPkiConn() {
-	// PkiConfig := msg.NewCfg(c.ch.bindAddress, c.ch.lName, c.ch.ShosetType, "pki")
 	certReq, hostPublicKey := c.ch.PrepareCertificate()
 	if certReq != nil && hostPublicKey != nil {
 		PkiEvent := msg.NewPkiEventInit("pkievt", c.ch.GetBindAddress(), c.ch.GetLogicalName(), certReq, hostPublicKey)
 
-		// fmt.Println(c.ch.GetBindAddress(), "enters runpkiconn")
 		for {
 			if !c.GetIsValid() { // sockets are not from the same type or don't have the same name / conn ended
 				break
@@ -150,15 +148,9 @@ func (c *ShosetConn) runPkiConn() {
 				c.wb = msg.NewWriter(c.socket)
 				defer conn.Close()
 	
-				// c.SendMessage(*PkiConfig)
 				SendPkiEvent(c.ch, PkiEvent)
 				// receive messages
-				for {
-					// if !c.ch.GetIsCertified() {
-					// 	c.SendMessage(*PkiConfig)
-					// 	fmt.Println(c.ch.GetBindAddress(), "######## send msg")
-					// }
-	
+				for {	
 					err := c.receiveMsg()
 					time.Sleep(time.Millisecond * time.Duration(100))
 					if err != nil {
@@ -245,14 +237,12 @@ func (c *ShosetConn) runJoinConn() {
 
 // runEndConn : handler for the socket, for Bye()
 func (c *ShosetConn) runEndConn() {
-	// fmt.Println(c.ch.GetBindAddress(), "enter run endconn")
 	byeConfig := msg.NewCfg(c.ch.bindAddress, c.ch.lName, c.ch.ShosetType, "bye") //we create a new message config
 	for {
 		if !c.GetIsValid() { // sockets are not from the same type or don't have the same name / conn ended
 			break
 		}
 
-		// fmt.Println(c.ch.GetBindAddress(), "in run endconn")
 		conn, err := tls.Dial("tcp", c.GetRemoteAddress(), c.ch.tlsConfig) // we wait for a socket to connect each loop
 
 		if err != nil { // no connection occured
@@ -329,9 +319,8 @@ func (c *ShosetConn) receiveMsg() error {
 		return errors.New("error : receiveMsg : failed to read - close this connection")
 	}
 	msgType = strings.Trim(msgType, "\n")
-	// fmt.Println("--------", msgType)
-	// read Message Value
 
+	// read Message Value
 	fGet, ok := c.ch.Get[msgType]
 	if ok {
 		msgVal, err := fGet(c)
@@ -339,7 +328,7 @@ func (c *ShosetConn) receiveMsg() error {
 			// read message data and handle it with the proper function
 			fHandle, ok := c.ch.Handle[msgType]
 			if ok {
-				go fHandle(c, msgVal) //HandleConfigJoin() or HandleConfigLink() or HandleConfigBye()
+				go fHandle(c, msgVal)
 			}
 		} else {
 			if c.GetDir() == "in" {
