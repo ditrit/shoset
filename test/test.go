@@ -349,7 +349,7 @@ func testJoin1() {
 	cl1 := shoset.NewShoset("cl", "cl")
 	cl1.Bind("localhost:8001")
 
-	cl2 := shoset.NewShoset("cl", "cl")    // always "cl" "cl" for gandalf
+	cl2 := shoset.NewShoset("cl", "cl")                      // always "cl" "cl" for gandalf
 	cl2.Protocol("localhost:8002", "localhost:8001", "join") // we join it to our first socket
 
 	cl3 := shoset.NewShoset("cl", "cl")
@@ -368,7 +368,7 @@ func testJoin1() {
 func testJoin2() {
 	done := make(chan bool)
 
-	cl2 := shoset.NewShoset("cl", "cl")    // always "cl" "cl" for gandalf
+	cl2 := shoset.NewShoset("cl", "cl")                      // always "cl" "cl" for gandalf
 	cl2.Protocol("localhost:8002", "localhost:8001", "join") // we join it to our first socket
 
 	cl3 := shoset.NewShoset("cl", "cl")
@@ -417,7 +417,7 @@ func testJoin3() {
 func testJoin4() {
 	done := make(chan bool)
 
-	cl2 := shoset.NewShoset("cl", "cl")    // always "cl" "cl" for gandalf
+	cl2 := shoset.NewShoset("cl", "cl")                      // always "cl" "cl" for gandalf
 	cl2.Protocol("localhost:8002", "localhost:8001", "join") // we join it to our first socket
 
 	cl3 := shoset.NewShoset("cl", "cl")
@@ -789,7 +789,7 @@ func test_link8() {
 	Ca2.Protocol("localhost:8212", "localhost:8112", "link")
 
 	// time.Sleep(time.Second * time.Duration(5))
-	
+
 	// fmt.Println("\ncl : ", cl1)
 	// fmt.Println("\ncl : ", cl2)
 	// fmt.Println("\ncl : ", cl3)
@@ -853,17 +853,33 @@ func test_pki() {
 
 	Ca2 := shoset.NewShoset("Ca", "c") //connecteur
 	Ca2.Protocol("localhost:8212", "localhost:8112", "link")
-	
+
+	w := shoset.NewShoset("w", "w")
+	w.Protocol("localhost:8311", "localhost:8211", "link")
+
+	x := shoset.NewShoset("x", "x")
+	x.Protocol("localhost:8312", "localhost:8212", "link")
+
+	y := shoset.NewShoset("y", "y")
+	y.Protocol("localhost:8412", "localhost:8312", "link")
+
+	z := shoset.NewShoset("z", "z")
+	z.Protocol("localhost:8512", "localhost:8412", "link")
+
 	for {
 		time.Sleep(time.Second * time.Duration(2))
-		// fmt.Println("\ncl : ", cl1)
-		// fmt.Println("\ncl : ", cl2)
-		// fmt.Println("\ncl : ", cl3)
-		// fmt.Println("\ncl : ", cl4)
-		// fmt.Println("\nag : ", aga1)
-		// fmt.Println("\nag : ", aga2)
-		// fmt.Println("\nca : ", Ca1)
-		// fmt.Println("\nca : ", Ca2)
+		fmt.Println("\ncl : ", cl1)
+		fmt.Println("\ncl : ", cl2)
+		fmt.Println("\ncl : ", cl3)
+		fmt.Println("\ncl : ", cl4)
+		fmt.Println("\nag : ", aga1)
+		fmt.Println("\nag : ", aga2)
+		fmt.Println("\nca : ", Ca1)
+		fmt.Println("\nca : ", Ca2)
+		fmt.Println("\nw : ", w)
+		fmt.Println("\nx : ", x)
+		fmt.Println("\ny : ", y)
+		fmt.Println("\nz : ", z)
 		// fmt.Println("ConnsByTypeArray('cl')", aga1.GetConnsByTypeArray("c"))
 	}
 

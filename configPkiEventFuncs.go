@@ -50,13 +50,12 @@ func HandlePkiEvent(c *ShosetConn, message msg.Message) error {
 						return err
 					}
 					returnPkiEvent = msg.NewPkiEventReturn(evt.GetRequestAddress(), signedCert, CAcert, CAprivateKey)
-					returnPkiEvent.SetUUID(evt.GetUUID()+"*")
 					// fmt.Println("return pki event sent to", evt.GetRequestAddress())
 				} else {
 					returnPkiEvent = msg.NewPkiEventReturn(evt.GetRequestAddress(), signedCert, CAcert, nil)
-					returnPkiEvent.SetUUID(evt.GetUUID()+"*")
 					// fmt.Println("return pki event sent to", evt.GetRequestAddress())
 				}
+				returnPkiEvent.SetUUID(evt.GetUUID() + "*") // return event has the same uuid so that network isn't flooded with same events
 				SendPkiEvent(c.ch, returnPkiEvent)
 			}
 		}
@@ -80,6 +79,7 @@ func HandlePkiEvent(c *ShosetConn, message msg.Message) error {
 		} else {
 			// fmt.Println(c.ch.GetBindAddress(), "has been certified")
 		}
+		c.ch.SetIsCertified(true)
 	} else {
 		// je transmet le msg puisque je suis ni pki ni demandeur
 		if state := c.GetCh().Queue["pkievt"].Push(evt, c.GetRemoteShosetType(), c.GetLocalAddress()); state {
