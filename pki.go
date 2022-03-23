@@ -9,7 +9,8 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
-	"io/ioutil"
+
+	// "io/ioutil"
 	"math/big"
 	"os"
 	"strings"
@@ -81,7 +82,6 @@ func (c *Shoset) InitPKI(address string) error {
 		return errors.New("couldn't create CA")
 	}
 
-	// Public key
 	CAcertFile, err := os.Create(dirname + "/.shoset/" + c.ConnsByName.GetConfigName() + "/cert/CAcert.crt")
 	if err != nil {
 		return err
@@ -98,12 +98,20 @@ func (c *Shoset) InitPKI(address string) error {
 	CAprivateKeyFile.Close()
 
 	// Create and sign additional certificates - here the certificate of the socket from the CA
-	certReq, hostPublicKey := c.PrepareCertificate()
+	certReq, hostPublicKey, _ := c.PrepareCertificate()
 	if certReq != nil && hostPublicKey != nil {
 		signedHostCert := c.SignCertificate(certReq, hostPublicKey)
 		if signedHostCert != nil {
+
+			certFile, err := os.Create(dirname + "/.shoset/" + c.ConnsByName.GetConfigName() + "/cert/cert.crt")
+			if err != nil {
+				return err
+			}
+			pem.Encode(certFile, &pem.Block{Type: "CERTIFICATE", Bytes: signedHostCert})
+			certFile.Close()
+
 			// Public key
-			ioutil.WriteFile(dirname+"/.shoset/"+c.ConnsByName.GetConfigName()+"/cert/cert.crt", signedHostCert, 0644)
+			// ioutil.WriteFile(dirname+"/.shoset/"+c.ConnsByName.GetConfigName()+"/cert/cert.crt", signedHostCert, 0644)
 		} else {
 			return errors.New("prepare certificate didn't work")
 		}
@@ -129,10 +137,10 @@ func (c *Shoset) GenerateSecret(login, password string) string {
 	return ""
 }
 
-func (c *Shoset) PrepareCertificate() (*x509.Certificate, *rsa.PublicKey) {
+func (c *Shoset) PrepareCertificate() (*x509.Certificate, *rsa.PublicKey, *rsa.PrivateKey) {
 	dirname, err := os.UserHomeDir()
 	if err != nil {
-		return nil, nil
+		return nil, nil, nil
 	}
 
 	// Prepare new certificate
@@ -160,11 +168,11 @@ func (c *Shoset) PrepareCertificate() (*x509.Certificate, *rsa.PublicKey) {
 	// Private key
 	hostPrivateKeyFile, err := os.OpenFile(dirname+"/.shoset/"+c.ConnsByName.GetConfigName()+"/cert/privateKey.key", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
-		return nil, nil
+		return nil, nil, nil
 	}
 	pem.Encode(hostPrivateKeyFile, &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(hostPrivateKey)})
 	hostPrivateKeyFile.Close()
-	return certReq, hostPublicKey
+	return certReq, hostPublicKey, hostPrivateKey
 }
 
 func (c *Shoset) SignCertificate(certReq *x509.Certificate, hostPublicKey *rsa.PublicKey) []byte {
@@ -184,7 +192,7 @@ func (c *Shoset) SignCertificate(certReq *x509.Certificate, hostPublicKey *rsa.P
 		if err != nil {
 			return nil
 		}
-	
+
 		// Sign the certificate
 		signedHostCert, err := x509.CreateCertificate(rand.Reader, certReq, ca, hostPublicKey, catls.PrivateKey)
 		if err != nil {

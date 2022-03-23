@@ -2,12 +2,10 @@ package shoset
 
 import (
 	"crypto/tls"
-
 	// "crypto/x509"
-	// "io/ioutil"
-
 	"errors"
 	"fmt"
+	// "io/ioutil"
 	"net"
 	"os"
 	"strings"
@@ -53,10 +51,10 @@ type Shoset struct {
 	Wait   map[string]func(*Shoset, *msg.Iterator, map[string]string, int) *msg.Message
 
 	// configuration TLS
-	// tlsConfigSingleWay *tls.Config
-	// tlsConfigDoubleWay *tls.Config
-	tlsConfig   *tls.Config
-	tlsServerOK bool
+	tlsConfigSingleWay *tls.Config
+	tlsConfigDoubleWay *tls.Config
+	tlsConfig          *tls.Config
+	tlsServerOK        bool
 
 	// synchronisation des goroutines
 	Done chan bool
@@ -74,7 +72,17 @@ func (c Shoset) GetLogicalName() string { return c.lName }
 func (c Shoset) GetShosetType() string  { return c.ShosetType }
 func (c *Shoset) GetIsValid() bool      { return c.isValid }
 func (c *Shoset) GetIsPki() bool        { return c.isPki }
-func (c *Shoset) GetIsCertified() bool        { return c.isCertified }
+func (c *Shoset) GetIsCertified() bool  { return c.isCertified }
+
+func (c *Shoset) GetTLSconfig() string {
+	if c.tlsConfig == c.tlsConfigSingleWay {
+		return "single"
+	} else if c.tlsConfig == c.tlsConfigDoubleWay {
+		return "double"
+	} else {
+		return ""
+	}
+}
 
 func (c *Shoset) SetBindAddress(bindAddress string) {
 	c.bindAddress = bindAddress
@@ -158,7 +166,7 @@ func NewShoset(lName, ShosetType string) *Shoset { //l
 	shoset.Send["config"] = SendConfig
 	shoset.Wait["config"] = WaitConfig
 
-	// Configuration TLS //////////////////////////////////// à améliorer
+	// Configuration TLS
 	if fileExists(certPath) && fileExists(keyPath) {
 		cert, err := tls.LoadX509KeyPair(certPath, keyPath)
 		if err != nil { // only client in insecure mode
@@ -187,8 +195,8 @@ func NewShoset(lName, ShosetType string) *Shoset { //l
 	// }
 	// tlsConfigDoubleWay.BuildNameToCertificate()
 
-	// shoset.tlsConfigSingleWay = nil
-	// shoset.tlsConfigDoubleWay = nil
+	shoset.tlsConfigSingleWay = shoset.tlsConfig
+	shoset.tlsConfigDoubleWay = nil
 	// shoset.tlsConfig = nil
 	// shoset.tlsServerOK = true
 
@@ -216,10 +224,10 @@ func (c *Shoset) Bind(address string) error {
 		fmt.Println(c, "\nShoset already bound")
 		return errors.New("Shoset already bound")
 	}
-	// if !c.tlsServerOK { // TLS configuration not ok (security problem)
-	// 	fmt.Println("TLS configuration not OK (certificate not found / loaded)")
-	// 	return errors.New("TLS configuration not OK (certificate not found / loaded)")
-	// }
+	if !c.tlsServerOK { // TLS configuration not ok (security problem)
+		fmt.Println("TLS configuration not OK (certificate not found / loaded)")
+		return errors.New("TLS configuration not OK (certificate not found / loaded)")
+	}
 	ipAddress, err := GetIP(address) // parse the address from function parameter to get the IP
 	if err != nil {                  // check if IP is ok
 		return err
@@ -338,13 +346,40 @@ func (c *Shoset) handleBind() error {
 }
 
 func (c *Shoset) Protocol(bindAddress, remoteAddress, protocolType string) (*ShosetConn, error) {
-	if c.GetBindAddress() == "" { //} || (bindAddress == c.GetBindAddress() && c.tlsConfig != c.tlsConfigDoubleWay) {
-		c.Bind(bindAddress)
-	}
-
-	if !c.GetIsCertified() { 
+	if !c.GetIsCertified() {
 		conn, _ := NewShosetConn(c, remoteAddress, "out")
 		go conn.runPkiConn()
+	}
+
+	// for {
+	// 	if c.GetIsCertified() {
+	// 		dirname, err := os.UserHomeDir()
+	// 		if err != nil {
+	// 			return nil, err
+	// 		}
+
+	// 		CAcert, err := ioutil.ReadFile(dirname + "/.shoset/" + c.ConnsByName.GetConfigName() + "/cert/CAcert.crt")
+	// 		if err != nil {
+	// 			return nil, err
+	// 		}
+
+	// 		caCertPool := x509.NewCertPool()
+	// 		caCertPool.AppendCertsFromPEM(CAcert)
+	// 		c.tlsConfig = &tls.Config{
+
+	// 			ClientCAs:  caCertPool,
+	// 			ClientAuth: tls.RequireAndVerifyClientCert,
+	// 		}
+	// 		c.tlsConfig.BuildNameToCertificate()
+	// 		c.tlsConfigDoubleWay = c.tlsConfig
+	// 		break
+	// 	} else {
+	// 		fmt.Println(c.GetBindAddress(), "not certified yet")
+	// 	}
+	// }
+
+	if c.GetBindAddress() == "" { //} || (bindAddress == c.GetBindAddress() && c.tlsConfig != c.tlsConfigDoubleWay) {
+		c.Bind(bindAddress)
 	}
 
 	var conn *ShosetConn

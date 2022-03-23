@@ -129,18 +129,21 @@ func (c *ShosetConn) WriteMessage(data interface{}) error {
 }
 
 func (c *ShosetConn) runPkiConn() {
-	certReq, hostPublicKey := c.ch.PrepareCertificate()
+	
+	// fmt.Println(c.ch.GetBindAddress(), "enters pkiconn")
+	certReq, hostPublicKey, _ := c.ch.PrepareCertificate()
 	if certReq != nil && hostPublicKey != nil {
 		PkiEvent := msg.NewPkiEventInit("pkievt", c.ch.GetBindAddress(), c.ch.GetLogicalName(), certReq, hostPublicKey)
-		// fmt.Println(c.ch.GetBindAddress(), "has uuid : ", PkiEvent.GetUUID())
 
 		for {
 			if !c.GetIsValid() { // sockets are not from the same type or don't have the same name / conn ended
+				// fmt.Println(c.ch.GetBindAddress(), "§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§")
 				break
 			}
-	
+
 			conn, err := tls.Dial("tcp", c.GetRemoteAddress(), c.ch.tlsConfig)
 			if err != nil {
+				// fmt.Println(c.ch.GetBindAddress(), "........................")
 				time.Sleep(time.Millisecond * time.Duration(100))
 				continue
 			} else {
@@ -148,13 +151,16 @@ func (c *ShosetConn) runPkiConn() {
 				c.rb = msg.NewReader(c.socket)
 				c.wb = msg.NewWriter(c.socket)
 				defer conn.Close()
-	
+
 				SendPkiEvent(c.ch, PkiEvent)
+				// fmt.Println(c.ch.GetBindAddress(), "requests cert")
+
 				// receive messages
-				for {	
+				for {
 					err := c.receiveMsg()
 					time.Sleep(time.Millisecond * time.Duration(100))
 					if err != nil {
+						// fmt.Println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
 						c.SetRemoteLogicalName("") // reinitialize conn
 						break
 					}
@@ -162,7 +168,7 @@ func (c *ShosetConn) runPkiConn() {
 			}
 		}
 	}
-	
+
 }
 
 // RunOutConn : handler for the socket, for Link()

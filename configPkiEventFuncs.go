@@ -2,6 +2,9 @@ package shoset
 
 import (
 	// "fmt"
+	// "crypto/tls"
+	// "crypto/x509"
+	"encoding/pem"
 	"io/ioutil"
 	"os"
 
@@ -17,7 +20,6 @@ func GetPkiEvent(c *ShosetConn) (msg.Message, error) {
 
 // HandleEvent :
 func HandlePkiEvent(c *ShosetConn, message msg.Message) error {
-
 	evt := message.(msg.PkiEvent)
 	dirname, err := os.UserHomeDir()
 	if err != nil {
@@ -41,6 +43,8 @@ func HandlePkiEvent(c *ShosetConn, message msg.Message) error {
 				return err
 			}
 
+			// fmt.Println(evt.GetRequestAddress(), "asks event")
+
 			signedCert := c.ch.SignCertificate(evt.GetCertReq(), evt.GetHostPublicKey())
 			if signedCert != nil {
 				var returnPkiEvent *msg.PkiEvent
@@ -56,6 +60,7 @@ func HandlePkiEvent(c *ShosetConn, message msg.Message) error {
 					// fmt.Println("return pki event sent to", evt.GetRequestAddress())
 				}
 				returnPkiEvent.SetUUID(evt.GetUUID() + "*") // return event has the same uuid so that network isn't flooded with same events
+				// fmt.Println("return pki event sent to", evt.GetRequestAddress())
 				SendPkiEvent(c.ch, returnPkiEvent)
 			}
 		}
@@ -65,8 +70,16 @@ func HandlePkiEvent(c *ShosetConn, message msg.Message) error {
 		//   je recupere le msg et lire mon cert
 		//   return
 		// fi
-		signedCert := evt.GetSignedCert()
-		ioutil.WriteFile(dirname+"/.shoset/"+c.ch.ConnsByName.GetConfigName()+"/cert/cert.crt", signedCert, 0644)
+		signedHostCert := evt.GetSignedCert()
+		// ioutil.WriteFile(dirname+"/.shoset/"+c.ch.ConnsByName.GetConfigName()+"/cert/cert.crt", signedCert, 0644)
+
+		certFile, err := os.Create(dirname + "/.shoset/" + c.ch.ConnsByName.GetConfigName() + "/cert/cert.crt")
+		if err != nil {
+			return err
+		}
+		pem.Encode(certFile, &pem.Block{Type: "CERTIFICATE", Bytes: signedHostCert})
+		certFile.Close()
+
 		caCert := evt.GetCAcert()
 		ioutil.WriteFile(dirname+"/.shoset/"+c.ch.ConnsByName.GetConfigName()+"/cert/CAcert.crt", caCert, 0644)
 
@@ -75,11 +88,22 @@ func HandlePkiEvent(c *ShosetConn, message msg.Message) error {
 			ioutil.WriteFile(dirname+"/.shoset/"+c.ch.ConnsByName.GetConfigName()+"/cert/privateCAKey.key", caPrivateKey, 0644)
 
 			c.ch.SetIsPki(true)
-			// fmt.Println(c.ch.GetBindAddress(), "is now pki and has been certified")
+			// fmt.Println(c.ch.GetBindAddress(), "is now pki and has been certified with", c.ch.GetTLSconfig(), "way")
 		} else {
-			// fmt.Println(c.ch.GetBindAddress(), "has been certified")
+			// fmt.Println(c.ch.GetBindAddress(), "has been certified with", c.ch.GetTLSconfig(), "way")
 		}
 		c.ch.SetIsCertified(true)
+
+		// caCertPool := x509.NewCertPool()
+		// caCertPool.AppendCertsFromPEM(caCert)
+		// c.ch.tlsConfig = &tls.Config{
+
+		// 	ClientCAs:  caCertPool,
+		// 	ClientAuth: tls.RequireAndVerifyClientCert,
+		// }
+		// c.ch.tlsConfig.BuildNameToCertificate()
+		// c.ch.tlsConfigDoubleWay = c.ch.tlsConfig
+
 	} else {
 		// je transmet le msg puisque je suis ni pki ni demandeur
 		if state := c.GetCh().Queue["pkievt"].Push(evt, c.GetRemoteShosetType(), c.GetLocalAddress()); state {

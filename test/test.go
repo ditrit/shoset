@@ -2,7 +2,7 @@ package main // tests run in the main package
 
 import (
 	"fmt"
-	"os"
+	// "os"
 
 	// "log"
 
@@ -868,18 +868,19 @@ func test_pki() {
 
 	for {
 		time.Sleep(time.Second * time.Duration(2))
-		fmt.Println("\ncl : ", cl1)
-		fmt.Println("\ncl : ", cl2)
-		fmt.Println("\ncl : ", cl3)
-		fmt.Println("\ncl : ", cl4)
-		fmt.Println("\nag : ", aga1)
-		fmt.Println("\nag : ", aga2)
-		fmt.Println("\nca : ", Ca1)
-		fmt.Println("\nca : ", Ca2)
-		fmt.Println("\nw : ", w)
-		fmt.Println("\nx : ", x)
-		fmt.Println("\ny : ", y)
-		fmt.Println("\nz : ", z)
+		// fmt.Println(cl1.GetTLSconfig())
+		// fmt.Println("\ncl : ", cl1)
+		// fmt.Println("\ncl : ", cl2)
+		// fmt.Println("\ncl : ", cl3)
+		// fmt.Println("\ncl : ", cl4)
+		// fmt.Println("\nag : ", aga1)
+		// fmt.Println("\nag : ", aga2)
+		// fmt.Println("\nca : ", Ca1)
+		// fmt.Println("\nca : ", Ca2)
+		// fmt.Println("\nw : ", w)
+		// fmt.Println("\nx : ", x)
+		// fmt.Println("\ny : ", y)
+		// fmt.Println("\nz : ", z)
 		// fmt.Println("ConnsByTypeArray('cl')", aga1.GetConnsByTypeArray("c"))
 	}
 
@@ -888,28 +889,29 @@ func test_pki() {
 
 func main() {
 	//terminal
-	arg := os.Args[1]
-	if arg == "1" {
-		// testJoin1()
-		// testJoin2()
-		// testJoin3()
-		// testJoin4()
-		// test_link1()
-		// test_link2()
-		// test_link3()
-		// test_link4()
-		// test_link5()
-		// test_link6()
-		// test_link7()
-		// test_link8()
-		test_pki()
-	} else if arg == "2" {
-		// simpleCluster()
-		// simpleAgregator()
-		simpleConnector()
-	} else if arg == "3" {
-		simplesimpleConnector()
-	}
+	test_pki()
+	// arg := os.Args[1]
+	// if arg == "1" {
+	// 	// testJoin1()
+	// 	// testJoin2()
+	// 	// testJoin3()
+	// 	// testJoin4()
+	// 	// test_link1()
+	// 	// test_link2()
+	// 	// test_link3()
+	// 	// test_link4()
+	// 	// test_link5()
+	// 	// test_link6()
+	// 	// test_link7()
+	// 	// test_link8()
+	// 	test_pki()
+	// } else if arg == "2" {
+	// 	// simpleCluster()
+	// 	// simpleAgregator()
+	// 	simpleConnector()
+	// } else if arg == "3" {
+	// 	simplesimpleConnector()
+	// }
 }
 
 // linkOk
