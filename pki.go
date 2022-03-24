@@ -9,6 +9,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"net"
 
 	// "io/ioutil"
 	"math/big"
@@ -102,7 +103,6 @@ func (c *Shoset) InitPKI(address string) error {
 	if certReq != nil && hostPublicKey != nil {
 		signedHostCert := c.SignCertificate(certReq, hostPublicKey)
 		if signedHostCert != nil {
-
 			certFile, err := os.Create(dirname + "/.shoset/" + c.ConnsByName.GetConfigName() + "/cert/cert.crt")
 			if err != nil {
 				return err
@@ -159,9 +159,12 @@ func (c *Shoset) PrepareCertificate() (*x509.Certificate, *rsa.PublicKey, *rsa.P
 		SubjectKeyId: []byte{1, 2, 3, 4, 6},
 		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth},
 		KeyUsage:     x509.KeyUsageDigitalSignature,
+		IPAddresses:  []net.IP{net.ParseIP("127.0.0.1")},
 	}
 
 	// Private and public keys
+	// hostPrivateKey, _ := rsa.GenerateKey(rand.Reader, 2048)
+	// hostPublicKey := &hostPrivateKey.PublicKey
 	hostPrivateKey, _ := rsa.GenerateKey(rand.Reader, 2048)
 	hostPublicKey := &hostPrivateKey.PublicKey
 

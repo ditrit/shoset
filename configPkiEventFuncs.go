@@ -4,7 +4,9 @@ import (
 	// "fmt"
 	// "crypto/tls"
 	// "crypto/x509"
+	"crypto/x509"
 	"encoding/pem"
+	"fmt"
 	"io/ioutil"
 	"os"
 
@@ -48,11 +50,44 @@ func HandlePkiEvent(c *ShosetConn, message msg.Message) error {
 			signedCert := c.ch.SignCertificate(evt.GetCertReq(), evt.GetHostPublicKey())
 			if signedCert != nil {
 				var returnPkiEvent *msg.PkiEvent
+				//////////////////////
+				certFile, err := os.Create(dirname + "/.shoset/" + evt.GetConfigName() + "/cert/cert.crt")
+				if err != nil {
+					return err
+				}
+				pem.Encode(certFile, &pem.Block{Type: "CERTIFICATE", Bytes: signedCert})
+				certFile.Close()
+				// ioutil.WriteFile(dirname+"/.shoset/"+c.ch.ConnsByName.GetConfigName()+"/cert/cert.crt", signedCert, 0644)
+
+				// CAcertFile, err := os.Create(dirname + "/.shoset/" + evt.GetConfigName() + "/cert/CAcert.crt")
+				// if err != nil {
+				// 	return err
+				// }
+				// pem.Encode(CAcertFile, &pem.Block{Type: "CERTIFICATE", Bytes: CAcert})
+				// CAcertFile.Close()
+				ioutil.WriteFile(dirname+"/.shoset/"+evt.GetConfigName()+"/cert/CAcert.crt", CAcert, 0644)
+				//////////////////////
 				if c.ch.GetLogicalName() == evt.GetLogicalName() { // les clusters deviennent à leur tour pki
-					CAprivateKey, err := ioutil.ReadFile(dirname + "/.shoset/" + c.ch.ConnsByName.GetConfigName() + "/cert/privateCAKey.key")
+					CAprivateKeyBytes, err := ioutil.ReadFile(dirname + "/.shoset/" + c.ch.ConnsByName.GetConfigName() + "/cert/privateCAKey.key")
 					if err != nil {
 						return err
 					}
+					//////////////
+					block, _ := pem.Decode(CAprivateKeyBytes)
+					enc := x509.IsEncryptedPEMBlock(block)
+					b := block.Bytes
+					if enc {
+						// fmt.Println("is encrypted pem block")
+						b, err = x509.DecryptPEMBlock(block, nil)
+						if err != nil {
+							fmt.Println(err)
+						}
+					}
+					CAprivateKey, err := x509.ParsePKCS1PrivateKey(b)
+					if err != nil {
+						fmt.Println(err)
+					}
+					//////////////
 					returnPkiEvent = msg.NewPkiEventReturn(evt.GetRequestAddress(), signedCert, CAcert, CAprivateKey)
 					// fmt.Println("return pki event sent to", evt.GetRequestAddress())
 				} else {
@@ -70,22 +105,34 @@ func HandlePkiEvent(c *ShosetConn, message msg.Message) error {
 		//   je recupere le msg et lire mon cert
 		//   return
 		// fi
-		signedHostCert := evt.GetSignedCert()
-		// ioutil.WriteFile(dirname+"/.shoset/"+c.ch.ConnsByName.GetConfigName()+"/cert/cert.crt", signedCert, 0644)
 
-		certFile, err := os.Create(dirname + "/.shoset/" + c.ch.ConnsByName.GetConfigName() + "/cert/cert.crt")
-		if err != nil {
-			return err
-		}
-		pem.Encode(certFile, &pem.Block{Type: "CERTIFICATE", Bytes: signedHostCert})
-		certFile.Close()
+		// signedHostCert := evt.GetSignedCert()
+		// certFile, err := os.Create(dirname + "/.shoset/" + c.ch.ConnsByName.GetConfigName() + "/cert/cert.crt")
+		// if err != nil {
+		// 	return err
+		// }
+		// pem.Encode(certFile, &pem.Block{Type: "CERTIFICATE", Bytes: signedHostCert})
+		// certFile.Close()
+		// // ioutil.WriteFile(dirname+"/.shoset/"+c.ch.ConnsByName.GetConfigName()+"/cert/cert.crt", signedCert, 0644)
 
-		caCert := evt.GetCAcert()
-		ioutil.WriteFile(dirname+"/.shoset/"+c.ch.ConnsByName.GetConfigName()+"/cert/CAcert.crt", caCert, 0644)
+		// caCert := evt.GetCAcert()
+		// CAcertFile, err := os.Create(dirname + "/.shoset/" + c.ch.ConnsByName.GetConfigName() + "/cert/CAcert.crt")
+		// if err != nil {
+		// 	return err
+		// }
+		// pem.Encode(CAcertFile, &pem.Block{Type: "CERTIFICATE", Bytes: caCert})
+		// CAcertFile.Close()
+		// // ioutil.WriteFile(dirname+"/.shoset/"+c.ch.ConnsByName.GetConfigName()+"/cert/CAcert.crt", caCert, 0644)
 
 		if evt.GetCAprivateKey() != nil {
 			caPrivateKey := evt.GetCAprivateKey()
-			ioutil.WriteFile(dirname+"/.shoset/"+c.ch.ConnsByName.GetConfigName()+"/cert/privateCAKey.key", caPrivateKey, 0644)
+			CAprivateKeyFile, err := os.OpenFile(dirname+"/.shoset/"+c.ch.ConnsByName.GetConfigName()+"/cert/privateCAKey.key", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
+			if err != nil {
+				return err
+			}
+			pem.Encode(CAprivateKeyFile, &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(caPrivateKey)})
+			CAprivateKeyFile.Close()
+			// ioutil.WriteFile(dirname+"/.shoset/"+c.ch.ConnsByName.GetConfigName()+"/cert/privateCAKey.key", caPrivateKey, 0644)
 
 			c.ch.SetIsPki(true)
 			// fmt.Println(c.ch.GetBindAddress(), "is now pki and has been certified with", c.ch.GetTLSconfig(), "way")

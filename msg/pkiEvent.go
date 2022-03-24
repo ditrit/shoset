@@ -9,21 +9,23 @@ import (
 type PkiEvent struct {
 	MessageBase
 	RequestAddress string
+	ConfigName string
 	Command string
 	Secret string
 	LogicalName string
 	CertReq *x509.Certificate
 	SignedCert []byte
 	HostPublicKey *rsa.PublicKey
-	CAprivateKey []byte
+	CAprivateKey *rsa.PrivateKey
 	CAcert []byte
 }
 
-func NewPkiEventInit(command, requestAddress, logicalName string, certReq *x509.Certificate, hostPublicKey *rsa.PublicKey) *PkiEvent{
+func NewPkiEventInit(command, requestAddress, configName, logicalName string, certReq *x509.Certificate, hostPublicKey *rsa.PublicKey) *PkiEvent{
 	e := new(PkiEvent)
 	e.InitMessageBase()
 
 	e.RequestAddress = requestAddress
+	e.ConfigName = configName
 	e.Command = command
 	e.CertReq = certReq
 	e.HostPublicKey = hostPublicKey
@@ -31,7 +33,7 @@ func NewPkiEventInit(command, requestAddress, logicalName string, certReq *x509.
 	return e
 }
 
-func NewPkiEventReturn(requestAddress string, signedCert, CAcert []byte, caPrivateKey []byte) *PkiEvent{
+func NewPkiEventReturn(requestAddress string, signedCert, CAcert []byte, caPrivateKey *rsa.PrivateKey) *PkiEvent{
 	e := new(PkiEvent)
 	e.InitMessageBase()
 
@@ -50,6 +52,8 @@ func (e PkiEvent) GetCommand() string { return e.Command }
 
 func (e PkiEvent) GetRequestAddress() string { return e.RequestAddress }
 
+func (e PkiEvent) GetConfigName() string { return e.ConfigName }
+
 func (e PkiEvent) GetLogicalName() string { return e.LogicalName }
 
 func (e PkiEvent) GetCertReq() *x509.Certificate {return e.CertReq}
@@ -58,7 +62,7 @@ func (e PkiEvent) GetSignedCert() []byte {return e.SignedCert}
 
 func (e PkiEvent) GetHostPublicKey() *rsa.PublicKey { return e.HostPublicKey }
 
-func (e PkiEvent) GetCAprivateKey() []byte { return e.CAprivateKey }
+func (e PkiEvent) GetCAprivateKey() *rsa.PrivateKey { return e.CAprivateKey }
 
 func (e PkiEvent) GetCAcert() []byte {return e.CAcert}
 
