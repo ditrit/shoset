@@ -3,6 +3,7 @@
 !**/*.pem
 !**/*.dot
 !**/*.svg
+!**/*.sh
 !**/
 
 !/.gitignore
