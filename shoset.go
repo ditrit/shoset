@@ -185,16 +185,6 @@ func NewShoset(lName, ShosetType string) *Shoset { //l
 		shoset.tlsServerOK = false
 	}
 
-	// caCert, _ := ioutil.ReadFile("")
-	// caCertPool := x509.NewCertPool()
-	// caCertPool.AppendCertsFromPEM(caCert)
-
-	// tlsConfigDoubleWay := &tls.Config{
-	// 	ClientCAs:  caCertPool,
-	// 	ClientAuth: tls.RequireAndVerifyClientCert,
-	// }
-	// tlsConfigDoubleWay.BuildNameToCertificate()
-
 	shoset.tlsConfigSingleWay = shoset.tlsConfig
 	shoset.tlsConfigDoubleWay = nil
 	// shoset.tlsConfig = nil
@@ -219,13 +209,10 @@ func (c Shoset) String() string {
 
 //Bind : Connect to another Shoset
 func (c *Shoset) Bind(address string) error {
-	// fmt.Println(c.GetBindAddress(), "enters bind asking to bind to", address)
 	if c.GetBindAddress() != "" && c.GetBindAddress() != address { //socket already bounded to a port (already passed this Bind function once)
-		fmt.Println(c, "\nShoset already bound")
 		return errors.New("Shoset already bound")
 	}
 	if !c.tlsServerOK { // TLS configuration not ok (security problem)
-		fmt.Println("TLS configuration not OK (certificate not found / loaded)")
 		return errors.New("TLS configuration not OK (certificate not found / loaded)")
 	}
 	ipAddress, err := GetIP(address) // parse the address from function parameter to get the IP
@@ -268,57 +255,10 @@ func (c *Shoset) Bind(address string) error {
 
 	listener, err := net.Listen("tcp", c.GetBindAddress()) //open a net listener
 	if err != nil {                                        // check if listener is ok
-		//fmt.Println("Failed to bind:", err.Error())
-		//return err
-		// fmt.Println(c.GetBindAddress(), "already listening")
+		return errors.New("a shoset is already listening on this port")
 	} else {
 		c.listener = listener
 	}
-
-	// init config
-	// if fileExists(dirname + "/.shoset/" + c.ConnsByName.GetConfigName() + "/cert/CAcert.pem") {
-	// 	caCert, _ := ioutil.ReadFile(dirname + "/.shoset/" + c.ConnsByName.GetConfigName() + "/cert/CAcert.pem")
-	// 	caCertPool := x509.NewCertPool()
-	// 	caCertPool.AppendCertsFromPEM(caCert)
-
-	// 	c.tlsConfigDoubleWay = &tls.Config{
-	// 		ClientCAs:  caCertPool,
-	// 		ClientAuth: tls.RequireAndVerifyClientCert,
-	// 	}
-	// 	c.tlsConfigDoubleWay.BuildNameToCertificate()
-	// } else {
-	// 	// fmt.Println("whaaaaaaaaaaaaaat?")
-	// }
-
-	// // tlsconfig
-	// if c.tlsConfigDoubleWay != nil {
-	// 	// fmt.Println(c.GetBindAddress(), "double way ok")
-	// 	c.tlsConfig = c.tlsConfigDoubleWay
-	// } else if c.tlsConfigSingleWay != nil {
-	// 	// fmt.Println(c.GetBindAddress(), "single way ok")
-	// 	c.tlsConfig = c.tlsConfigSingleWay
-	// } else {
-	// 	// fmt.Println(c.GetBindAddress(), "init single way")
-	// 	if fileExists(certPath) && fileExists(keyPath) {
-	// 		cert, err := tls.LoadX509KeyPair(certPath, keyPath)
-	// 		if err != nil { // only client in insecure mode
-	// 			fmt.Println("! error in loading certificate !")
-	// 			c.tlsConfigSingleWay = &tls.Config{InsecureSkipVerify: true}
-	// 			c.tlsServerOK = false
-	// 		} else {
-	// 			c.tlsConfigSingleWay = &tls.Config{
-	// 				Certificates:       []tls.Certificate{cert},
-	// 				InsecureSkipVerify: true,
-	// 			}
-	// 			c.tlsServerOK = true
-	// 		}
-	// 		c.tlsConfig = c.tlsConfigSingleWay
-	// 	} else {
-	// 		fmt.Println("! wrong path certificate !")
-	// 		c.tlsServerOK = false
-	// 	}
-	// }
-	//fmt.Println(c.GetBindAddress(), "ready to handle bind")
 	go c.handleBind() // process runInconn()
 	return nil
 }
@@ -351,34 +291,7 @@ func (c *Shoset) Protocol(bindAddress, remoteAddress, protocolType string) (*Sho
 		go conn.runPkiConn()
 	}
 
-	// for {
-	// 	if c.GetIsCertified() {
-	// 		dirname, err := os.UserHomeDir()
-	// 		if err != nil {
-	// 			return nil, err
-	// 		}
-
-	// 		CAcert, err := ioutil.ReadFile(dirname + "/.shoset/" + c.ConnsByName.GetConfigName() + "/cert/CAcert.crt")
-	// 		if err != nil {
-	// 			return nil, err
-	// 		}
-
-	// 		caCertPool := x509.NewCertPool()
-	// 		caCertPool.AppendCertsFromPEM(CAcert)
-	// 		c.tlsConfig = &tls.Config{
-
-	// 			ClientCAs:  caCertPool,
-	// 			ClientAuth: tls.RequireAndVerifyClientCert,
-	// 		}
-	// 		c.tlsConfig.BuildNameToCertificate()
-	// 		c.tlsConfigDoubleWay = c.tlsConfig
-	// 		break
-	// 	} else {
-	// 		fmt.Println(c.GetBindAddress(), "not certified yet")
-	// 	}
-	// }
-
-	if c.GetBindAddress() == "" { //} || (bindAddress == c.GetBindAddress() && c.tlsConfig != c.tlsConfigDoubleWay) {
+	if c.GetBindAddress() == "" { 
 		c.Bind(bindAddress)
 	}
 
@@ -415,7 +328,6 @@ func (c *Shoset) Protocol(bindAddress, remoteAddress, protocolType string) (*Sho
 		conn, _ := NewShosetConn(c, remoteAddress, "out")
 		go conn.runEndConn()
 	default:
-		fmt.Println("Wrong input protocolType")
 		return nil, errors.New("wrong input protocolType")
 	}
 	return conn, nil

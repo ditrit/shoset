@@ -5,8 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-
-	//"os"
 	"strings"
 	"time"
 
@@ -54,7 +52,6 @@ func (c *ShosetConn) GetIsValid() bool { return c.isValid }
 // SetName : // remote logical Name
 func (c *ShosetConn) SetRemoteLogicalName(lName string) { // remote logical Name
 	c.remoteLname = lName // remote logical Name
-	// c.GetCh().ConnsByName.Set(c.GetName(), c.GetRemoteAddress(), c)
 }
 
 // SetBindAddr :
@@ -137,13 +134,11 @@ func (c *ShosetConn) runPkiConn() {
 
 		for {
 			if !c.GetIsValid() { // sockets are not from the same type or don't have the same name / conn ended
-				// fmt.Println(c.ch.GetBindAddress(), "§§§§§§§§§§§§§§§§§§§§§§§§§§§§§§")
 				break
 			}
 
 			conn, err := tls.Dial("tcp", c.GetRemoteAddress(), c.ch.tlsConfig)
 			if err != nil {
-				// fmt.Println(c.ch.GetBindAddress(), "........................")
 				time.Sleep(time.Millisecond * time.Duration(100))
 				continue
 			} else {
@@ -153,14 +148,12 @@ func (c *ShosetConn) runPkiConn() {
 				defer conn.Close()
 
 				SendPkiEvent(c.ch, PkiEvent)
-				// fmt.Println(c.ch.GetBindAddress(), "requests cert")
 
 				// receive messages
 				for {
 					err := c.receiveMsg()
 					time.Sleep(time.Millisecond * time.Duration(100))
 					if err != nil {
-						// fmt.Println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
 						c.SetRemoteLogicalName("") // reinitialize conn
 						break
 					}

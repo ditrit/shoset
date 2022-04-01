@@ -144,6 +144,8 @@ func (c *Shoset) PrepareCertificate() (*x509.Certificate, *rsa.PublicKey, *rsa.P
 	}
 
 	// Prepare new certificate
+	// voir infos du certificat généré
+	// openssl x509 -in ./cert.crt -text -noout
 	certReq := &x509.Certificate{
 		SerialNumber: big.NewInt(1658),
 		Subject: pkix.Name{
@@ -163,8 +165,6 @@ func (c *Shoset) PrepareCertificate() (*x509.Certificate, *rsa.PublicKey, *rsa.P
 	}
 
 	// Private and public keys
-	// hostPrivateKey, _ := rsa.GenerateKey(rand.Reader, 2048)
-	// hostPublicKey := &hostPrivateKey.PublicKey
 	hostPrivateKey, _ := rsa.GenerateKey(rand.Reader, 2048)
 	hostPublicKey := &hostPrivateKey.PublicKey
 
@@ -179,6 +179,8 @@ func (c *Shoset) PrepareCertificate() (*x509.Certificate, *rsa.PublicKey, *rsa.P
 }
 
 func (c *Shoset) SignCertificate(certReq *x509.Certificate, hostPublicKey *rsa.PublicKey) []byte {
+	// check if the certificates generated are valid
+	// openssl s_server -accept 8080 -www -cert yourcert.crt -key yourcert.key -CAfile CAcert.crt
 	if c.GetIsPki() {
 		dirname, err := os.UserHomeDir()
 		if err != nil {
