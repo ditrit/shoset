@@ -833,57 +833,57 @@ func test_pki() {
 	cl1 := shoset.NewShoset("cl", "cl") // cluster
 	cl1.InitPKI("localhost:8001")
 
-	time.Sleep(time.Duration(5) * time.Second)
+	// time.Sleep(time.Duration(100) * time.Millisecond)
 
 	cl2 := shoset.NewShoset("cl", "cl")
 	cl2.Protocol("localhost:8002", "localhost:8001", "join")
 
-	time.Sleep(time.Duration(5) * time.Second)
+	// time.Sleep(time.Duration(100) * time.Millisecond)
 
 	cl3 := shoset.NewShoset("cl", "cl")
 	cl3.Protocol("localhost:8003", "localhost:8002", "join")
 
-	time.Sleep(time.Duration(5) * time.Second)
+	// time.Sleep(time.Duration(100) * time.Millisecond)
 
 	cl4 := shoset.NewShoset("cl", "cl")
 	cl4.Protocol("localhost:8004", "localhost:8001", "join")
 
-	time.Sleep(time.Duration(5) * time.Second)
+	// time.Sleep(time.Duration(100) * time.Millisecond)
 
 	aga1 := shoset.NewShoset("aga", "a") // agregateur
 	aga1.Protocol("localhost:8111", "localhost:8001", "link")
 
-	time.Sleep(time.Duration(5) * time.Second)
+	// time.Sleep(time.Duration(100) * time.Millisecond)
 
 	aga2 := shoset.NewShoset("aga", "a") // agregateur
 	aga2.Protocol("localhost:8112", "localhost:8002", "link")
 
-	time.Sleep(time.Duration(5) * time.Second)
+	// time.Sleep(time.Duration(100) * time.Millisecond)
 
 	Ca1 := shoset.NewShoset("Ca", "c") //connecteur
 	Ca1.Protocol("localhost:8211", "localhost:8111", "link")
 
-	time.Sleep(time.Duration(5) * time.Second)
+	// time.Sleep(time.Duration(100) * time.Millisecond)
 
 	Ca2 := shoset.NewShoset("Ca", "c") //connecteur
 	Ca2.Protocol("localhost:8212", "localhost:8112", "link")
 
-	time.Sleep(time.Duration(5) * time.Second)
+	// time.Sleep(time.Duration(100) * time.Millisecond)
 
 	w := shoset.NewShoset("w", "w")
 	w.Protocol("localhost:8311", "localhost:8211", "link")
 
-	time.Sleep(time.Duration(5) * time.Second)
+	// time.Sleep(time.Duration(100) * time.Millisecond)
 
 	x := shoset.NewShoset("x", "x")
 	x.Protocol("localhost:8312", "localhost:8212", "link")
 
-	time.Sleep(time.Duration(5) * time.Second)
+	// time.Sleep(time.Duration(100) * time.Millisecond)
 
 	y := shoset.NewShoset("y", "y")
 	y.Protocol("localhost:8412", "localhost:8312", "link")
 
-	time.Sleep(time.Duration(5) * time.Second)
+	// time.Sleep(time.Duration(100) * time.Millisecond)
 
 	z := shoset.NewShoset("z", "z")
 	z.Protocol("localhost:8512", "localhost:8412", "link")

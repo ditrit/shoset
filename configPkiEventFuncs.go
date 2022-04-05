@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	// "time"
 
 	"github.com/ditrit/shoset/msg"
 )
@@ -39,6 +40,7 @@ func HandlePkiEvent(c *ShosetConn, message msg.Message) error {
 		//     return
 		//   fi
 		if evt.GetCertReq() != nil {
+			/////////////////////////////
 			CAcert, err := ioutil.ReadFile(dirname + "/.shoset/" + c.ch.ConnsByName.GetConfigName() + "/cert/CAcert.crt")
 			if err != nil {
 				return err
@@ -47,14 +49,8 @@ func HandlePkiEvent(c *ShosetConn, message msg.Message) error {
 			if signedCert != nil {
 				var returnPkiEvent *msg.PkiEvent
 
-				certFile, err := os.Create(dirname + "/.shoset/" + evt.GetConfigName() + "/cert/cert.crt")
-				if err != nil {
-					return err
-				}
-				pem.Encode(certFile, &pem.Block{Type: "CERTIFICATE", Bytes: signedCert})
-				certFile.Close()
-
-				ioutil.WriteFile(dirname+"/.shoset/"+evt.GetConfigName()+"/cert/CAcert.crt", CAcert, 0644)
+				
+				////////////////////////////////
 
 				if c.ch.GetLogicalName() == evt.GetLogicalName() { // les clusters deviennent à leur tour pki
 					CAprivateKeyBytes, err := ioutil.ReadFile(dirname + "/.shoset/" + c.ch.ConnsByName.GetConfigName() + "/cert/privateCAKey.key")
@@ -83,11 +79,33 @@ func HandlePkiEvent(c *ShosetConn, message msg.Message) error {
 			}
 		}
 	} else if c.ch.GetBindAddress() == evt.GetRequestAddress() {
-		// si le msg est une reponse a ma demmande (champ adresse equivaut la mienne), c'est donc moi qui ai envoyé le certreq
+		// si le msg est une reponse à ma demande (champ adresse equivaut la mienne), c'est donc moi qui ai envoyé le certreq
 		// alors
 		//   je recupere le msg et lire mon cert
 		//   return
 		// fi
+
+		///////////////////////////////
+		// fmt.Println(c.ch.ConnsByName.GetConfigName(), ":", evt.GetCAcert())
+
+		if evt.GetSignedCert() != nil {
+			signedCert := evt.GetSignedCert()
+			certFile, err := os.Create(dirname + "/.shoset/" + c.ch.ConnsByName.GetConfigName() + "/cert/cert.crt")
+			if err != nil {
+				return err
+			}
+			pem.Encode(certFile, &pem.Block{Type: "CERTIFICATE", Bytes: signedCert})
+			certFile.Close()
+		}
+		
+
+		if evt.GetCAcert() != nil {
+			caCert := evt.GetCAcert()
+			ioutil.WriteFile(dirname+"/.shoset/"+c.ch.ConnsByName.GetConfigName()+"/cert/CAcert.crt", caCert, 0644)
+		}
+
+		///////////////////////////////
+		
 		if evt.GetCAprivateKey() != nil {
 			caPrivateKey := evt.GetCAprivateKey()
 			CAprivateKeyFile, err := os.OpenFile(dirname+"/.shoset/"+c.ch.ConnsByName.GetConfigName()+"/cert/privateCAKey.key", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)

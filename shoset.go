@@ -2,9 +2,11 @@ package shoset
 
 import (
 	"crypto/tls"
+	"time"
 	// "crypto/x509"
 	"errors"
 	"fmt"
+
 	// "io/ioutil"
 	"net"
 	"os"
@@ -288,10 +290,11 @@ func (c *Shoset) handleBind() error {
 func (c *Shoset) Protocol(bindAddress, remoteAddress, protocolType string) (*ShosetConn, error) {
 	if !c.GetIsCertified() {
 		conn, _ := NewShosetConn(c, remoteAddress, "out")
+		time.Sleep(time.Duration(2) * time.Second)
 		go conn.runPkiConn()
 	}
 
-	if c.GetBindAddress() == "" { 
+	if c.GetBindAddress() == "" {
 		c.Bind(bindAddress)
 	}
 

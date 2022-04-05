@@ -18,7 +18,7 @@ do
     done
     echo -n "$SHOSET : " >> $LOGFILE
     openssl s_server -accept $PORT -www -cert cert.crt -key privateKey.key -CAfile CAcert.crt -naccept 1 | grep ACCEPT >> $LOGFILE & 
-    sleep 2
+    sleep 0.5
     openssl s_client -connect localhost:$PORT -showcerts -CAfile CAcert.crt <<< "Q"
     echo ""
     i=`expr $i + 1`
