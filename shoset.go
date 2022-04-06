@@ -2,7 +2,8 @@ package shoset
 
 import (
 	"crypto/tls"
-	"time"
+	"sync"
+	// "time"
 	// "crypto/x509"
 	"errors"
 	"fmt"
@@ -66,15 +67,18 @@ type Shoset struct {
 	isPki       bool
 	isCertified bool
 	listener    net.Listener
+	m sync.Mutex
+	wentThroughPkiOnce bool
 }
 
 /*           Accessors            */
-func (c Shoset) GetBindAddress() string { return c.bindAddress }
-func (c Shoset) GetLogicalName() string { return c.lName }
-func (c Shoset) GetShosetType() string  { return c.ShosetType }
+func (c *Shoset) GetBindAddress() string { return c.bindAddress }
+func (c *Shoset) GetLogicalName() string { return c.lName }
+func (c *Shoset) GetShosetType() string  { return c.ShosetType }
 func (c *Shoset) GetIsValid() bool      { return c.isValid }
 func (c *Shoset) GetIsPki() bool        { return c.isPki }
 func (c *Shoset) GetIsCertified() bool  { return c.isCertified }
+func (c *Shoset) GetWentThroughPkiOnce() bool { return c.wentThroughPkiOnce}
 
 func (c *Shoset) GetTLSconfig() string {
 	if c.tlsConfig == c.tlsConfigSingleWay {
@@ -100,6 +104,10 @@ func (c *Shoset) SetIsCertified(state bool) {
 	c.isCertified = state
 }
 
+func (c *Shoset) SetWentThroughPkiOnce(state bool) {
+	c.wentThroughPkiOnce = state
+}
+
 /*       Constructor     */
 func NewShoset(lName, ShosetType string) *Shoset { //l
 	// Creation
@@ -119,6 +127,7 @@ func NewShoset(lName, ShosetType string) *Shoset { //l
 	shoset.isPki = false
 	shoset.isCertified = false
 	shoset.listener = nil
+	shoset.wentThroughPkiOnce = false
 
 	// Dictionnaire des queues de message (par type de message)
 	shoset.Queue = make(map[string]*msg.Queue)
@@ -153,7 +162,6 @@ func NewShoset(lName, ShosetType string) *Shoset { //l
 	shoset.Get["pkievt"] = GetPkiEvent
 	shoset.Handle["pkievt"] = HandlePkiEvent
 	shoset.Send["pkievt"] = SendPkiEvent
-	// shoset.Wait["pkievt"] = WaitPkiEvent
 
 	shoset.Queue["cmd"] = msg.NewQueue()
 	shoset.Get["cmd"] = GetCommand
@@ -196,7 +204,7 @@ func NewShoset(lName, ShosetType string) *Shoset { //l
 }
 
 // Display with fmt - override the print of the object
-func (c Shoset) String() string {
+func (c *Shoset) String() string {
 	descr := fmt.Sprintf("Shoset -  lName: %s,\n\t\tbindAddr : %s,\n\t\ttype : %s, \n\t\tisPki : %t, \n\t\tisCertified : %t, \n\t\tConnsByName : ", c.GetLogicalName(), c.GetBindAddress(), c.GetShosetType(), c.GetIsPki(), c.GetIsCertified())
 	for _, lName := range c.ConnsByName.Keys() {
 		c.ConnsByName.Iterate(lName,
@@ -288,9 +296,11 @@ func (c *Shoset) handleBind() error {
 }
 
 func (c *Shoset) Protocol(bindAddress, remoteAddress, protocolType string) (*ShosetConn, error) {
-	if !c.GetIsCertified() {
+	if !c.GetIsCertified() && !c.GetWentThroughPkiOnce() {
 		conn, _ := NewShosetConn(c, remoteAddress, "out")
-		time.Sleep(time.Duration(2) * time.Second)
+		// time.Sleep(time.Duration(2) * time.Second)
+		fmt.Println("#######", bindAddress)
+		c.SetWentThroughPkiOnce(true)
 		go conn.runPkiConn()
 	}
 

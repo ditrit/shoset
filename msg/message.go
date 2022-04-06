@@ -46,7 +46,7 @@ func (m MessageBase) GetUUID() string {
 	return m.UUID
 }
 
-func (m MessageBase) SetUUID(newUUID string) {
+func (m *MessageBase) SetUUID(newUUID string) {
 	m.UUID = newUUID
 }
 

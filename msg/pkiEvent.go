@@ -3,13 +3,13 @@ package msg
 import (
 	"crypto/rsa"
 	"crypto/x509"
+	"fmt"
 )
 
 // Event : Gandalf event internal
 type PkiEvent struct {
 	MessageBase
 	RequestAddress string
-	ConfigName string
 	Command string
 	Secret string
 	LogicalName string
@@ -20,12 +20,11 @@ type PkiEvent struct {
 	CAcert []byte
 }
 
-func NewPkiEventInit(command, requestAddress, configName, logicalName string, certReq *x509.Certificate, hostPublicKey *rsa.PublicKey) *PkiEvent{
+func NewPkiEventInit(command, requestAddress, logicalName string, certReq *x509.Certificate, hostPublicKey *rsa.PublicKey) *PkiEvent{
 	e := new(PkiEvent)
 	e.InitMessageBase()
 
 	e.RequestAddress = requestAddress
-	e.ConfigName = configName
 	e.Command = command
 	e.CertReq = certReq
 	e.HostPublicKey = hostPublicKey
@@ -52,8 +51,6 @@ func (e PkiEvent) GetCommand() string { return e.Command }
 
 func (e PkiEvent) GetRequestAddress() string { return e.RequestAddress }
 
-func (e PkiEvent) GetConfigName() string { return e.ConfigName }
-
 func (e PkiEvent) GetLogicalName() string { return e.LogicalName }
 
 func (e PkiEvent) GetCertReq() *x509.Certificate {return e.CertReq}
@@ -66,4 +63,7 @@ func (e PkiEvent) GetCAprivateKey() *rsa.PrivateKey { return e.CAprivateKey }
 
 func (e PkiEvent) GetCAcert() []byte {return e.CAcert}
 
-
+func (e PkiEvent) String() string {
+	descr := fmt.Sprintf("RequestAddress: %s, RequestAddress: %s,\n\t\tSignedCert : %s, \n\t\tCAcert : %s", e.GetCommand(), e.GetRequestAddress(), e.GetSignedCert(), e.GetCAcert())
+	return descr
+}

@@ -29,7 +29,7 @@ func HandlePkiEvent(c *ShosetConn, message msg.Message) error {
 		return err
 	}
 
-	if c.ch.GetIsPki() {
+	if c.ch.GetIsPki() && evt.GetCommand() == "pkievt" {
 		// si je suis pki :
 		//   si on m'envoie un certreq
 		//   alors
@@ -75,10 +75,11 @@ func HandlePkiEvent(c *ShosetConn, message msg.Message) error {
 					returnPkiEvent = msg.NewPkiEventReturn(evt.GetRequestAddress(), signedCert, CAcert, nil)
 				}
 				returnPkiEvent.SetUUID(evt.GetUUID() + "*") // return event has the same uuid so that network isn't flooded with same events
+				fmt.Println("return msg sent to ", evt.GetRequestAddress())
 				SendPkiEvent(c.ch, returnPkiEvent)
 			}
 		}
-	} else if c.ch.GetBindAddress() == evt.GetRequestAddress() {
+	} else if c.ch.GetBindAddress() == evt.GetRequestAddress() && evt.Command == "" {
 		// si le msg est une reponse à ma demande (champ adresse equivaut la mienne), c'est donc moi qui ai envoyé le certreq
 		// alors
 		//   je recupere le msg et lire mon cert
@@ -121,6 +122,7 @@ func HandlePkiEvent(c *ShosetConn, message msg.Message) error {
 	} else {
 		// je transmet le msg puisque je suis ni pki ni demandeur
 		if state := c.GetCh().Queue["pkievt"].Push(evt, c.GetRemoteShosetType(), c.GetLocalAddress()); state {
+			fmt.Println(c.ch.GetBindAddress(), "transmits msg from ", evt.GetRequestAddress())
 			SendPkiEvent(c.ch, evt)
 		}
 	}

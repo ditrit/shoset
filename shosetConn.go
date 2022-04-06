@@ -130,9 +130,10 @@ func (c *ShosetConn) runPkiConn() {
 	// fmt.Println(c.ch.GetBindAddress(), "enters pkiconn")
 	certReq, hostPublicKey, _ := c.ch.PrepareCertificate()
 	if certReq != nil && hostPublicKey != nil {
-		PkiEvent := msg.NewPkiEventInit("pkievt", c.ch.GetBindAddress(), c.ch.ConnsByName.GetConfigName(), c.ch.GetLogicalName(), certReq, hostPublicKey)
+		PkiEvent := msg.NewPkiEventInit("pkievt", c.ch.GetBindAddress(), c.ch.GetLogicalName(), certReq, hostPublicKey)
 
 		for {
+			fmt.Println(",,,,,,,,,,,,", c.ch.GetBindAddress())
 			if !c.GetIsValid() { // sockets are not from the same type or don't have the same name / conn ended
 				break
 			}
@@ -148,6 +149,8 @@ func (c *ShosetConn) runPkiConn() {
 				defer conn.Close()
 
 				SendPkiEvent(c.ch, PkiEvent)
+				fmt.Println(c.ch.GetBindAddress(), "init msg")
+
 
 				// receive messages
 				for {
@@ -155,6 +158,7 @@ func (c *ShosetConn) runPkiConn() {
 					time.Sleep(time.Millisecond * time.Duration(100))
 					if err != nil {
 						c.SetRemoteLogicalName("") // reinitialize conn
+						fmt.Println("!!!!!!!!! ", err)
 						break
 					}
 				}

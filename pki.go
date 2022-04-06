@@ -181,26 +181,34 @@ func (c *Shoset) PrepareCertificate() (*x509.Certificate, *rsa.PublicKey, *rsa.P
 func (c *Shoset) SignCertificate(certReq *x509.Certificate, hostPublicKey *rsa.PublicKey) []byte {
 	// check if the certificates generated are valid
 	// openssl s_server -accept 8080 -www -cert yourcert.crt -key yourcert.key -CAfile CAcert.crt
+
+	c.m.Lock()
+	defer c.m.Unlock()
+
 	if c.GetIsPki() {
 		dirname, err := os.UserHomeDir()
 		if err != nil {
+			fmt.Println("err", err)
 			return nil
 		}
 
 		// Load CA
 		catls, err := tls.LoadX509KeyPair(dirname+"/.shoset/"+c.ConnsByName.GetConfigName()+"/cert/CAcert.crt", dirname+"/.shoset/"+c.ConnsByName.GetConfigName()+"/cert/privateCAKey.key")
 		if err != nil {
+			fmt.Println("err", err)
 			return nil
 		}
 
 		ca, err := x509.ParseCertificate(catls.Certificate[0]) // we parse the previous certificate
 		if err != nil {
+			fmt.Println("err", err)
 			return nil
 		}
 
 		// Sign the certificate
 		signedHostCert, err := x509.CreateCertificate(rand.Reader, certReq, ca, hostPublicKey, catls.PrivateKey)
 		if err != nil {
+			fmt.Println("err", err)
 			return nil
 		}
 		return signedHostCert

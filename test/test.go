@@ -833,60 +833,126 @@ func test_pki() {
 	cl1 := shoset.NewShoset("cl", "cl") // cluster
 	cl1.InitPKI("localhost:8001")
 
-	// time.Sleep(time.Duration(100) * time.Millisecond)
+	// time.Sleep(time.Duration(5) * time.Second)
 
 	cl2 := shoset.NewShoset("cl", "cl")
 	cl2.Protocol("localhost:8002", "localhost:8001", "join")
 
-	// time.Sleep(time.Duration(100) * time.Millisecond)
+	// time.Sleep(time.Duration(5) * time.Second)
 
 	cl3 := shoset.NewShoset("cl", "cl")
 	cl3.Protocol("localhost:8003", "localhost:8002", "join")
 
-	// time.Sleep(time.Duration(100) * time.Millisecond)
+	// time.Sleep(time.Duration(5) * time.Second)
 
 	cl4 := shoset.NewShoset("cl", "cl")
 	cl4.Protocol("localhost:8004", "localhost:8001", "join")
 
-	// time.Sleep(time.Duration(100) * time.Millisecond)
+	// time.Sleep(time.Duration(5) * time.Second)
 
 	aga1 := shoset.NewShoset("aga", "a") // agregateur
 	aga1.Protocol("localhost:8111", "localhost:8001", "link")
 
-	// time.Sleep(time.Duration(100) * time.Millisecond)
+	// time.Sleep(time.Duration(5) * time.Second)
 
 	aga2 := shoset.NewShoset("aga", "a") // agregateur
 	aga2.Protocol("localhost:8112", "localhost:8002", "link")
 
-	// time.Sleep(time.Duration(100) * time.Millisecond)
+	// time.Sleep(time.Duration(5) * time.Second)
 
 	Ca1 := shoset.NewShoset("Ca", "c") //connecteur
 	Ca1.Protocol("localhost:8211", "localhost:8111", "link")
 
-	// time.Sleep(time.Duration(100) * time.Millisecond)
+	// time.Sleep(time.Duration(5) * time.Second)
 
 	Ca2 := shoset.NewShoset("Ca", "c") //connecteur
 	Ca2.Protocol("localhost:8212", "localhost:8112", "link")
 
-	// time.Sleep(time.Duration(100) * time.Millisecond)
+	// time.Sleep(time.Duration(5) * time.Second)
 
 	w := shoset.NewShoset("w", "w")
 	w.Protocol("localhost:8311", "localhost:8211", "link")
 
-	// time.Sleep(time.Duration(100) * time.Millisecond)
+	// time.Sleep(time.Duration(5) * time.Second)
 
 	x := shoset.NewShoset("x", "x")
 	x.Protocol("localhost:8312", "localhost:8212", "link")
 
-	// time.Sleep(time.Duration(100) * time.Millisecond)
+	// time.Sleep(time.Duration(5) * time.Second)
 
 	y := shoset.NewShoset("y", "y")
 	y.Protocol("localhost:8412", "localhost:8312", "link")
 
-	// time.Sleep(time.Duration(100) * time.Millisecond)
+	// time.Sleep(time.Duration(5) * time.Second)
 
 	z := shoset.NewShoset("z", "z")
 	z.Protocol("localhost:8512", "localhost:8412", "link")
+
+	for {
+		time.Sleep(time.Second * time.Duration(2))
+		// fmt.Println(cl1.GetTLSconfig())
+		// fmt.Println("\ncl : ", cl1)
+		// fmt.Println("\ncl : ", cl2)
+		// fmt.Println("\ncl : ", cl3)
+		// fmt.Println("\ncl : ", cl4)
+		// fmt.Println("\nag : ", aga1)
+		// fmt.Println("\nag : ", aga2)
+		// fmt.Println("\nca : ", Ca1)
+		// fmt.Println("\nca : ", Ca2)
+		// fmt.Println("\nw : ", w)
+		// fmt.Println("\nx : ", x)
+		// fmt.Println("\ny : ", y)
+		// fmt.Println("\nz : ", z)
+		// fmt.Println("ConnsByTypeArray('cl')", aga1.GetConnsByTypeArray("c"))
+	}
+
+	<-done
+}
+
+func test_pki2() {
+	done := make(chan bool)
+
+	cl1 := shoset.NewShoset("cl", "cl") // cluster
+	cl1.InitPKI("localhost:8001")
+
+	// time.Sleep(time.Duration(5) * time.Second)
+
+	cl2 := shoset.NewShoset("cl", "cl")
+	cl2.Protocol("localhost:8002", "localhost:8001", "join")
+
+	// time.Sleep(time.Duration(5) * time.Second)
+
+	cl3 := shoset.NewShoset("cl", "cl")
+	cl3.Protocol("localhost:8003", "localhost:8001", "join")
+
+	// time.Sleep(time.Duration(5) * time.Second)
+
+	cl4 := shoset.NewShoset("cl", "cl")
+	cl4.Protocol("localhost:8004", "localhost:8001", "join")
+
+	// time.Sleep(time.Duration(5) * time.Second)
+
+	cl5 := shoset.NewShoset("cl", "cl")
+	cl5.Protocol("localhost:8005", "localhost:8001", "join")
+
+	// time.Sleep(time.Duration(5) * time.Second)
+
+	cl6 := shoset.NewShoset("cl", "cl")
+	cl6.Protocol("localhost:8006", "localhost:8001", "join")
+
+	// time.Sleep(time.Duration(5) * time.Second)
+
+	cl7 := shoset.NewShoset("cl", "cl")
+	cl7.Protocol("localhost:8007", "localhost:8001", "join")
+
+	// time.Sleep(time.Duration(5) * time.Second)
+
+	cl8 := shoset.NewShoset("cl", "cl")
+	cl8.Protocol("localhost:8008", "localhost:8001", "join")
+
+	// time.Sleep(time.Duration(5) * time.Second)
+
+	
 
 	for {
 		time.Sleep(time.Second * time.Duration(2))
