@@ -36,12 +36,12 @@ func HandleConfigPki(c *ShosetConn, message msg.Message) error {
 				return err
 			}
 
-			CAcert, err := ioutil.ReadFile(dirname + "/.shoset/" + c.ch.ConnsByName.GetConfigName() + "/cert/CAcert.crt")
+			CAcert, err := ioutil.ReadFile(dirname + "/.shoset/" + c.ch.GetFileName() + "/cert/CAcert.crt")
 			if err != nil {
 				return err
 			}
 
-			CAprivateKey, err := ioutil.ReadFile(dirname + "/.shoset/" + c.ch.ConnsByName.GetConfigName() + "/cert/privateCAKey.key")
+			CAprivateKey, err := ioutil.ReadFile(dirname + "/.shoset/" + c.ch.GetFileName() + "/cert/privateCAKey.key")
 			if err != nil {
 				return err
 			}
@@ -64,12 +64,12 @@ func HandleConfigPki(c *ShosetConn, message msg.Message) error {
 				}
 
 				// Public key
-				ioutil.WriteFile(dirname+"/.shoset/"+c.ch.ConnsByName.GetConfigName()+"/cert/CAcert.crt", caCert, 0644)
+				ioutil.WriteFile(dirname+"/.shoset/"+c.ch.GetFileName()+"/cert/CAcert.crt", caCert, 0644)
 
 				// Private key
-				ioutil.WriteFile(dirname+"/.shoset/"+c.ch.ConnsByName.GetConfigName()+"/cert/privateCAKey.key", caPrivateKey, 0644)
+				ioutil.WriteFile(dirname+"/.shoset/"+c.ch.GetFileName()+"/cert/privateCAKey.key", caPrivateKey, 0644)
 
-				// err = c.ch.InitCertificate(dirname+"/.shoset/"+c.ch.ConnsByName.GetConfigName()+"/cert/CAcert.crt", dirname+"/.shoset/"+c.ch.ConnsByName.GetConfigName()+"/cert/privateCAKey.key")
+				// err = c.ch.InitCertificate(dirname+"/.shoset/"+c.ch.GetFileName()+"/cert/CAcert.crt", dirname+"/.shoset/"+c.ch.GetFileName()+"/cert/privateCAKey.key")
 				// if err != nil {
 				// 	fmt.Println("init certificate didn't work")
 				// }

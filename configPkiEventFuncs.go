@@ -4,11 +4,13 @@ import (
 	// "fmt"
 	// "crypto/tls"
 	// "crypto/x509"
+	"crypto/tls"
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
 	"io/ioutil"
 	"os"
+
 	// "time"
 
 	"github.com/ditrit/shoset/msg"
@@ -40,8 +42,7 @@ func HandlePkiEvent(c *ShosetConn, message msg.Message) error {
 		//     return
 		//   fi
 		if evt.GetCertReq() != nil {
-			/////////////////////////////
-			CAcert, err := ioutil.ReadFile(dirname + "/.shoset/" + c.ch.ConnsByName.GetConfigName() + "/cert/CAcert.crt")
+			CAcert, err := ioutil.ReadFile(dirname + "/.shoset/" + c.ch.GetFileName() + "/cert/CAcert.crt")
 			if err != nil {
 				return err
 			}
@@ -49,11 +50,8 @@ func HandlePkiEvent(c *ShosetConn, message msg.Message) error {
 			if signedCert != nil {
 				var returnPkiEvent *msg.PkiEvent
 
-				
-				////////////////////////////////
-
 				if c.ch.GetLogicalName() == evt.GetLogicalName() { // les clusters deviennent à leur tour pki
-					CAprivateKeyBytes, err := ioutil.ReadFile(dirname + "/.shoset/" + c.ch.ConnsByName.GetConfigName() + "/cert/privateCAKey.key")
+					CAprivateKeyBytes, err := ioutil.ReadFile(dirname + "/.shoset/" + c.ch.GetFileName() + "/cert/privateCAKey.key")
 					if err != nil {
 						return err
 					}
@@ -85,31 +83,24 @@ func HandlePkiEvent(c *ShosetConn, message msg.Message) error {
 		//   je recupere le msg et lire mon cert
 		//   return
 		// fi
-
-		///////////////////////////////
-		// fmt.Println(c.ch.ConnsByName.GetConfigName(), ":", evt.GetCAcert())
-
 		if evt.GetSignedCert() != nil {
 			signedCert := evt.GetSignedCert()
-			certFile, err := os.Create(dirname + "/.shoset/" + c.ch.ConnsByName.GetConfigName() + "/cert/cert.crt")
+			certFile, err := os.Create(dirname + "/.shoset/" + c.ch.GetFileName() + "/cert/cert.crt")
 			if err != nil {
 				return err
 			}
 			pem.Encode(certFile, &pem.Block{Type: "CERTIFICATE", Bytes: signedCert})
 			certFile.Close()
 		}
-		
 
 		if evt.GetCAcert() != nil {
 			caCert := evt.GetCAcert()
-			ioutil.WriteFile(dirname+"/.shoset/"+c.ch.ConnsByName.GetConfigName()+"/cert/CAcert.crt", caCert, 0644)
+			ioutil.WriteFile(dirname+"/.shoset/"+c.ch.GetFileName()+"/cert/CAcert.crt", caCert, 0644)
 		}
 
-		///////////////////////////////
-		
 		if evt.GetCAprivateKey() != nil {
 			caPrivateKey := evt.GetCAprivateKey()
-			CAprivateKeyFile, err := os.OpenFile(dirname+"/.shoset/"+c.ch.ConnsByName.GetConfigName()+"/cert/privateCAKey.key", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
+			CAprivateKeyFile, err := os.OpenFile(dirname+"/.shoset/"+c.ch.GetFileName()+"/cert/privateCAKey.key", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 			if err != nil {
 				return err
 			}
@@ -119,6 +110,28 @@ func HandlePkiEvent(c *ShosetConn, message msg.Message) error {
 			c.ch.SetIsPki(true)
 		}
 		c.ch.SetIsCertified(true)
+
+		// point env variable to our CAcert so that computer does not point elsewhere
+		os.Setenv("SSL_CERT_FILE", dirname+"/.shoset/"+c.ch.GetFileName()+"/cert/CAcert.crt")
+
+		// tls Double way
+		cert, err := tls.LoadX509KeyPair(dirname+"/.shoset/"+c.ch.GetFileName()+"/cert/cert.crt", dirname+"/.shoset/"+c.ch.GetFileName()+"/cert/privateKey.key")
+		if err != nil {
+			fmt.Println("! Unable to Load certificate !")
+		}
+		CAcert, err := ioutil.ReadFile(dirname + "/.shoset/" + c.ch.GetFileName() + "/cert/CAcert.crt")
+		if err != nil {
+			fmt.Println("error read file cacert :", err)
+		}
+		caCertPool := x509.NewCertPool()
+		caCertPool.AppendCertsFromPEM(CAcert)
+		c.ch.tlsConfigDoubleWay = &tls.Config{
+			Certificates:       []tls.Certificate{cert},
+			ClientCAs:          caCertPool,
+			ClientAuth:         tls.RequireAndVerifyClientCert,
+			InsecureSkipVerify: false,
+		}
+		c.ch.tlsConfigDoubleWay.BuildNameToCertificate()
 	} else {
 		// je transmet le msg puisque je suis ni pki ni demandeur
 		if state := c.GetCh().Queue["pkievt"].Push(evt, c.GetRemoteShosetType(), c.GetLocalAddress()); state {

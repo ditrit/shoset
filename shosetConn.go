@@ -125,9 +125,8 @@ func (c *ShosetConn) WriteMessage(data interface{}) error {
 	return c.wb.WriteMessage(data)
 }
 
-func (c *ShosetConn) runPkiConn() {
-	
-	// fmt.Println(c.ch.GetBindAddress(), "enters pkiconn")
+func (c *ShosetConn) runPkiConn(bindAddress string) {
+	fmt.Println(bindAddress, "enters pkiconn")
 	certReq, hostPublicKey, _ := c.ch.PrepareCertificate()
 	if certReq != nil && hostPublicKey != nil {
 		PkiEvent := msg.NewPkiEventInit("pkievt", c.ch.GetBindAddress(), c.ch.GetLogicalName(), certReq, hostPublicKey)
@@ -141,6 +140,7 @@ func (c *ShosetConn) runPkiConn() {
 			conn, err := tls.Dial("tcp", c.GetRemoteAddress(), c.ch.tlsConfig)
 			if err != nil {
 				time.Sleep(time.Millisecond * time.Duration(100))
+				fmt.Println("err:", err)
 				continue
 			} else {
 				c.socket = conn
@@ -150,7 +150,6 @@ func (c *ShosetConn) runPkiConn() {
 
 				SendPkiEvent(c.ch, PkiEvent)
 				fmt.Println(c.ch.GetBindAddress(), "init msg")
-
 
 				// receive messages
 				for {
@@ -165,7 +164,6 @@ func (c *ShosetConn) runPkiConn() {
 			}
 		}
 	}
-
 }
 
 // RunOutConn : handler for the socket, for Link()

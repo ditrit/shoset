@@ -3,6 +3,7 @@ package shoset
 import (
 	"crypto/tls"
 	"sync"
+
 	// "time"
 	// "crypto/x509"
 	"errors"
@@ -62,33 +63,35 @@ type Shoset struct {
 	// synchronisation des goroutines
 	Done chan bool
 
-	viperConfig *viper.Viper
-	isValid     bool
-	isPki       bool
-	isCertified bool
-	listener    net.Listener
-	m sync.Mutex
+	viperConfig        *viper.Viper
+	isValid            bool
+	isPki              bool
+	isCertified        bool
+	listener           net.Listener
+	m                  sync.Mutex
 	wentThroughPkiOnce bool
+	fileName           string
 }
 
 /*           Accessors            */
-func (c *Shoset) GetBindAddress() string { return c.bindAddress }
-func (c *Shoset) GetLogicalName() string { return c.lName }
-func (c *Shoset) GetShosetType() string  { return c.ShosetType }
-func (c *Shoset) GetIsValid() bool      { return c.isValid }
-func (c *Shoset) GetIsPki() bool        { return c.isPki }
-func (c *Shoset) GetIsCertified() bool  { return c.isCertified }
-func (c *Shoset) GetWentThroughPkiOnce() bool { return c.wentThroughPkiOnce}
+func (c *Shoset) GetBindAddress() string      { return c.bindAddress }
+func (c *Shoset) GetLogicalName() string      { return c.lName }
+func (c *Shoset) GetShosetType() string       { return c.ShosetType }
+func (c *Shoset) GetIsValid() bool            { return c.isValid }
+func (c *Shoset) GetIsPki() bool              { return c.isPki }
+func (c *Shoset) GetIsCertified() bool        { return c.isCertified }
+func (c *Shoset) GetWentThroughPkiOnce() bool { return c.wentThroughPkiOnce }
+func (c *Shoset) GetFileName() string         { return c.fileName }
 
-func (c *Shoset) GetTLSconfig() string {
-	if c.tlsConfig == c.tlsConfigSingleWay {
-		return "single"
-	} else if c.tlsConfig == c.tlsConfigDoubleWay {
-		return "double"
-	} else {
-		return ""
-	}
-}
+// func (c *Shoset) GetTLSconfig() string {
+// 	if c.tlsConfig == c.tlsConfigSingleWay {
+// 		return "single"
+// 	} else if c.tlsConfig == c.tlsConfigDoubleWay {
+// 		return "double"
+// 	} else {
+// 		return ""
+// 	}
+// }
 
 func (c *Shoset) SetBindAddress(bindAddress string) {
 	c.bindAddress = bindAddress
@@ -106,6 +109,10 @@ func (c *Shoset) SetIsCertified(state bool) {
 
 func (c *Shoset) SetWentThroughPkiOnce(state bool) {
 	c.wentThroughPkiOnce = state
+}
+
+func (c *Shoset) SetFileName(fileName string) {
+	c.fileName = fileName
 }
 
 /*       Constructor     */
@@ -128,6 +135,7 @@ func NewShoset(lName, ShosetType string) *Shoset { //l
 	shoset.isCertified = false
 	shoset.listener = nil
 	shoset.wentThroughPkiOnce = false
+	shoset.fileName = ""
 
 	// Dictionnaire des queues de message (par type de message)
 	shoset.Queue = make(map[string]*msg.Queue)
@@ -195,7 +203,10 @@ func NewShoset(lName, ShosetType string) *Shoset { //l
 		shoset.tlsServerOK = false
 	}
 
-	shoset.tlsConfigSingleWay = shoset.tlsConfig
+	// shoset.tlsConfig = &tls.Config{InsecureSkipVerify: true}
+	// shoset.tlsServerOK = true
+
+	shoset.tlsConfigSingleWay = &tls.Config{InsecureSkipVerify: true}
 	shoset.tlsConfigDoubleWay = nil
 	// shoset.tlsConfig = nil
 	// shoset.tlsServerOK = true
@@ -225,29 +236,15 @@ func (c *Shoset) Bind(address string) error {
 	if !c.tlsServerOK { // TLS configuration not ok (security problem)
 		return errors.New("TLS configuration not OK (certificate not found / loaded)")
 	}
-	ipAddress, err := GetIP(address) // parse the address from function parameter to get the IP
-	if err != nil {                  // check if IP is ok
-		return err
-	}
-
-	_ipAddress := strings.Replace(ipAddress, ":", "_", -1)
-	_ipAddress = strings.Replace(_ipAddress, ".", "-", -1)
-	c.ConnsByName.SetConfigName(_ipAddress)
 
 	// viper config
 	dirname, err := os.UserHomeDir()
 	if err != nil {
 		fmt.Println(err)
 	}
-	if !fileExists(dirname + "/.shoset/" + _ipAddress + "/") {
-		os.Mkdir(dirname+"/.shoset/", 0700)
-		os.Mkdir(dirname+"/.shoset/"+_ipAddress+"/", 0700)
-		os.Mkdir(dirname+"/.shoset/"+_ipAddress+"/config/", 0700)
-		os.Mkdir(dirname+"/.shoset/"+_ipAddress+"/cert/", 0700)
-	}
 
-	c.viperConfig.AddConfigPath(dirname + "/.shoset/" + _ipAddress + "/config/")
-	c.viperConfig.SetConfigName(_ipAddress)
+	c.viperConfig.AddConfigPath(dirname + "/.shoset/" + c.GetFileName() + "/config/")
+	c.viperConfig.SetConfigName(c.GetFileName())
 	c.viperConfig.SetConfigType("yaml")
 
 	if err := c.viperConfig.ReadInConfig(); err != nil {
@@ -261,7 +258,10 @@ func (c *Shoset) Bind(address string) error {
 		}
 	}
 
-	c.SetBindAddress(ipAddress) // bound to the port
+	ipAddress, err := GetIP(address)
+	if err == nil {
+		c.SetBindAddress(ipAddress) // bound to the port
+	}
 
 	listener, err := net.Listen("tcp", c.GetBindAddress()) //open a net listener
 	if err != nil {                                        // check if listener is ok
@@ -296,12 +296,29 @@ func (c *Shoset) handleBind() error {
 }
 
 func (c *Shoset) Protocol(bindAddress, remoteAddress, protocolType string) (*ShosetConn, error) {
+	ipAddress, err := GetIP(bindAddress) // parse the address from function parameter to get the IP
+	if err == nil {                      // check if IP is ok
+		_ipAddress := strings.Replace(ipAddress, ":", "_", -1)
+		_ipAddress = strings.Replace(_ipAddress, ".", "-", -1)
+		c.SetFileName(_ipAddress)
+
+		dirname, err := os.UserHomeDir()
+		if err != nil {
+			fmt.Println(err)
+		}
+
+		if !fileExists(dirname + "/.shoset/" + c.GetFileName() + "/") {
+			os.Mkdir(dirname+"/.shoset/", 0700)
+			os.Mkdir(dirname+"/.shoset/"+c.GetFileName()+"/", 0700)
+			os.Mkdir(dirname+"/.shoset/"+c.GetFileName()+"/config/", 0700)
+			os.Mkdir(dirname+"/.shoset/"+c.GetFileName()+"/cert/", 0700)
+		}
+	}
+
 	if !c.GetIsCertified() && !c.GetWentThroughPkiOnce() {
 		conn, _ := NewShosetConn(c, remoteAddress, "out")
-		// time.Sleep(time.Duration(2) * time.Second)
-		fmt.Println("#######", bindAddress)
 		c.SetWentThroughPkiOnce(true)
-		go conn.runPkiConn()
+		go conn.runPkiConn(bindAddress)
 	}
 
 	if c.GetBindAddress() == "" {
@@ -351,7 +368,7 @@ func (c *Shoset) deleteConn(connAddr, connLname string) {
 	if conns := c.ConnsByName.Get(connLname); conns != nil {
 		if conns.Get(connAddr) != nil {
 			// fmt.Println(c.GetBindAddress(), " is ok in deleteConn")
-			c.ConnsByName.Delete(connLname, connAddr)
+			c.ConnsByName.Delete(connLname, connAddr, c.fileName)
 		}
 	}
 }

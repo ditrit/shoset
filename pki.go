@@ -9,11 +9,13 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"net"
 
 	// "io/ioutil"
 	"math/big"
 	"os"
+
 	"strings"
 	"time"
 
@@ -37,23 +39,22 @@ func (c *Shoset) InitPKI(address string) error {
 
 	// demarche d'initialisation de bind classique (shoset.go/bind)
 	ipAddress, err := GetIP(address) // parse the address from function parameter to get the IP
-	if err != nil {                  // check if IP is ok
-		return err
+	if err == nil {                      // check if IP is ok
+		_ipAddress := strings.Replace(ipAddress, ":", "_", -1)
+		_ipAddress = strings.Replace(_ipAddress, ".", "-", -1)
+		c.SetFileName(_ipAddress)
 	}
-	_ipAddress := strings.Replace(ipAddress, ":", "_", -1)
-	_ipAddress = strings.Replace(_ipAddress, ".", "-", -1)
-	c.ConnsByName.SetConfigName(_ipAddress)
 
 	dirname, err := os.UserHomeDir()
 	if err != nil {
 		fmt.Println("Get UserHomeDir error : ", err)
 		return err
 	}
-	if !fileExists(dirname + "/.shoset/" + c.ConnsByName.GetConfigName() + "/") {
+	if !fileExists(dirname + "/.shoset/" + c.GetFileName() + "/") {
 		os.Mkdir(dirname+"/.shoset/", 0700)
-		os.Mkdir(dirname+"/.shoset/"+c.ConnsByName.GetConfigName()+"/", 0700)
-		os.Mkdir(dirname+"/.shoset/"+c.ConnsByName.GetConfigName()+"/config/", 0700)
-		os.Mkdir(dirname+"/.shoset/"+c.ConnsByName.GetConfigName()+"/cert/", 0700)
+		os.Mkdir(dirname+"/.shoset/"+c.GetFileName()+"/", 0700)
+		os.Mkdir(dirname+"/.shoset/"+c.GetFileName()+"/config/", 0700)
+		os.Mkdir(dirname+"/.shoset/"+c.GetFileName()+"/cert/", 0700)
 	}
 
 	// Create Certificate Authority
@@ -83,7 +84,7 @@ func (c *Shoset) InitPKI(address string) error {
 		return errors.New("couldn't create CA")
 	}
 
-	CAcertFile, err := os.Create(dirname + "/.shoset/" + c.ConnsByName.GetConfigName() + "/cert/CAcert.crt")
+	CAcertFile, err := os.Create(dirname + "/.shoset/" + c.GetFileName() + "/cert/CAcert.crt")
 	if err != nil {
 		return err
 	}
@@ -91,7 +92,7 @@ func (c *Shoset) InitPKI(address string) error {
 	CAcertFile.Close()
 
 	// Private key
-	CAprivateKeyFile, err := os.OpenFile(dirname+"/.shoset/"+c.ConnsByName.GetConfigName()+"/cert/privateCAKey.key", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
+	CAprivateKeyFile, err := os.OpenFile(dirname+"/.shoset/"+c.GetFileName()+"/cert/privateCAKey.key", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
 		return err
 	}
@@ -103,7 +104,7 @@ func (c *Shoset) InitPKI(address string) error {
 	if certReq != nil && hostPublicKey != nil {
 		signedHostCert := c.SignCertificate(certReq, hostPublicKey)
 		if signedHostCert != nil {
-			certFile, err := os.Create(dirname + "/.shoset/" + c.ConnsByName.GetConfigName() + "/cert/cert.crt")
+			certFile, err := os.Create(dirname + "/.shoset/" + c.GetFileName() + "/cert/cert.crt")
 			if err != nil {
 				return err
 			}
@@ -111,7 +112,7 @@ func (c *Shoset) InitPKI(address string) error {
 			certFile.Close()
 
 			// Public key
-			// ioutil.WriteFile(dirname+"/.shoset/"+c.ConnsByName.GetConfigName()+"/cert/cert.crt", signedHostCert, 0644)
+			// ioutil.WriteFile(dirname+"/.shoset/"+c.GetFileName()+"/cert/cert.crt", signedHostCert, 0644)
 		} else {
 			return errors.New("prepare certificate didn't work")
 		}
@@ -122,6 +123,37 @@ func (c *Shoset) InitPKI(address string) error {
 	// 3. Elle associe le rôle 'pki' au nom logique de la shoset
 	c.SetIsCertified(true)
 	c.Bind(address)
+
+	// point env variable to our CAcert so that computer does not point elsewhere
+	os.Setenv("SSL_CERT_FILE", dirname+"/.shoset/"+c.GetFileName()+"/cert/CAcert.crt")
+
+	// tls Double way
+	cert, err := tls.LoadX509KeyPair(dirname+"/.shoset/"+c.GetFileName()+"/cert/cert.crt", dirname+"/.shoset/"+c.GetFileName()+"/cert/privateKey.key")
+	if err != nil {
+		fmt.Println("! Unable to Load certificate !")
+	}
+	CAcertBytes, err := ioutil.ReadFile(dirname + "/.shoset/" + c.GetFileName() + "/cert/CAcert.crt")
+	if err != nil {
+		fmt.Println("error read file cacert :", err)
+	}
+	caCertPool := x509.NewCertPool()
+	caCertPool.AppendCertsFromPEM(CAcertBytes)
+	c.tlsConfigDoubleWay = &tls.Config{
+		Certificates:       []tls.Certificate{cert},
+		ClientCAs:          caCertPool,
+		ClientAuth:         tls.RequireAndVerifyClientCert,
+		InsecureSkipVerify: false,
+	}
+	c.tlsConfigDoubleWay.BuildNameToCertificate()
+
+	// tls config single way
+	c.tlsConfigSingleWay = &tls.Config{
+		Certificates:       []tls.Certificate{cert},
+		InsecureSkipVerify: false,
+	}
+
+	// c.tlsConfig = c.tlsConfigSingleWay
+	// c.tlsConfig = c.tlsConfigDoubleWay
 
 	return nil
 }
@@ -169,8 +201,9 @@ func (c *Shoset) PrepareCertificate() (*x509.Certificate, *rsa.PublicKey, *rsa.P
 	hostPublicKey := &hostPrivateKey.PublicKey
 
 	// Private key
-	hostPrivateKeyFile, err := os.OpenFile(dirname+"/.shoset/"+c.ConnsByName.GetConfigName()+"/cert/privateKey.key", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
+	hostPrivateKeyFile, err := os.OpenFile(dirname+"/.shoset/"+c.GetFileName()+"/cert/privateKey.key", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
+		fmt.Println("whouuuu !", err)
 		return nil, nil, nil
 	}
 	pem.Encode(hostPrivateKeyFile, &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(hostPrivateKey)})
@@ -193,7 +226,7 @@ func (c *Shoset) SignCertificate(certReq *x509.Certificate, hostPublicKey *rsa.P
 		}
 
 		// Load CA
-		catls, err := tls.LoadX509KeyPair(dirname+"/.shoset/"+c.ConnsByName.GetConfigName()+"/cert/CAcert.crt", dirname+"/.shoset/"+c.ConnsByName.GetConfigName()+"/cert/privateCAKey.key")
+		catls, err := tls.LoadX509KeyPair(dirname+"/.shoset/"+c.GetFileName()+"/cert/CAcert.crt", dirname+"/.shoset/"+c.GetFileName()+"/cert/privateCAKey.key")
 		if err != nil {
 			fmt.Println("err", err)
 			return nil

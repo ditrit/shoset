@@ -12,7 +12,6 @@ import (
 type MapSafeMapConn struct {
 	m map[string]*MapSafeConn
 	sync.Mutex
-	ConfigName  string
 	viperConfig *viper.Viper
 }
 
@@ -41,7 +40,7 @@ func (m *MapSafeMapConn) _getConfig() ([]string, []string) {
 }
 
 // Set : assign a value to a MapSafeMapConn
-func (m *MapSafeMapConn) Set(lname, key, protocolType, shosetType string, value *ShosetConn) *MapSafeMapConn {
+func (m *MapSafeMapConn) Set(lname, key, protocolType, shosetType, fileName string, value *ShosetConn) *MapSafeMapConn {
 	m.Lock()
 	defer m.Unlock()
 	value.ch.LnamesByProtocol.Set(protocolType, lname)
@@ -55,13 +54,13 @@ func (m *MapSafeMapConn) Set(lname, key, protocolType, shosetType string, value 
 	}
 	keys := m.m[lname].Keys("out")
 	if len(keys) != 0 {
-		m.updateFile(lname, protocolType, keys)
+		m.updateFile(lname, protocolType, fileName, keys)
 	}
 	return m
 }
 
 // Delete : delete a value in a MapSafeMapConn
-func (m *MapSafeMapConn) Delete(lname, key string) {
+func (m *MapSafeMapConn) Delete(lname, key, fileName string) {
 	m.Lock()
 	// var address string
 	_, ok := m.m[lname]
@@ -90,7 +89,7 @@ func (m *MapSafeMapConn) Delete(lname, key string) {
 
 					keys := m.m[lname].Keys("out")
 					for _, protocolType := range protocolTypes {
-						m.updateFile(lname, protocolType, keys)
+						m.updateFile(lname, protocolType, fileName, keys)
 					}
 
 				}
@@ -100,25 +99,14 @@ func (m *MapSafeMapConn) Delete(lname, key string) {
 	m.Unlock()
 }
 
-func (m *MapSafeMapConn) updateFile(lname, protocolType string, keys []string) {
-	if m.ConfigName != "" {
+func (m *MapSafeMapConn) updateFile(lname, protocolType, fileName string, keys []string) {
+	if fileName != "" {
 		m.viperConfig.Set(protocolType, keys)
 		dirname, err := os.UserHomeDir()
 		if err != nil {
 			fmt.Println(err)
 		}
-		m.viperConfig.WriteConfigAs(dirname + "/.shoset/"+ m.GetConfigName() + "/config/config.yaml")
-	}
-}
-
-
-func (m *MapSafeMapConn) GetConfigName() string {
-	return m.ConfigName
-}
-
-func (m *MapSafeMapConn) SetConfigName(name string) {
-	if name != "" {
-		m.ConfigName = name
+		m.viperConfig.WriteConfigAs(dirname + "/.shoset/"+ fileName + "/config/config.yaml")
 	}
 }
 

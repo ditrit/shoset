@@ -35,7 +35,7 @@ func HandleConfigJoin(c *ShosetConn, message msg.Message) error {
 				c.SetRemoteAddress(remoteAddress)
 				c.SetRemoteLogicalName(cfg.GetLogicalName())
 				c.SetRemoteShosetType(cfg.GetShosetType())
-				ch.ConnsByName.Set(ch.GetLogicalName(), remoteAddress, "join", ch.GetShosetType(), c) // set conn in this socket
+				ch.ConnsByName.Set(ch.GetLogicalName(), remoteAddress, "join", ch.GetShosetType(), c.ch.GetFileName(), c) // set conn in this socket
 				// ch.LnamesByProtocol.Set("join", c.GetRemoteLogicalName())
 				// ch.LnamesByType.Set(c.ch.GetShosetType(), c.GetRemoteLogicalName())
 
@@ -62,7 +62,7 @@ func HandleConfigJoin(c *ShosetConn, message msg.Message) error {
 	case "aknowledge_join":
 		c.SetRemoteLogicalName(cfg.GetLogicalName())
 		c.SetRemoteShosetType(cfg.GetShosetType())
-		ch.ConnsByName.Set(ch.GetLogicalName(), c.GetRemoteAddress(), "join", ch.GetShosetType(), c) // set conns in the other socket
+		ch.ConnsByName.Set(ch.GetLogicalName(), c.GetRemoteAddress(), "join", ch.GetShosetType(), c.ch.GetFileName(), c) // set conns in the other socket
 		// c.ch.LnamesByProtocol.Set("join", c.GetRemoteLogicalName())
 		// c.ch.LnamesByType.Set(c.ch.GetShosetType(), c.GetRemoteLogicalName())
 
