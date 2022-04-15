@@ -153,7 +153,7 @@ func (c *Shoset) InitPKI(address string) error {
 	}
 
 	// c.tlsConfig = c.tlsConfigSingleWay
-	// c.tlsConfig = c.tlsConfigDoubleWay
+	c.tlsConfig = c.tlsConfigDoubleWay
 
 	return nil
 }

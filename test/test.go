@@ -2,6 +2,8 @@ package main // tests run in the main package
 
 import (
 	"fmt"
+	"os"
+
 	// "os"
 
 	// "log"
@@ -909,67 +911,29 @@ func test_pki() {
 	<-done
 }
 
-func test_pki2() {
+func test_pki_server() {
 	done := make(chan bool)
 
 	cl1 := shoset.NewShoset("cl", "cl") // cluster
 	cl1.InitPKI("localhost:8001")
 
-	// time.Sleep(time.Duration(5) * time.Second)
+	for {
+		time.Sleep(time.Second * time.Duration(2))
+		// fmt.Println("\ncl : ", cl1)
+	}
+
+	<-done
+}
+
+func test_pki_client() {
+	done := make(chan bool)
 
 	cl2 := shoset.NewShoset("cl", "cl")
 	cl2.Protocol("localhost:8002", "localhost:8001", "join")
 
-	// time.Sleep(time.Duration(5) * time.Second)
-
-	cl3 := shoset.NewShoset("cl", "cl")
-	cl3.Protocol("localhost:8003", "localhost:8001", "join")
-
-	// time.Sleep(time.Duration(5) * time.Second)
-
-	cl4 := shoset.NewShoset("cl", "cl")
-	cl4.Protocol("localhost:8004", "localhost:8001", "join")
-
-	// time.Sleep(time.Duration(5) * time.Second)
-
-	cl5 := shoset.NewShoset("cl", "cl")
-	cl5.Protocol("localhost:8005", "localhost:8001", "join")
-
-	// time.Sleep(time.Duration(5) * time.Second)
-
-	cl6 := shoset.NewShoset("cl", "cl")
-	cl6.Protocol("localhost:8006", "localhost:8001", "join")
-
-	// time.Sleep(time.Duration(5) * time.Second)
-
-	cl7 := shoset.NewShoset("cl", "cl")
-	cl7.Protocol("localhost:8007", "localhost:8001", "join")
-
-	// time.Sleep(time.Duration(5) * time.Second)
-
-	cl8 := shoset.NewShoset("cl", "cl")
-	cl8.Protocol("localhost:8008", "localhost:8001", "join")
-
-	// time.Sleep(time.Duration(5) * time.Second)
-
-	
-
 	for {
 		time.Sleep(time.Second * time.Duration(2))
-		// fmt.Println(cl1.GetTLSconfig())
-		// fmt.Println("\ncl : ", cl1)
 		// fmt.Println("\ncl : ", cl2)
-		// fmt.Println("\ncl : ", cl3)
-		// fmt.Println("\ncl : ", cl4)
-		// fmt.Println("\nag : ", aga1)
-		// fmt.Println("\nag : ", aga2)
-		// fmt.Println("\nca : ", Ca1)
-		// fmt.Println("\nca : ", Ca2)
-		// fmt.Println("\nw : ", w)
-		// fmt.Println("\nx : ", x)
-		// fmt.Println("\ny : ", y)
-		// fmt.Println("\nz : ", z)
-		// fmt.Println("ConnsByTypeArray('cl')", aga1.GetConnsByTypeArray("c"))
 	}
 
 	<-done
@@ -977,29 +941,31 @@ func test_pki2() {
 
 func main() {
 	//terminal
-	test_pki()
-	// arg := os.Args[1]
-	// if arg == "1" {
-	// 	// testJoin1()
-	// 	// testJoin2()
-	// 	// testJoin3()
-	// 	// testJoin4()
-	// 	// test_link1()
-	// 	// test_link2()
-	// 	// test_link3()
-	// 	// test_link4()
-	// 	// test_link5()
-	// 	// test_link6()
-	// 	// test_link7()
-	// 	// test_link8()
-	// 	test_pki()
-	// } else if arg == "2" {
-	// 	// simpleCluster()
-	// 	// simpleAgregator()
-	// 	simpleConnector()
-	// } else if arg == "3" {
-	// 	simplesimpleConnector()
-	// }
+	arg := os.Args[1]
+	if arg == "1" {
+		test_pki_server()
+		// testJoin1()
+		// testJoin2()
+		// testJoin3()
+		// testJoin4()
+		// test_link1()
+		// test_link2()
+		// test_link3()
+		// test_link4()
+		// test_link5()
+		// test_link6()
+		// test_link7()
+		// test_link8()
+		test_pki()
+	} else if arg == "2" {
+		test_pki_client()
+
+		// simpleCluster()
+		// simpleAgregator()
+		// simpleConnector()
+	} else if arg == "3" {
+		// simplesimpleConnector()
+	}
 }
 
 // linkOk

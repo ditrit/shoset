@@ -2,14 +2,10 @@ package shoset
 
 import (
 	"crypto/tls"
-	"sync"
-
-	// "time"
-	// "crypto/x509"
 	"errors"
 	"fmt"
+	"sync"
 
-	// "io/ioutil"
 	"net"
 	"os"
 	"strings"
@@ -19,8 +15,8 @@ import (
 )
 
 //terminal
-var certPath = "./certs/cert.pem"
-var keyPath = "./certs/key.pem"
+// var certPath = "./certs/cert.pem"
+// var keyPath = "./certs/key.pem"
 
 //debugger
 // var certPath = "../certs/cert.pem"
@@ -42,10 +38,12 @@ type Shoset struct {
 	ConnsByName      *MapSafeMapConn // map[string]map[string]*ShosetConn   connexions par nom logique
 	LnamesByType     *MapSafeStrings // for gandalf
 	LnamesByProtocol *MapSafeStrings
+	ConnsSingle      map[string]bool
 
 	lName       string // Nom logique de la shoset
 	ShosetType  string // Type logique de la shoset
 	bindAddress string // Adresse sur laquelle la shoset est bindée
+	pkiRequestAddress string // La même que bindaddress mais seulement pour la pki cas la chaussette n'est pas encore bindée
 
 	// Dictionnaire des queues de message (par type de message)
 	Queue  map[string]*msg.Queue
@@ -71,10 +69,12 @@ type Shoset struct {
 	m                  sync.Mutex
 	wentThroughPkiOnce bool
 	fileName           string
+	// isSingleTLS bool
 }
 
 /*           Accessors            */
 func (c *Shoset) GetBindAddress() string      { return c.bindAddress }
+func (c *Shoset) GetPkiRequestAddress() string      { return c.pkiRequestAddress }
 func (c *Shoset) GetLogicalName() string      { return c.lName }
 func (c *Shoset) GetShosetType() string       { return c.ShosetType }
 func (c *Shoset) GetIsValid() bool            { return c.isValid }
@@ -82,6 +82,8 @@ func (c *Shoset) GetIsPki() bool              { return c.isPki }
 func (c *Shoset) GetIsCertified() bool        { return c.isCertified }
 func (c *Shoset) GetWentThroughPkiOnce() bool { return c.wentThroughPkiOnce }
 func (c *Shoset) GetFileName() string         { return c.fileName }
+
+// func (c *Shoset) GetIsSingleTLS() bool { return c.isSingleTLS }
 
 // func (c *Shoset) GetTLSconfig() string {
 // 	if c.tlsConfig == c.tlsConfigSingleWay {
@@ -95,6 +97,10 @@ func (c *Shoset) GetFileName() string         { return c.fileName }
 
 func (c *Shoset) SetBindAddress(bindAddress string) {
 	c.bindAddress = bindAddress
+}
+
+func (c *Shoset) SetPkiRequestAddress(pkiRequestAddress string) {
+	c.pkiRequestAddress = pkiRequestAddress
 }
 
 func (c *Shoset) SetIsValid(state bool) {
@@ -114,6 +120,10 @@ func (c *Shoset) SetWentThroughPkiOnce(state bool) {
 func (c *Shoset) SetFileName(fileName string) {
 	c.fileName = fileName
 }
+
+// func (c *Shoset) SetIsSingleTLS(state bool) {
+// 	c.isSingleTLS = state
+// }
 
 /*       Constructor     */
 func NewShoset(lName, ShosetType string) *Shoset { //l
@@ -135,7 +145,8 @@ func NewShoset(lName, ShosetType string) *Shoset { //l
 	shoset.isCertified = false
 	shoset.listener = nil
 	shoset.wentThroughPkiOnce = false
-	shoset.fileName = ""
+	// shoset.isSingleTLS = true
+	shoset.ConnsSingle = make(map[string]bool)
 
 	// Dictionnaire des queues de message (par type de message)
 	shoset.Queue = make(map[string]*msg.Queue)
@@ -155,10 +166,6 @@ func NewShoset(lName, ShosetType string) *Shoset { //l
 	shoset.Queue["cfgbye"] = msg.NewQueue()
 	shoset.Get["cfgbye"] = GetConfigBye
 	shoset.Handle["cfgbye"] = HandleConfigBye
-
-	shoset.Queue["cfgpki"] = msg.NewQueue()
-	shoset.Get["cfgpki"] = GetConfigPki
-	shoset.Handle["cfgpki"] = HandleConfigPki
 
 	shoset.Queue["evt"] = msg.NewQueue()
 	shoset.Get["evt"] = GetEvent
@@ -184,32 +191,11 @@ func NewShoset(lName, ShosetType string) *Shoset { //l
 	shoset.Send["config"] = SendConfig
 	shoset.Wait["config"] = WaitConfig
 
-	// Configuration TLS
-	if fileExists(certPath) && fileExists(keyPath) {
-		cert, err := tls.LoadX509KeyPair(certPath, keyPath)
-		if err != nil { // only client in insecure mode
-			fmt.Println("! Unable to Load certificate !")
-			shoset.tlsConfig = &tls.Config{InsecureSkipVerify: true}
-			shoset.tlsServerOK = false
-		} else {
-			shoset.tlsConfig = &tls.Config{
-				Certificates:       []tls.Certificate{cert},
-				InsecureSkipVerify: true,
-			}
-			shoset.tlsServerOK = true
-		}
-	} else {
-		fmt.Println("! Unable to Load certificate !")
-		shoset.tlsServerOK = false
-	}
-
-	// shoset.tlsConfig = &tls.Config{InsecureSkipVerify: true}
-	// shoset.tlsServerOK = true
+	shoset.tlsConfig = &tls.Config{InsecureSkipVerify: true}
+	shoset.tlsServerOK = true
 
 	shoset.tlsConfigSingleWay = &tls.Config{InsecureSkipVerify: true}
 	shoset.tlsConfigDoubleWay = nil
-	// shoset.tlsConfig = nil
-	// shoset.tlsServerOK = true
 
 	return &shoset
 }
@@ -273,11 +259,13 @@ func (c *Shoset) Bind(address string) error {
 	return nil
 }
 
-// runBindTo : handler for the socket
 func (c *Shoset) handleBind() error {
 	defer c.listener.Close()
 
+	var doubleWay = false
+
 	for {
+		fmt.Println("new for loop")
 		if !c.GetIsValid() { // sockets are not from the same type or don't have the same name / conn ended
 			return errors.New("error : Invalid connection for join - not the same type/name or shosetConn ended")
 		}
@@ -286,16 +274,44 @@ func (c *Shoset) handleBind() error {
 			fmt.Printf("serverShoset accept error: %s", err)
 			break
 		}
-		tlsConn := tls.Server(unencConn, c.tlsConfig) // create the securised connection protocol
-		address := tlsConn.RemoteAddr().String()
-		conn, _ := NewShosetConn(c, address, "in") // create the securised connection
-		conn.socket = tlsConn                      //we override socket attribut with our securised protocol
-		go conn.runInConn()
+
+		address_port := unencConn.RemoteAddr().String()
+		address_parts := strings.Split(address_port, ":")
+		address_ := address_parts[0]
+
+		if c.ConnsSingle[address_] {
+			fmt.Println(c.GetBindAddress(), "trying singleWay")
+			tlsConn := tls.Server(unencConn, c.tlsConfigSingleWay) // create the securised connection protocol
+
+			address := tlsConn.RemoteAddr().String()
+			conn, _ := NewShosetConn(c, address, "in") // create the securised connection
+			conn.socket = tlsConn                      //we override socket attribut with our securised protocol
+
+			go conn.runInConnSingle(address_)
+		} else if !doubleWay {
+			fmt.Println(c.GetBindAddress(), "trying doubleWay")
+			tlsConn := tls.Server(unencConn, c.tlsConfigDoubleWay) // create the securised connection protocol
+
+			address := tlsConn.RemoteAddr().String()
+			conn, _ := NewShosetConn(c, address, "in") // create the securised connection
+			conn.socket = tlsConn                      //we override socket attribut with our securised protocol
+
+			_, err = conn.socket.Write([]byte("hello double\n"))
+			if err == nil {
+				go conn.runInConnDouble()
+				doubleWay = true
+			} else {
+				fmt.Println("err double : ", err)
+				c.ConnsSingle[address_] = true
+				conn.socket.Close()
+			}
+		}
 	}
 	return nil
 }
 
 func (c *Shoset) Protocol(bindAddress, remoteAddress, protocolType string) (*ShosetConn, error) {
+	fmt.Println("enter protocol")
 	ipAddress, err := GetIP(bindAddress) // parse the address from function parameter to get the IP
 	if err == nil {                      // check if IP is ok
 		_ipAddress := strings.Replace(ipAddress, ":", "_", -1)
@@ -316,51 +332,62 @@ func (c *Shoset) Protocol(bindAddress, remoteAddress, protocolType string) (*Sho
 	}
 
 	if !c.GetIsCertified() && !c.GetWentThroughPkiOnce() {
+		fmt.Println("enter request certs")
 		conn, _ := NewShosetConn(c, remoteAddress, "out")
-		c.SetWentThroughPkiOnce(true)
-		go conn.runPkiConn(bindAddress)
-	}
+		c.SetPkiRequestAddress(ipAddress)
+		c.SetWentThroughPkiOnce(true)    // avoid concurrency when multiple protocols are running at the same time
+		conn.runPkiRequest() // I don't have my certs, I request them
+		if c.GetIsCertified() {
+			conn.socket.Close()
+			c.Protocol(bindAddress, remoteAddress, protocolType)
+		} else {
+			fmt.Println("couldn't certify")
+		}
+	} else {
+		fmt.Println("enter bind")
+		if c.GetBindAddress() == "" {
+			c.Bind(bindAddress) // I have my certs, I can bind
+		}
+		fmt.Println("finish bind")
 
-	if c.GetBindAddress() == "" {
-		c.Bind(bindAddress)
-	}
+		var conn *ShosetConn
+		switch protocolType {
+		case "join":
+			conns := c.ConnsByName.Get(c.GetLogicalName())
+			if conns != nil {
+				exists := conns.Get(remoteAddress) // check if remoteAddress is already in the map
+				if exists != nil {                 //connection already established for this socket
+					return exists, nil
 
-	var conn *ShosetConn
-	switch protocolType {
-	case "join":
-		conns := c.ConnsByName.Get(c.GetLogicalName())
-		if conns != nil {
-			exists := conns.Get(remoteAddress) // check if remoteAddress is already in the map
-			if exists != nil {                 //connection already established for this socket
-				return exists, nil
-
+				}
 			}
-		}
-		if remoteAddress == c.GetBindAddress() { // connection impossible with itself
-			return nil, nil
-		}
-		conn, _ := NewShosetConn(c, remoteAddress, "out")
-		go conn.runJoinConn()
-	case "link":
-		conns := c.ConnsByName.Get(c.GetLogicalName())
-		if conns != nil {
-			exists := conns.Get(remoteAddress) // check if remoteAddress is already in the map
-			if exists != nil {                 //connection already established for this socket
-				return exists, nil
+			if remoteAddress == c.GetBindAddress() { // connection impossible with itself
+				return nil, nil
 			}
+			conn, _ := NewShosetConn(c, remoteAddress, "out")
+			go conn.runJoinConn()
+		case "link":
+			conns := c.ConnsByName.Get(c.GetLogicalName())
+			if conns != nil {
+				exists := conns.Get(remoteAddress) // check if remoteAddress is already in the map
+				if exists != nil {                 //connection already established for this socket
+					return exists, nil
+				}
+			}
+			if remoteAddress == c.GetBindAddress() { // connection impossible with itself
+				return nil, nil
+			}
+			conn, _ := NewShosetConn(c, remoteAddress, "out")
+			go conn.runLinkConn()
+		case "bye":
+			conn, _ := NewShosetConn(c, remoteAddress, "out")
+			go conn.runByeConn()
+		default:
+			return nil, errors.New("wrong input protocolType")
 		}
-		if remoteAddress == c.GetBindAddress() { // connection impossible with itself
-			return nil, nil
-		}
-		conn, _ := NewShosetConn(c, remoteAddress, "out")
-		go conn.runOutConn()
-	case "bye":
-		conn, _ := NewShosetConn(c, remoteAddress, "out")
-		go conn.runEndConn()
-	default:
-		return nil, errors.New("wrong input protocolType")
+		return conn, nil
 	}
-	return conn, nil
+	return nil, nil
 }
 
 func (c *Shoset) deleteConn(connAddr, connLname string) {

@@ -26,15 +26,10 @@ func NewCfg(address, lName, shosetType, commandName string) *ConfigProtocol {
 }
 
 // for link and join
-func NewCfgPki(address, lName, shosetType, commandName string, caCert, caPrivateKey []byte) *ConfigProtocol {
+func NewCfgPkiFinished(commandName string) *ConfigProtocol {
 	c := new(ConfigProtocol)
 	c.InitMessageBase()
 	c.CommandName = commandName
-	c.Address = address
-	c.LogicalName = lName
-	c.ShosetType = shosetType
-	c.CAcert = caCert
-	c.CAprivateKey = caPrivateKey
 	return c
 }
 
@@ -69,12 +64,6 @@ func (c ConfigProtocol) GetMsgType() string {
 		return "cfgbye"
 	case "delete":
 		return "cfgbye"
-	case "pki":
-		return "cfgpki"
-	case "return_pki":
-		return "cfgpki"
-	case "search_pki":
-		return "cfgpki"
 	}
 	return "Wrong input protocolType"
 }
