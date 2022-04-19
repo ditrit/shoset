@@ -256,7 +256,7 @@ func (c *ShosetConn) runLinkConn() {
 			break
 		}
 
-		conn, err := tls.Dial("tcp", c.GetRemoteAddress(), c.ch.tlsConfig)
+		conn, err := tls.Dial("tcp", c.GetRemoteAddress(), c.ch.tlsConfigDoubleWay)
 		if err != nil {
 			time.Sleep(time.Millisecond * time.Duration(100))
 			continue
@@ -292,10 +292,13 @@ func (c *ShosetConn) runJoinConn() {
 			break
 		}
 
+		fmt.Println(c.ch.GetPkiRequestAddress(), "init new double connection")
+
 		conn, err := tls.Dial("tcp", c.GetRemoteAddress(), c.ch.tlsConfigDoubleWay) // we wait for a socket to connect each loop
 
 		if err != nil { // no connection occured
 			time.Sleep(time.Millisecond * time.Duration(100))
+			fmt.Println("join err", err)
 			continue
 		} else { // a connection occured
 			c.socket = conn
@@ -305,13 +308,16 @@ func (c *ShosetConn) runJoinConn() {
 
 			// receive messages
 			for {
+				fmt.Println("in join for loop")
 				if c.GetRemoteLogicalName() == "" {
 					c.SendMessage(*joinConfig)
+					fmt.Println("join msg sent")
 				}
 
 				err := c.receiveMsg()
 				time.Sleep(time.Millisecond * time.Duration(100))
 				if err != nil {
+					fmt.Println("join err in recvmsg", err)
 					c.SetRemoteLogicalName("") // reinitialize conn
 					break
 				}
@@ -328,7 +334,7 @@ func (c *ShosetConn) runByeConn() {
 			break
 		}
 
-		conn, err := tls.Dial("tcp", c.GetRemoteAddress(), c.ch.tlsConfig) // we wait for a socket to connect each loop
+		conn, err := tls.Dial("tcp", c.GetRemoteAddress(), c.ch.tlsConfigDoubleWay) // we wait for a socket to connect each loop
 
 		if err != nil { // no connection occured
 			time.Sleep(time.Millisecond * time.Duration(100))
@@ -484,6 +490,10 @@ func (c *ShosetConn) receiveMsg() error {
 		return errors.New(err.Error())
 	}
 	msgType = strings.Trim(msgType, "\n")
+
+	if msgType == "hello double" {
+		return nil
+	}
 
 	// read Message Value
 	fGet, ok := c.ch.Get[msgType]

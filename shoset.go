@@ -255,14 +255,14 @@ func (c *Shoset) Bind(address string) error {
 	} else {
 		c.listener = listener
 	}
-	go c.handleBind() // process runInconn()
+
+	fmt.Println("binded, going to launch handlebind")
+	go c.handleBind()
 	return nil
 }
 
 func (c *Shoset) handleBind() error {
-	defer c.listener.Close()
-
-	var doubleWay = false
+	// defer c.listener.Close()
 
 	for {
 		fmt.Println("new for loop")
@@ -288,7 +288,7 @@ func (c *Shoset) handleBind() error {
 			conn.socket = tlsConn                      //we override socket attribut with our securised protocol
 
 			go conn.runInConnSingle(address_)
-		} else if !doubleWay {
+		} else {
 			fmt.Println(c.GetBindAddress(), "trying doubleWay")
 			tlsConn := tls.Server(unencConn, c.tlsConfigDoubleWay) // create the securised connection protocol
 
@@ -299,7 +299,7 @@ func (c *Shoset) handleBind() error {
 			_, err = conn.socket.Write([]byte("hello double\n"))
 			if err == nil {
 				go conn.runInConnDouble()
-				doubleWay = true
+				return nil
 			} else {
 				fmt.Println("err double : ", err)
 				c.ConnsSingle[address_] = true

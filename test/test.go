@@ -956,7 +956,7 @@ func main() {
 		// test_link6()
 		// test_link7()
 		// test_link8()
-		test_pki()
+		// test_pki()
 	} else if arg == "2" {
 		test_pki_client()
 
