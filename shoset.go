@@ -69,7 +69,6 @@ type Shoset struct {
 	m                  sync.Mutex
 	wentThroughPkiOnce bool
 	fileName           string
-	// isSingleTLS bool
 }
 
 /*           Accessors            */
@@ -82,18 +81,6 @@ func (c *Shoset) GetIsPki() bool              { return c.isPki }
 func (c *Shoset) GetIsCertified() bool        { return c.isCertified }
 func (c *Shoset) GetWentThroughPkiOnce() bool { return c.wentThroughPkiOnce }
 func (c *Shoset) GetFileName() string         { return c.fileName }
-
-// func (c *Shoset) GetIsSingleTLS() bool { return c.isSingleTLS }
-
-// func (c *Shoset) GetTLSconfig() string {
-// 	if c.tlsConfig == c.tlsConfigSingleWay {
-// 		return "single"
-// 	} else if c.tlsConfig == c.tlsConfigDoubleWay {
-// 		return "double"
-// 	} else {
-// 		return ""
-// 	}
-// }
 
 func (c *Shoset) SetBindAddress(bindAddress string) {
 	c.bindAddress = bindAddress
@@ -120,10 +107,6 @@ func (c *Shoset) SetWentThroughPkiOnce(state bool) {
 func (c *Shoset) SetFileName(fileName string) {
 	c.fileName = fileName
 }
-
-// func (c *Shoset) SetIsSingleTLS(state bool) {
-// 	c.isSingleTLS = state
-// }
 
 /*       Constructor     */
 func NewShoset(lName, ShosetType string) *Shoset { //l
@@ -256,16 +239,14 @@ func (c *Shoset) Bind(address string) error {
 		c.listener = listener
 	}
 
-	fmt.Println("binded, going to launch handlebind")
 	go c.handleBind()
 	return nil
 }
 
 func (c *Shoset) handleBind() error {
-	// defer c.listener.Close()
+	defer c.listener.Close()
 
 	for {
-		fmt.Println("new for loop")
 		if !c.GetIsValid() { // sockets are not from the same type or don't have the same name / conn ended
 			return errors.New("error : Invalid connection for join - not the same type/name or shosetConn ended")
 		}
@@ -278,6 +259,14 @@ func (c *Shoset) handleBind() error {
 		address_port := unencConn.RemoteAddr().String()
 		address_parts := strings.Split(address_port, ":")
 		address_ := address_parts[0]
+
+		// fmt.Println("#################")
+		// fmt.Println(unencConn.LocalAddr().Network())
+		// fmt.Println(unencConn.LocalAddr().String())
+		// fmt.Println(unencConn.RemoteAddr().Network())
+		// fmt.Println(unencConn.RemoteAddr().String())
+		// fmt.Println("#################")
+
 
 		if c.ConnsSingle[address_] {
 			fmt.Println(c.GetBindAddress(), "trying singleWay")
@@ -299,7 +288,7 @@ func (c *Shoset) handleBind() error {
 			_, err = conn.socket.Write([]byte("hello double\n"))
 			if err == nil {
 				go conn.runInConnDouble()
-				return nil
+				// return nil
 			} else {
 				fmt.Println("err double : ", err)
 				c.ConnsSingle[address_] = true
@@ -311,7 +300,6 @@ func (c *Shoset) handleBind() error {
 }
 
 func (c *Shoset) Protocol(bindAddress, remoteAddress, protocolType string) (*ShosetConn, error) {
-	fmt.Println("enter protocol")
 	ipAddress, err := GetIP(bindAddress) // parse the address from function parameter to get the IP
 	if err == nil {                      // check if IP is ok
 		_ipAddress := strings.Replace(ipAddress, ":", "_", -1)
@@ -332,7 +320,6 @@ func (c *Shoset) Protocol(bindAddress, remoteAddress, protocolType string) (*Sho
 	}
 
 	if !c.GetIsCertified() && !c.GetWentThroughPkiOnce() {
-		fmt.Println("enter request certs")
 		conn, _ := NewShosetConn(c, remoteAddress, "out")
 		c.SetPkiRequestAddress(ipAddress)
 		c.SetWentThroughPkiOnce(true)    // avoid concurrency when multiple protocols are running at the same time
@@ -344,11 +331,9 @@ func (c *Shoset) Protocol(bindAddress, remoteAddress, protocolType string) (*Sho
 			fmt.Println("couldn't certify")
 		}
 	} else {
-		fmt.Println("enter bind")
 		if c.GetBindAddress() == "" {
 			c.Bind(bindAddress) // I have my certs, I can bind
 		}
-		fmt.Println("finish bind")
 
 		var conn *ShosetConn
 		switch protocolType {

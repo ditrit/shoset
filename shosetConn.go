@@ -175,7 +175,7 @@ func (c *ShosetConn) runPkiRequest() {
 								}
 
 								if c.ch.GetPkiRequestAddress() == evt.GetRequestAddress() && evt.Command == "" {
-									fmt.Println("return msg received")
+									fmt.Println(c.ch.GetPkiRequestAddress(), "return msg received")
 									if evt.GetSignedCert() != nil && evt.GetCAcert() != nil {
 										signedCert := evt.GetSignedCert()
 										certFile, err := os.Create(dirname + "/.shoset/" + c.ch.GetFileName() + "/cert/cert.crt")
@@ -231,7 +231,7 @@ func (c *ShosetConn) runPkiRequest() {
 											InsecureSkipVerify: false,
 										}
 										c.socket.Close()
-										fmt.Println("!!! I have been certified !!!")
+										fmt.Println(c.ch.GetPkiRequestAddress(), "!!! I have been certified !!!")
 										return
 									}
 								} else {
@@ -285,7 +285,6 @@ func (c *ShosetConn) runLinkConn() {
 
 // RunJoinConn : handler for the socket, for Join()
 func (c *ShosetConn) runJoinConn() {
-	fmt.Println("enter run join conn")
 	joinConfig := msg.NewCfg(c.ch.bindAddress, c.ch.lName, c.ch.ShosetType, "join") //we create a new message config
 	for {
 		if !c.GetIsValid() { // sockets are not from the same type or don't have the same name / conn ended
@@ -308,10 +307,8 @@ func (c *ShosetConn) runJoinConn() {
 
 			// receive messages
 			for {
-				fmt.Println("in join for loop")
 				if c.GetRemoteLogicalName() == "" {
 					c.SendMessage(*joinConfig)
-					fmt.Println("join msg sent")
 				}
 
 				err := c.receiveMsg()
@@ -374,7 +371,7 @@ func (c *ShosetConn) runInConnSingle(address_ string) {
 		msgType = strings.Trim(msgType, "\n")
 		time.Sleep(time.Millisecond * time.Duration(10))
 		if err != nil {
-			fmt.Println("# error : ", err)
+			fmt.Println(c.ch.GetPkiRequestAddress(), "# error : ", err)
 			break
 		} else {
 			fGet, ok := c.ch.Get[msgType]
@@ -388,6 +385,7 @@ func (c *ShosetConn) runInConnSingle(address_ string) {
 					}
 
 					if c.ch.GetIsPki() && evt.GetCommand() == "pkievt" {
+						// 1. un nouveau se connecte directement à moi et je suis PKI
 						fmt.Println("received event")
 						if evt.GetCertReq() != nil {
 							CAcert, err := ioutil.ReadFile(dirname + "/.shoset/" + c.ch.GetFileName() + "/cert/CAcert.crt")
@@ -429,8 +427,10 @@ func (c *ShosetConn) runInConnSingle(address_ string) {
 							}
 						}
 					} else {
+						// 2. un nouveau se connecte à moi et je suis passe plat
 						SendPkiEvent(c.ch, msgVal)
 					}
+					// 3. j'ai reçu un message autre que pkievt, donc j'ignore
 				} else {
 					fmt.Println("didn't find function to handle event")
 				}
@@ -448,7 +448,6 @@ func (c *ShosetConn) runInConnDouble() {
 
 	// receive messages
 	for {
-		fmt.Println("in for loop runInConnDouble")
 		err := c.receiveMsg()
 		time.Sleep(time.Millisecond * time.Duration(10))
 		if err != nil {

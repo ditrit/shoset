@@ -931,6 +931,12 @@ func test_pki_client() {
 	cl2 := shoset.NewShoset("cl", "cl")
 	cl2.Protocol("localhost:8002", "localhost:8001", "join")
 
+	cl3 := shoset.NewShoset("x", "x")
+	cl3.Protocol("localhost:8003", "localhost:8002", "link")
+
+	cl4 := shoset.NewShoset("y", "y")
+	cl4.Protocol("localhost:8004", "localhost:8003", "link")
+
 	for {
 		time.Sleep(time.Second * time.Duration(2))
 		// fmt.Println("\ncl : ", cl2)
