@@ -35,14 +35,15 @@ type Shoset struct {
 	Context map[string]interface{} //TOTO
 
 	//	id          string
-	ConnsByName      *MapSafeMapConn // map[string]map[string]*ShosetConn   connexions par nom logique
-	LnamesByType     *MapSafeStrings // for gandalf
-	LnamesByProtocol *MapSafeStrings
-	ConnsSingle      map[string]bool
+	ConnsByName        *MapSafeMapConn // map[string]map[string]*ShosetConn   connexions par nom logique
+	LnamesByType       *MapSafeStrings // for gandalf
+	LnamesByProtocol   *MapSafeStrings
+	ConnsSingle        map[string]bool
+	ConnsSingleAddress map[string]*ShosetConn
 
-	lName       string // Nom logique de la shoset
-	ShosetType  string // Type logique de la shoset
-	bindAddress string // Adresse sur laquelle la shoset est bindée
+	lName             string // Nom logique de la shoset
+	ShosetType        string // Type logique de la shoset
+	bindAddress       string // Adresse sur laquelle la shoset est bindée
 	pkiRequestAddress string // La même que bindaddress mais seulement pour la pki cas la chaussette n'est pas encore bindée
 
 	// Dictionnaire des queues de message (par type de message)
@@ -72,15 +73,15 @@ type Shoset struct {
 }
 
 /*           Accessors            */
-func (c *Shoset) GetBindAddress() string      { return c.bindAddress }
-func (c *Shoset) GetPkiRequestAddress() string      { return c.pkiRequestAddress }
-func (c *Shoset) GetLogicalName() string      { return c.lName }
-func (c *Shoset) GetShosetType() string       { return c.ShosetType }
-func (c *Shoset) GetIsValid() bool            { return c.isValid }
-func (c *Shoset) GetIsPki() bool              { return c.isPki }
-func (c *Shoset) GetIsCertified() bool        { return c.isCertified }
-func (c *Shoset) GetWentThroughPkiOnce() bool { return c.wentThroughPkiOnce }
-func (c *Shoset) GetFileName() string         { return c.fileName }
+func (c *Shoset) GetBindAddress() string       { return c.bindAddress }
+func (c *Shoset) GetPkiRequestAddress() string { return c.pkiRequestAddress }
+func (c *Shoset) GetLogicalName() string       { return c.lName }
+func (c *Shoset) GetShosetType() string        { return c.ShosetType }
+func (c *Shoset) GetIsValid() bool             { return c.isValid }
+func (c *Shoset) GetIsPki() bool               { return c.isPki }
+func (c *Shoset) GetIsCertified() bool         { return c.isCertified }
+func (c *Shoset) GetWentThroughPkiOnce() bool  { return c.wentThroughPkiOnce }
+func (c *Shoset) GetFileName() string          { return c.fileName }
 
 func (c *Shoset) SetBindAddress(bindAddress string) {
 	c.bindAddress = bindAddress
@@ -130,6 +131,7 @@ func NewShoset(lName, ShosetType string) *Shoset { //l
 	shoset.wentThroughPkiOnce = false
 	// shoset.isSingleTLS = true
 	shoset.ConnsSingle = make(map[string]bool)
+	shoset.ConnsSingleAddress = make(map[string]*ShosetConn)
 
 	// Dictionnaire des queues de message (par type de message)
 	shoset.Queue = make(map[string]*msg.Queue)
@@ -185,7 +187,7 @@ func NewShoset(lName, ShosetType string) *Shoset { //l
 
 // Display with fmt - override the print of the object
 func (c *Shoset) String() string {
-	descr := fmt.Sprintf("Shoset -  lName: %s,\n\t\tbindAddr : %s,\n\t\ttype : %s, \n\t\tisPki : %t, \n\t\tisCertified : %t, \n\t\tConnsByName : ", c.GetLogicalName(), c.GetBindAddress(), c.GetShosetType(), c.GetIsPki(), c.GetIsCertified())
+	descr := fmt.Sprintf("Shoset -  lName: %s,\n\t\tbindAddr : %s,\n\t\ttype : %s, \n\t\tisPki : %t, \n\t\tisCertified : %t,\n\t\tlen(ConnsSingle) : %d,\n\t\tlen(ConnsSingleAddress) : %d, \n\t\tConnsByName : ", c.GetLogicalName(), c.GetBindAddress(), c.GetShosetType(), c.GetIsPki(), c.GetIsCertified(), len(c.ConnsSingle), len(c.ConnsSingleAddress))
 	for _, lName := range c.ConnsByName.Keys() {
 		c.ConnsByName.Iterate(lName,
 			func(key string, val *ShosetConn) {
@@ -260,16 +262,8 @@ func (c *Shoset) handleBind() error {
 		address_parts := strings.Split(address_port, ":")
 		address_ := address_parts[0]
 
-		// fmt.Println("#################")
-		// fmt.Println(unencConn.LocalAddr().Network())
-		// fmt.Println(unencConn.LocalAddr().String())
-		// fmt.Println(unencConn.RemoteAddr().Network())
-		// fmt.Println(unencConn.RemoteAddr().String())
-		// fmt.Println("#################")
-
-
 		if c.ConnsSingle[address_] {
-			fmt.Println(c.GetBindAddress(), "trying singleWay")
+			// fmt.Println(c.GetBindAddress(), "trying singleWay")
 			tlsConn := tls.Server(unencConn, c.tlsConfigSingleWay) // create the securised connection protocol
 
 			address := tlsConn.RemoteAddr().String()
@@ -278,7 +272,7 @@ func (c *Shoset) handleBind() error {
 
 			go conn.runInConnSingle(address_)
 		} else {
-			fmt.Println(c.GetBindAddress(), "trying doubleWay")
+			// fmt.Println(c.GetBindAddress(), "trying doubleWay")
 			tlsConn := tls.Server(unencConn, c.tlsConfigDoubleWay) // create the securised connection protocol
 
 			address := tlsConn.RemoteAddr().String()
@@ -290,7 +284,7 @@ func (c *Shoset) handleBind() error {
 				go conn.runInConnDouble()
 				// return nil
 			} else {
-				fmt.Println("err double : ", err)
+				// fmt.Println("err double : ", err)
 				c.ConnsSingle[address_] = true
 				conn.socket.Close()
 			}
@@ -301,7 +295,8 @@ func (c *Shoset) handleBind() error {
 
 func (c *Shoset) Protocol(bindAddress, remoteAddress, protocolType string) (*ShosetConn, error) {
 	ipAddress, err := GetIP(bindAddress) // parse the address from function parameter to get the IP
-	if err == nil {                      // check if IP is ok
+	// fmt.Println(ipAddress, "has id ", c.GetID())
+	if err == nil { // check if IP is ok
 		_ipAddress := strings.Replace(ipAddress, ":", "_", -1)
 		_ipAddress = strings.Replace(_ipAddress, ".", "-", -1)
 		c.SetFileName(_ipAddress)
@@ -322,8 +317,8 @@ func (c *Shoset) Protocol(bindAddress, remoteAddress, protocolType string) (*Sho
 	if !c.GetIsCertified() && !c.GetWentThroughPkiOnce() {
 		conn, _ := NewShosetConn(c, remoteAddress, "out")
 		c.SetPkiRequestAddress(ipAddress)
-		c.SetWentThroughPkiOnce(true)    // avoid concurrency when multiple protocols are running at the same time
-		conn.runPkiRequest() // I don't have my certs, I request them
+		c.SetWentThroughPkiOnce(true) // avoid concurrency when multiple protocols are running at the same time
+		conn.runPkiRequest()          // I don't have my certs, I request them
 		if c.GetIsCertified() {
 			conn.socket.Close()
 			c.Protocol(bindAddress, remoteAddress, protocolType)

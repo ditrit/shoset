@@ -971,6 +971,8 @@ func main() {
 		// simpleConnector()
 	} else if arg == "3" {
 		// simplesimpleConnector()
+	} else {
+		test_pki()
 	}
 }
 

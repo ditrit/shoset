@@ -32,10 +32,11 @@ func NewPkiEventInit(command, requestAddress, logicalName string, certReq *x509.
 	return e
 }
 
-func NewPkiEventReturn(requestAddress string, signedCert, CAcert []byte, caPrivateKey *rsa.PrivateKey) *PkiEvent{
+func NewPkiEventReturn(command, requestAddress string, signedCert, CAcert []byte, caPrivateKey *rsa.PrivateKey) *PkiEvent{
 	e := new(PkiEvent)
 	e.InitMessageBase()
 
+	e.Command = command
 	e.RequestAddress = requestAddress
 	e.SignedCert = signedCert
 	e.CAcert = CAcert
@@ -43,7 +44,20 @@ func NewPkiEventReturn(requestAddress string, signedCert, CAcert []byte, caPriva
 	return e
 }
 
-func (e PkiEvent) GetMsgType() string { return "pkievt" }
+// func (e PkiEvent) GetMsgType() string { 
+// 	fmt.Println(e.GetCommand())
+// 	return "pkievt" 
+// }
+
+func (e PkiEvent) GetMsgType() string {
+	switch e.GetCommand() {
+	case "pkievt":
+		return "pkievt"
+	case "return_pkievt":
+		return "pkievt"
+	}
+	return "Wrong input protocolType"
+}
 
 func (e PkiEvent) GetSecret() string { return e.Secret }
 
