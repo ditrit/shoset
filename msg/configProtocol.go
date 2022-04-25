@@ -10,8 +10,6 @@ type ConfigProtocol struct {
 	Address      string
 	MyBrothers   []string
 	YourBrothers []string
-	CAcert []byte
-	CAprivateKey []byte
 }
 
 // for link and join
@@ -85,7 +83,3 @@ func (c ConfigProtocol) GetMyBrothers() []string { return c.MyBrothers }
 
 // GetBros :
 func (c ConfigProtocol) GetYourBrothers() []string { return c.YourBrothers }
-
-func (c ConfigProtocol) GetCAcert() []byte { return c.CAcert }
-
-func (c ConfigProtocol) GetCAprivateKey() []byte { return c.CAprivateKey }

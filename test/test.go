@@ -891,7 +891,7 @@ func test_pki() {
 	z.Protocol("localhost:8512", "localhost:8412", "link")
 
 	for {
-		time.Sleep(time.Second * time.Duration(2))
+		time.Sleep(time.Second * time.Duration(1))
 		// fmt.Println(cl1.GetTLSconfig())
 		// fmt.Println("\ncl : ", cl1)
 		// fmt.Println("\ncl : ", cl2)
@@ -905,6 +905,8 @@ func test_pki() {
 		// fmt.Println("\nx : ", x)
 		// fmt.Println("\ny : ", y)
 		// fmt.Println("\nz : ", z)
+		return
+		time.Sleep(time.Second * time.Duration(10))
 		// fmt.Println("ConnsByTypeArray('cl')", aga1.GetConnsByTypeArray("c"))
 	}
 

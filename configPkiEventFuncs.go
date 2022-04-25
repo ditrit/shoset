@@ -92,7 +92,7 @@ func HandlePkiEvent(c *ShosetConn, message msg.Message) error {
 		// fmt.Println("I'm ", c.ch.GetBindAddress(), " and I have received a msg for", evt.GetRequestAddress())
 		// c.SendMessage(evt)
 		c.ch.ConnsSingleAddress[evt.GetRequestAddress()].SendMessage(evt)
-		// defer c.ch.ConnsSingleAddress[evt.GetRequestAddress()].socket.Close()
+		// c.ch.ConnsSingleAddress[evt.GetRequestAddress()].socket.Close()
 		delete(c.ch.ConnsSingleAddress, evt.GetRequestAddress())
 
 		// fmt.Println("msg sent to ", c.ch.ConnsSingleAddress[evt.GetRequestAddress()].GetLocalAddress(), c.ch.ConnsSingleAddress[evt.GetRequestAddress()].GetRemoteAddress())

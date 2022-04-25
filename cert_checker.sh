@@ -3,7 +3,7 @@
 # openssl s_server -accept 8080 -www -cert yourcert.crt -key yourcert.key -CAfile CAcert.crt
 
 REPERTORY=~/.shoset
-LOGFILE=$REPERTORY/log.txt
+LOGFILE=$REPERTORY/cert_checker.txt
 i=0
 
 for SHOSET in $REPERTORY/*;

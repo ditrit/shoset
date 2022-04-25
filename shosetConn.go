@@ -162,7 +162,7 @@ func (c *ShosetConn) runPkiRequest() {
 					msgType = strings.Trim(msgType, "\n")
 					time.Sleep(time.Millisecond * time.Duration(10))
 					if err != nil {
-						fmt.Println("# error : ", err)
+						// fmt.Println("# error : ", err)
 						break
 					} else {
 						fGet, ok := c.ch.Get[msgType]
@@ -255,7 +255,7 @@ func (c *ShosetConn) runPkiRequest() {
 
 // RunOutConn : handler for the socket, for Link()
 func (c *ShosetConn) runLinkConn() {
-	myConfig := msg.NewCfg(c.ch.bindAddress, c.ch.lName, c.ch.ShosetType, "link")
+	linkConfig := msg.NewCfg(c.ch.bindAddress, c.ch.lName, c.ch.ShosetType, "link")
 	for {
 		if !c.GetIsValid() { // sockets are not from the same type or don't have the same name / conn ended
 			break
@@ -274,7 +274,7 @@ func (c *ShosetConn) runLinkConn() {
 			// receive messages
 			for {
 				if c.GetRemoteLogicalName() == "" {
-					c.SendMessage(*myConfig)
+					c.SendMessage(*linkConfig)
 				}
 
 				err := c.receiveMsg()
@@ -368,9 +368,9 @@ func (c *ShosetConn) runInConnSingle(address_ string) {
 	// fmt.Println(c.ch.GetBindAddress(), "in runSingleConn")
 	c.rb = msg.NewReader(c.socket)
 	c.wb = msg.NewWriter(c.socket)
-	defer c.socket.Close()
+	// defer c.socket.Close()
 
-	var id string
+	delete(c.ch.ConnsSingle, address_)
 
 	// receive messages
 	for {
@@ -378,7 +378,7 @@ func (c *ShosetConn) runInConnSingle(address_ string) {
 		msgType = strings.Trim(msgType, "\n")
 		time.Sleep(time.Millisecond * time.Duration(10))
 		if err != nil {
-			fmt.Println(c.ch.GetPkiRequestAddress(), "## error : ", err)
+			// fmt.Println(c.ch.GetPkiRequestAddress(), "## error : ", err)
 			break
 		} else {
 			fGet, ok := c.ch.Get[msgType]
@@ -430,16 +430,15 @@ func (c *ShosetConn) runInConnSingle(address_ string) {
 									returnPkiEvent.SetUUID(evt.GetUUID() + "*") // return event has the same uuid so that network isn't flooded with same events
 									// fmt.Println("return msg sent to ", evt.GetRequestAddress())
 									c.SendMessage(returnPkiEvent)
-									defer c.socket.Close()
-									delete(c.ch.ConnsSingle, address_)
+									c.socket.Close()
+									// delete(c.ch.ConnsSingle, address_)
 									// return
 								}
 							}
 						} else {
 							// 2. un nouveau se connecte à moi et je suis passe plat
-							id = evt.GetRequestAddress()
-							delete(c.ch.ConnsSingle, address_)
-							c.ch.ConnsSingleAddress[id] = c
+							// delete(c.ch.ConnsSingle, address_)
+							c.ch.ConnsSingleAddress[evt.GetRequestAddress()] = c
 							SendPkiEvent(c.ch, msgVal)
 						}
 						// 3. j'ai reçu un message autre que pkievt, donc j'ignore
@@ -447,10 +446,27 @@ func (c *ShosetConn) runInConnSingle(address_ string) {
 						fmt.Println("didn't find function to handle event")
 					}
 				} else {
+					linkProtocol := msgVal.(msg.ConfigProtocol)
 					fmt.Println("not the right cmd", cmd)
-					
+					fmt.Println("-------")
+					fmt.Println(linkProtocol.GetCommandName())
+					fmt.Println(linkProtocol.GetAddress())
+					fmt.Println("-------")
+					descr := fmt.Sprintf("ConnsByName : ")
+					for _, lName := range c.ch.ConnsByName.Keys() {
+						c.ch.ConnsByName.Iterate(lName,
+							func(key string, val *ShosetConn) {
+								descr = fmt.Sprintf("%s %s\n\t\t\t     ", descr, val)
+							})
+					}
+					fmt.Println(descr)
+					fmt.Println("-------")
+					fmt.Println(c.ch.ConnsSingle)
+					fmt.Println("-------")
+					fmt.Println(c.ch.ConnsSingleAddress)
+
 				}
-			} else  {
+			} else {
 				fmt.Println("not ok")
 			}
 		}
