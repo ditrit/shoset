@@ -80,7 +80,7 @@ func HandlePkiEvent(c *ShosetConn, message msg.Message) error {
 
 			}
 		}
-	} else if _, ok := c.ch.ConnsSingleAddress[evt.GetRequestAddress()]; ok && evt.GetCommand() == "return_pkievt" {
+	} else if conn := c.ch.ConnsSingleAddress.Get(evt.GetRequestAddress()); conn != nil && evt.GetCommand() == "return_pkievt" {
 		// si le msg est une reponse à ma demande (champ adresse equivaut la mienne), c'est donc moi qui ai envoyé le certreq
 		// alors
 		//   je recupere le msg et lire mon cert
@@ -91,9 +91,10 @@ func HandlePkiEvent(c *ShosetConn, message msg.Message) error {
 
 		// fmt.Println("I'm ", c.ch.GetBindAddress(), " and I have received a msg for", evt.GetRequestAddress())
 		// c.SendMessage(evt)
-		c.ch.ConnsSingleAddress[evt.GetRequestAddress()].SendMessage(evt)
+		conn.SendMessage(evt)
 		// c.ch.ConnsSingleAddress[evt.GetRequestAddress()].socket.Close()
-		delete(c.ch.ConnsSingleAddress, evt.GetRequestAddress())
+		c.socket.Close()
+		c.ch.ConnsSingleAddress.Delete(evt.GetRequestAddress())
 
 		// fmt.Println("msg sent to ", c.ch.ConnsSingleAddress[evt.GetRequestAddress()].GetLocalAddress(), c.ch.ConnsSingleAddress[evt.GetRequestAddress()].GetRemoteAddress())
 

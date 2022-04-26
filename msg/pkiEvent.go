@@ -3,7 +3,6 @@ package msg
 import (
 	"crypto/rsa"
 	"crypto/x509"
-	"fmt"
 )
 
 // Event : Gandalf event internal
@@ -77,7 +76,3 @@ func (e PkiEvent) GetCAprivateKey() *rsa.PrivateKey { return e.CAprivateKey }
 
 func (e PkiEvent) GetCAcert() []byte {return e.CAcert}
 
-func (e PkiEvent) String() string {
-	descr := fmt.Sprintf("RequestAddress: %s, RequestAddress: %s,\n\t\tSignedCert : %s, \n\t\tCAcert : %s", e.GetCommand(), e.GetRequestAddress(), e.GetSignedCert(), e.GetCAcert())
-	return descr
-}

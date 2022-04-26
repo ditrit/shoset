@@ -10,6 +10,7 @@ type MapSafeConn struct {
 	sync.Mutex
 }
 
+
 // NewMapSafeConn : constructor
 func NewMapSafeConn() *MapSafeConn {
 	m := new(MapSafeConn)

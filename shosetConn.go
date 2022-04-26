@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	//	uuid "github.com/kjk/betterguid"
@@ -28,38 +29,79 @@ type ShosetConn struct {
 	rb               *msg.Reader
 	wb               *msg.Writer
 	isValid          bool // for join protocol
+	mu               sync.Mutex
 }
 
 // GetDir :
-func (c *ShosetConn) GetDir() string { return c.dir }
+func (c *ShosetConn) GetDir() string {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.dir
+}
 
 // GetCh :
-func (c *ShosetConn) GetCh() *Shoset { return c.ch }
+func (c *ShosetConn) GetCh() *Shoset {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.ch
+}
 
-func (c *ShosetConn) GetLocalLogicalName() string { return c.ch.GetLogicalName() }
+func (c *ShosetConn) GetLocalLogicalName() string {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.ch.GetLogicalName()
+}
 
 // GetName : // remote logical Name
-func (c *ShosetConn) GetRemoteLogicalName() string { return c.remoteLname }
+func (c *ShosetConn) GetRemoteLogicalName() string {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.remoteLname
+}
 
-func (c *ShosetConn) GetLocalShosetType() string { return c.ch.GetShosetType() }
+func (c *ShosetConn) GetLocalShosetType() string {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.ch.GetShosetType()
+}
 
 // GetShosetType : // remote ShosetTypeName
-func (c *ShosetConn) GetRemoteShosetType() string { return c.remoteShosetType }
+func (c *ShosetConn) GetRemoteShosetType() string {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.remoteShosetType
+}
 
 // GetBindAddr : port sur lequel on est bindé
-func (c *ShosetConn) GetLocalAddress() string { return c.ch.GetBindAddress() }
+func (c *ShosetConn) GetLocalAddress() string {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.ch.GetBindAddress()
+}
 
-func (c *ShosetConn) GetRemoteAddress() string { return c.remoteAddress }
+func (c *ShosetConn) GetRemoteAddress() string {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.remoteAddress
+}
 
-func (c *ShosetConn) GetIsValid() bool { return c.isValid }
+func (c *ShosetConn) GetIsValid() bool {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.isValid
+}
 
 // SetName : // remote logical Name
 func (c *ShosetConn) SetRemoteLogicalName(lName string) { // remote logical Name
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	c.remoteLname = lName // remote logical Name
 }
 
 // SetBindAddr :
 func (c *ShosetConn) SetLocalAddress(bindAddress string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	if bindAddress != "" {
 		c.ch.SetBindAddress(bindAddress)
 	}
@@ -67,16 +109,23 @@ func (c *ShosetConn) SetLocalAddress(bindAddress string) {
 
 // SetShosetType : // remote ShosetType
 func (c *ShosetConn) SetRemoteShosetType(ShosetType string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
 	if ShosetType != "" {
 		c.remoteShosetType = ShosetType
 	}
 }
 
 func (c *ShosetConn) SetIsValid(state bool) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	c.isValid = state
 }
 
 func (c *ShosetConn) SetRemoteAddress(address string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	if address != "" {
 		c.remoteAddress = address
 	}
@@ -149,9 +198,9 @@ func (c *ShosetConn) runPkiRequest() {
 				continue
 			} else {
 				c.socket = conn
-				c.rb = msg.NewReader(c.socket)
-				c.wb = msg.NewWriter(c.socket)
-				defer conn.Close()
+				c.rb.UpdateReader(c.socket)
+				c.wb.UpdateWriter(c.socket)
+				// defer conn.Close()
 
 				c.SendMessage(PkiEvent)
 				// fmt.Println("reqcert sent to ", c.GetRemoteAddress(), "!!!!!!!!!!!!!!!!!!!!!!")
@@ -161,6 +210,12 @@ func (c *ShosetConn) runPkiRequest() {
 					msgType, err := c.rb.ReadString()
 					msgType = strings.Trim(msgType, "\n")
 					time.Sleep(time.Millisecond * time.Duration(10))
+					if msgType != "pkievt" {
+						// fmt.Println("client didn't receive proper msgtype :", msgType)
+						c.socket.Close()
+						break
+					}
+					// fmt.Println(msgType)
 					if err != nil {
 						// fmt.Println("# error : ", err)
 						break
@@ -230,7 +285,7 @@ func (c *ShosetConn) runPkiRequest() {
 												Certificates:       []tls.Certificate{cert},
 												InsecureSkipVerify: false,
 											}
-											// defer c.socket.Close()
+											c.socket.Close()
 											// fmt.Println(c.ch.GetPkiRequestAddress(), "!!! I have been certified !!!")
 											return
 										}
@@ -244,7 +299,7 @@ func (c *ShosetConn) runPkiRequest() {
 								fmt.Println("not the right command client")
 							}
 						} else {
-							fmt.Println("not ok client")
+							fmt.Println(c.ch.GetPkiRequestAddress(), "not ok client", ok)
 						}
 					}
 				}
@@ -265,26 +320,27 @@ func (c *ShosetConn) runLinkConn() {
 		if err != nil {
 			time.Sleep(time.Millisecond * time.Duration(100))
 			continue
-		} else {
-			c.socket = conn
-			c.rb = msg.NewReader(c.socket)
-			c.wb = msg.NewWriter(c.socket)
-			defer conn.Close()
+		}
+		c.socket = conn
+		c.rb.UpdateReader(c.socket)
+		c.wb.UpdateWriter(c.socket)
+		// defer conn.Close()
 
-			// receive messages
-			for {
-				if c.GetRemoteLogicalName() == "" {
-					c.SendMessage(*linkConfig)
-				}
+		// receive messages
+		for {
+			if c.GetRemoteLogicalName() == "" {
+				c.SendMessage(*linkConfig)
+			}
 
-				err := c.receiveMsg()
-				time.Sleep(time.Millisecond * time.Duration(100))
-				if err != nil {
-					c.SetRemoteLogicalName("") // reinitialize conn
-					break
-				}
+			err := c.receiveMsg()
+			time.Sleep(time.Millisecond * time.Duration(100))
+			if err != nil {
+				c.SetRemoteLogicalName("") // reinitialize conn
+				conn.Close()
+				break
 			}
 		}
+
 	}
 }
 
@@ -304,27 +360,29 @@ func (c *ShosetConn) runJoinConn() {
 			time.Sleep(time.Millisecond * time.Duration(100))
 			fmt.Println("join err", err)
 			continue
-		} else { // a connection occured
-			c.socket = conn
-			c.rb = msg.NewReader(c.socket)
-			c.wb = msg.NewWriter(c.socket)
-			defer conn.Close()
+		}
+		// a connection occured
+		c.socket = conn
+		c.rb.UpdateReader(c.socket)
+		c.wb.UpdateWriter(c.socket)
+		// defer conn.Close()
 
-			// receive messages
-			for {
-				if c.GetRemoteLogicalName() == "" {
-					c.SendMessage(*joinConfig)
-				}
+		// receive messages
+		for {
+			if c.GetRemoteLogicalName() == "" {
+				c.SendMessage(*joinConfig)
+			}
 
-				err := c.receiveMsg()
-				time.Sleep(time.Millisecond * time.Duration(100))
-				if err != nil {
-					fmt.Println("join err in recvmsg", err)
-					c.SetRemoteLogicalName("") // reinitialize conn
-					break
-				}
+			err := c.receiveMsg()
+			time.Sleep(time.Millisecond * time.Duration(100))
+			if err != nil {
+				fmt.Println("join err in recvmsg", err)
+				c.SetRemoteLogicalName("") // reinitialize conn
+				conn.Close()
+				break
 			}
 		}
+
 	}
 }
 
@@ -341,36 +399,38 @@ func (c *ShosetConn) runByeConn() {
 		if err != nil { // no connection occured
 			time.Sleep(time.Millisecond * time.Duration(100))
 			continue
-		} else { // a connection occured
-			c.socket = conn
-			c.rb = msg.NewReader(c.socket)
-			c.wb = msg.NewWriter(c.socket)
-			defer conn.Close()
+		}
+		// a connection occured
+		c.socket = conn
+		c.rb.UpdateReader(c.socket)
+		c.wb.UpdateWriter(c.socket)
+		// defer conn.Close()
 
-			// receive messages
-			for {
-				if c.GetRemoteLogicalName() == "" {
-					c.SendMessage(*byeConfig)
-				}
+		// receive messages
+		for {
+			if c.GetRemoteLogicalName() == "" {
+				c.SendMessage(*byeConfig)
+			}
 
-				err := c.receiveMsg()
-				time.Sleep(time.Millisecond * time.Duration(100))
-				if err != nil {
-					c.SetRemoteLogicalName("") // reinitialize conn
-					break
-				}
+			err := c.receiveMsg()
+			time.Sleep(time.Millisecond * time.Duration(100))
+			if err != nil {
+				c.SetRemoteLogicalName("") // reinitialize conn
+				conn.Close()
+				break
 			}
 		}
+
 	}
 }
 
 func (c *ShosetConn) runInConnSingle(address_ string) {
 	// fmt.Println(c.ch.GetBindAddress(), "in runSingleConn")
-	c.rb = msg.NewReader(c.socket)
-	c.wb = msg.NewWriter(c.socket)
+	c.rb.UpdateReader(c.socket)
+	c.wb.UpdateWriter(c.socket)
 	// defer c.socket.Close()
 
-	delete(c.ch.ConnsSingle, address_)
+	// delete(c.ch.ConnsSingle, address_)
 
 	// receive messages
 	for {
@@ -431,6 +491,8 @@ func (c *ShosetConn) runInConnSingle(address_ string) {
 									// fmt.Println("return msg sent to ", evt.GetRequestAddress())
 									c.SendMessage(returnPkiEvent)
 									c.socket.Close()
+									c.ch.ConnsSingle.Delete(address_)
+									break
 									// delete(c.ch.ConnsSingle, address_)
 									// return
 								}
@@ -438,32 +500,35 @@ func (c *ShosetConn) runInConnSingle(address_ string) {
 						} else {
 							// 2. un nouveau se connecte à moi et je suis passe plat
 							// delete(c.ch.ConnsSingle, address_)
-							c.ch.ConnsSingleAddress[evt.GetRequestAddress()] = c
+							c.ch.ConnsSingleAddress.Set(evt.GetRequestAddress(), c)
 							SendPkiEvent(c.ch, msgVal)
+							// c.socket.Close()
+							c.ch.ConnsSingle.Delete(address_)
+							break
 						}
 						// 3. j'ai reçu un message autre que pkievt, donc j'ignore
 					} else {
 						fmt.Println("didn't find function to handle event")
 					}
 				} else {
-					linkProtocol := msgVal.(msg.ConfigProtocol)
+					// linkProtocol := msgVal.(msg.ConfigProtocol)
 					fmt.Println("not the right cmd", cmd)
-					fmt.Println("-------")
-					fmt.Println(linkProtocol.GetCommandName())
-					fmt.Println(linkProtocol.GetAddress())
-					fmt.Println("-------")
-					descr := fmt.Sprintf("ConnsByName : ")
-					for _, lName := range c.ch.ConnsByName.Keys() {
-						c.ch.ConnsByName.Iterate(lName,
-							func(key string, val *ShosetConn) {
-								descr = fmt.Sprintf("%s %s\n\t\t\t     ", descr, val)
-							})
-					}
-					fmt.Println(descr)
-					fmt.Println("-------")
-					fmt.Println(c.ch.ConnsSingle)
-					fmt.Println("-------")
-					fmt.Println(c.ch.ConnsSingleAddress)
+					// fmt.Println("-------")
+					// fmt.Println(linkProtocol.GetCommandName())
+					// fmt.Println(linkProtocol.GetAddress())
+					// fmt.Println("-------")
+					// descr := fmt.Sprintf("ConnsByName : ")
+					// for _, lName := range c.ch.ConnsByName.Keys() {
+					// 	c.ch.ConnsByName.Iterate(lName,
+					// 		func(key string, val *ShosetConn) {
+					// 			descr = fmt.Sprintf("%s %s\n\t\t\t     ", descr, val)
+					// 		})
+					// }
+					// fmt.Println(descr)
+					// fmt.Println("-------")
+					// fmt.Println(c.ch.ConnsSingle)
+					// fmt.Println("-------")
+					// fmt.Println(c.ch.ConnsSingleAddress)
 
 				}
 			} else {
@@ -476,8 +541,9 @@ func (c *ShosetConn) runInConnSingle(address_ string) {
 // runInConnDouble : handler for the connection, for handleBind()
 func (c *ShosetConn) runInConnDouble() {
 	// fmt.Println(c.ch.GetBindAddress(), "in runDoubleConn")
-	c.rb = msg.NewReader(c.socket)
-	c.wb = msg.NewWriter(c.socket)
+	c.rb.UpdateReader(c.socket)
+	c.wb.UpdateWriter(c.socket)
+
 	defer c.socket.Close()
 
 	// receive messages
@@ -487,22 +553,21 @@ func (c *ShosetConn) runInConnDouble() {
 		if err != nil {
 			if err.Error() == "Invalid connection for join - not the same type/name or shosetConn ended" {
 				c.ch.SetIsValid(false)
-				goto Exit
 			}
-			break
+			return
 		}
 	}
-
-Exit:
 }
 
 // SendMessage :
 func (c *ShosetConn) SendMessage(msg msg.Message) {
+
 	c.WriteString(msg.GetMsgType())
 	c.WriteMessage(msg)
 }
 
 func (c *ShosetConn) receiveMsg() error {
+
 	if !c.GetIsValid() {
 		c.ch.deleteConn(c.GetRemoteAddress(), c.GetRemoteLogicalName())
 		return errors.New("error : Invalid connection for join - not the same type/name or shosetConn ended")

@@ -21,6 +21,12 @@ func NewReader(rd io.Reader) *Reader {
 	return s
 }
 
+func (r *Reader) UpdateReader(rd io.Reader) {
+	r.m.Lock()
+	defer r.m.Unlock()
+	r.b = bufio.NewReader(rd)
+}
+
 // ReadString : safe version for goroutines
 func (r *Reader) ReadString() (string, error) {
 	r.m.Lock()
