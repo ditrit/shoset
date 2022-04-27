@@ -1,6 +1,7 @@
 package main // tests run in the main package
 
 import (
+	"context"
 	"fmt"
 	"os"
 
@@ -12,6 +13,20 @@ import (
 
 	"github.com/ditrit/shoset"
 )
+
+func loopUntilDone(tick time.Duration, ctx context.Context, callback func()) {
+	ticker := time.NewTicker(tick)
+	for {
+		select {
+		case <-ctx.Done():
+			fmt.Println("leaving...")
+			return
+		case t := <-ticker.C:
+			fmt.Println("Tick at", t)
+			callback()
+		}
+	}
+}
 
 // func shosetClient(logicalName, ShosetType, address string) {
 // 	c := shoset.NewShoset(logicalName, ShosetType)
@@ -82,7 +97,7 @@ import (
 // }
 
 // func shosetTest() {
-// 	done := make(chan bool)
+// 	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
 
 // 	c1 := shoset.NewShoset("c", "c")
 // 	c1.Bind("localhost:8301")
@@ -138,7 +153,7 @@ import (
 // }
 
 // func shosetTestEtoile() {
-// 	done := make(chan bool)
+// 	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
 
 // 	cl1 := shoset.NewShoset("cl", "cl")
 // 	cl1.Bind("localhost:8001")
@@ -271,7 +286,7 @@ import (
 // }
 
 // func testQueue() {
-// 	done := make(chan bool)
+// 	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
 // 	/*	// First let's make 2 sockets talk each other
 // 		C1 := shoset.NewShoset("C1", "c")
 // 		C1.Bind("localhost:8261")
@@ -302,51 +317,47 @@ import (
 // }
 
 func simpleCluster() {
-	done := make(chan bool)
+	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
 	cl1 := shoset.NewShoset("cl", "cl")
 	cl1.Bind("localhost:8001") //we take the port 8001 for our first socket
-	for {
-		time.Sleep(time.Second * time.Duration(1))
+
+	loopUntilDone(1*time.Second, ctx, func() {
 		fmt.Println("\ncl : ", cl1)
-	}
-	<-done
+	})
 }
 
 func simpleAgregator() {
-	done := make(chan bool)
+	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
 	aga1 := shoset.NewShoset("aga", "a") // agregateur
 	aga1.Protocol("localhost:8111", "localhost:8001", "link")
-	for {
-		time.Sleep(time.Second * time.Duration(1))
+
+	loopUntilDone(1*time.Second, ctx, func() {
 		fmt.Println("\ncl : ", aga1)
-	}
-	<-done
+	})
 }
 
 func simpleConnector() {
-	done := make(chan bool)
+	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
 	Ca1 := shoset.NewShoset("Ca", "c") // agregateur
 	Ca1.Protocol("localhost:8211", "localhost:8111", "link")
-	for {
-		time.Sleep(time.Second * time.Duration(1))
+
+	loopUntilDone(1*time.Second, ctx, func() {
 		fmt.Println("\ncl : ", Ca1)
-	}
-	<-done
+	})
 }
 
 func simplesimpleConnector() {
-	done := make(chan bool)
+	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
 	Ca1 := shoset.NewShoset("Ca", "c") // agregateur
 	Ca1.Bind("localhost:8211")
-	for {
-		time.Sleep(time.Second * time.Duration(1))
+
+	loopUntilDone(1*time.Second, ctx, func() {
 		fmt.Println("\ncl : ", Ca1)
-	}
-	<-done
+	})
 }
 
 func testJoin1() {
-	done := make(chan bool)
+	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
 
 	cl1 := shoset.NewShoset("cl", "cl")
 	cl1.Bind("localhost:8001")
@@ -357,18 +368,15 @@ func testJoin1() {
 	cl3 := shoset.NewShoset("cl", "cl")
 	cl3.Protocol("localhost:8003", "localhost:8001", "join")
 
-	for {
-		time.Sleep(time.Second * time.Duration(1))
+	loopUntilDone(1*time.Second, ctx, func() {
 		fmt.Println("\ncl : ", cl1)
 		fmt.Println("\ncl : ", cl2)
 		fmt.Println("\ncl : ", cl3)
-	}
-
-	<-done
+	})
 }
 
 func testJoin2() {
-	done := make(chan bool)
+	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
 
 	cl2 := shoset.NewShoset("cl", "cl")                      // always "cl" "cl" for gandalf
 	cl2.Protocol("localhost:8002", "localhost:8001", "join") // we join it to our first socket
@@ -377,17 +385,14 @@ func testJoin2() {
 	cl3.Protocol("localhost:8003", "localhost:8001", "join")
 	// cl3.Protocol("localhost:8002", "join")
 
-	for {
-		time.Sleep(time.Second * time.Duration(1))
+	loopUntilDone(1*time.Second, ctx, func() {
 		fmt.Println("\ncl : ", cl2)
 		fmt.Println("\ncl : ", cl3)
-	}
-
-	<-done
+	})
 }
 
 func testJoin3() {
-	done := make(chan bool)
+	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
 
 	cl1 := shoset.NewShoset("cl", "cl") // cluster
 	cl1.Bind("localhost:8001")
@@ -404,20 +409,17 @@ func testJoin3() {
 	cl5 := shoset.NewShoset("cl", "cl")
 	cl5.Protocol("localhost:8005", "localhost:8004", "join")
 
-	for {
-		time.Sleep(time.Second * time.Duration(1))
+	loopUntilDone(1*time.Second, ctx, func() {
 		fmt.Println("\ncl : ", cl1)
 		fmt.Println("\ncl : ", cl2)
 		fmt.Println("\ncl : ", cl3)
 		fmt.Println("\ncl : ", cl4)
 		fmt.Println("\ncl : ", cl5)
-	}
-
-	<-done
+	})
 }
 
 func testJoin4() {
-	done := make(chan bool)
+	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
 
 	cl2 := shoset.NewShoset("cl", "cl")                      // always "cl" "cl" for gandalf
 	cl2.Protocol("localhost:8002", "localhost:8001", "join") // we join it to our first socket
@@ -431,19 +433,16 @@ func testJoin4() {
 	cl5 := shoset.NewShoset("cl", "cl")
 	cl5.Protocol("localhost:8005", "localhost:8004", "join")
 
-	for {
-		time.Sleep(time.Second * time.Duration(1))
+	loopUntilDone(1*time.Second, ctx, func() {
 		fmt.Println("\ncl : ", cl2)
 		fmt.Println("\ncl : ", cl3)
 		fmt.Println("\ncl : ", cl4)
 		fmt.Println("\ncl : ", cl5)
-	}
-
-	<-done
+	})
 }
 
 // func testJoin() {
-// 	done := make(chan bool)
+// 	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
 
 // 	cl2 := shoset.NewShoset("cl", "cl") // always "cl" "cl" for gandalf
 // 	fmt.Println("\ncl : ", cl2)
@@ -470,7 +469,7 @@ func testJoin4() {
 // }
 
 // func test_link() {
-// 	done := make(chan bool)
+// 	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
 
 // 	cl1 := shoset.NewShoset("cl", "cl") // cluster
 // 	cl1.Bind("localhost:8001")
@@ -521,7 +520,7 @@ func testJoin4() {
 // }
 
 func test_link1() {
-	done := make(chan bool)
+	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
 
 	cl1 := shoset.NewShoset("cl", "cl") // cluster
 	cl1.Bind("localhost:8001")
@@ -541,21 +540,18 @@ func test_link1() {
 	aga2 := shoset.NewShoset("aga", "a") // agregateur
 	aga2.Protocol("localhost:8112", "localhost:8001", "link")
 
-	for {
-		time.Sleep(time.Second * time.Duration(1))
+	loopUntilDone(1*time.Second, ctx, func() {
 		fmt.Println("\ncl : ", cl1)
 		fmt.Println("\ncl : ", cl2)
 		fmt.Println("\ncl : ", cl3)
 		fmt.Println("\ncl : ", cl4)
 		fmt.Println("\nag : ", aga1)
 		fmt.Println("\nag : ", aga2)
-	}
-
-	<-done
+	})
 }
 
 func test_link2() {
-	done := make(chan bool)
+	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
 
 	cl2 := shoset.NewShoset("cl", "cl")
 	cl2.Protocol("localhost:8002", "localhost:8001", "join")
@@ -572,20 +568,17 @@ func test_link2() {
 	aga2 := shoset.NewShoset("aga", "a") // agregateur
 	aga2.Protocol("localhost:8112", "localhost:8001", "link")
 
-	for {
-		time.Sleep(time.Second * time.Duration(1))
+	loopUntilDone(1*time.Second, ctx, func() {
 		fmt.Println("\ncl : ", cl2)
 		fmt.Println("\ncl : ", cl3)
 		fmt.Println("\ncl : ", cl4)
 		fmt.Println("\nag : ", aga1)
 		fmt.Println("\nag : ", aga2)
-	}
-
-	<-done
+	})
 }
 
 func test_link3() {
-	done := make(chan bool)
+	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
 
 	cl1 := shoset.NewShoset("cl", "cl") // cluster
 	cl1.Bind("localhost:8001")
@@ -605,21 +598,18 @@ func test_link3() {
 	aga2 := shoset.NewShoset("aga", "a") // agregateur
 	aga2.Protocol("localhost:8112", "localhost:8002", "link")
 
-	for {
-		time.Sleep(time.Second * time.Duration(1))
+	loopUntilDone(1*time.Second, ctx, func() {
 		fmt.Println("\ncl : ", cl1)
 		fmt.Println("\ncl : ", cl2)
 		fmt.Println("\ncl : ", cl3)
 		fmt.Println("\ncl : ", cl4)
 		fmt.Println("\nag : ", aga1)
 		fmt.Println("\nag : ", aga2)
-	}
-
-	<-done
+	})
 }
 
 func test_link4() {
-	done := make(chan bool)
+	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
 
 	cl2 := shoset.NewShoset("cl", "cl")
 	cl2.Protocol("localhost:8002", "localhost:8001", "join")
@@ -636,20 +626,17 @@ func test_link4() {
 	aga2 := shoset.NewShoset("aga", "a") // agregateur
 	aga2.Protocol("localhost:8112", "localhost:8002", "link")
 
-	for {
-		time.Sleep(time.Second * time.Duration(1))
+	loopUntilDone(1*time.Second, ctx, func() {
 		fmt.Println("\ncl : ", cl2)
 		fmt.Println("\ncl : ", cl3)
 		fmt.Println("\ncl : ", cl4)
 		fmt.Println("\nag : ", aga1)
 		fmt.Println("\nag : ", aga2)
-	}
-
-	<-done
+	})
 }
 
 func test_link5() {
-	done := make(chan bool)
+	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
 
 	cl1 := shoset.NewShoset("cl", "cl") // cluster
 	cl1.Bind("localhost:8001")
@@ -675,8 +662,7 @@ func test_link5() {
 	Ca2 := shoset.NewShoset("Ca", "c") //connecteur
 	Ca2.Protocol("localhost:8212", "localhost:8112", "link")
 
-	for {
-		time.Sleep(time.Second * time.Duration(1))
+	loopUntilDone(1*time.Second, ctx, func() {
 		fmt.Println("\ncl : ", cl1)
 		fmt.Println("\ncl : ", cl2)
 		fmt.Println("\ncl : ", cl3)
@@ -685,13 +671,11 @@ func test_link5() {
 		fmt.Println("\nag : ", aga2)
 		fmt.Println("\nca : ", Ca1)
 		fmt.Println("\nca : ", Ca2)
-	}
-
-	<-done
+	})
 }
 
 func test_link6() {
-	done := make(chan bool)
+	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
 
 	cl2 := shoset.NewShoset("cl", "cl")
 	cl2.Protocol("localhost:8002", "localhost:8001", "join")
@@ -714,8 +698,7 @@ func test_link6() {
 	Ca2 := shoset.NewShoset("Ca", "c") //connecteur
 	Ca2.Protocol("localhost:8212", "localhost:8112", "link")
 
-	for {
-		time.Sleep(time.Second * time.Duration(1))
+	loopUntilDone(1*time.Second, ctx, func() {
 		fmt.Println("\ncl : ", cl2)
 		fmt.Println("\ncl : ", cl3)
 		fmt.Println("\ncl : ", cl4)
@@ -723,13 +706,11 @@ func test_link6() {
 		fmt.Println("\nag : ", aga2)
 		fmt.Println("\nca : ", Ca1)
 		fmt.Println("\nca : ", Ca2)
-	}
-
-	<-done
+	})
 }
 
 func test_link7() {
-	done := make(chan bool)
+	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
 
 	cl1 := shoset.NewShoset("cl", "cl") // cluster
 	cl1.Bind("localhost:8001")
@@ -752,8 +733,7 @@ func test_link7() {
 	Ca2 := shoset.NewShoset("Ca", "c") //connecteur
 	Ca2.Protocol("localhost:8212", "localhost:8112", "link")
 
-	for {
-		time.Sleep(time.Second * time.Duration(1))
+	loopUntilDone(1*time.Second, ctx, func() {
 		fmt.Println("\ncl : ", cl1)
 		fmt.Println("\ncl : ", cl2)
 		fmt.Println("\ncl : ", cl3)
@@ -761,13 +741,11 @@ func test_link7() {
 		fmt.Println("\nag : ", aga2)
 		fmt.Println("\nca : ", Ca1)
 		fmt.Println("\nca : ", Ca2)
-	}
-
-	<-done
+	})
 }
 
 func test_link8() {
-	done := make(chan bool)
+	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
 
 	cl1 := shoset.NewShoset("cl", "cl") // cluster
 	cl1.InitPKI("localhost:8001")
@@ -814,8 +792,7 @@ func test_link8() {
 	// fmt.Println("\nag : ", aga2)
 	// fmt.Println("\nca : ", Ca2)
 
-	for {
-		time.Sleep(time.Second * time.Duration(2))
+	loopUntilDone(2*time.Second, ctx, func() {
 		// fmt.Println("\ncl : ", cl1)
 		// fmt.Println("\ncl : ", cl2)
 		// fmt.Println("\ncl : ", cl3)
@@ -824,14 +801,10 @@ func test_link8() {
 		// fmt.Println("\nag : ", aga2)
 		// fmt.Println("\nca : ", Ca2)
 		// fmt.Println("ConnsByTypeArray('cl')", aga1.GetConnsByTypeArray("c"))
-	}
-
-	<-done
+	})
 }
 
-func test_pki() {
-	done := make(chan bool)
-
+func test_pki(ctx context.Context, done context.CancelFunc) {
 	cl1 := shoset.NewShoset("cl", "cl") // cluster
 	cl1.InitPKI("localhost:8001")
 
@@ -890,8 +863,8 @@ func test_pki() {
 	z := shoset.NewShoset("z", "z")
 	z.Protocol("localhost:8512", "localhost:8412", "link")
 
-	for {
-		time.Sleep(time.Second * time.Duration(1))
+	loopUntilDone(1*time.Second, ctx, func() {
+		fmt.Println("in_callback")
 		// fmt.Println(cl1.GetTLSconfig())
 		// fmt.Println("\ncl : ", cl1)
 		// fmt.Println("\ncl : ", cl2)
@@ -905,31 +878,26 @@ func test_pki() {
 		// fmt.Println("\nx : ", x)
 		// fmt.Println("\ny : ", y)
 		// fmt.Println("\nz : ", z)
-		return
-		time.Sleep(time.Second * time.Duration(10))
+		done()
+		// fmt.Println("wait 10s")
+		// time.Sleep(time.Second * time.Duration(10))
+		// fmt.Println("waited 10s")
 		// fmt.Println("ConnsByTypeArray('cl')", aga1.GetConnsByTypeArray("c"))
-	}
-
-	<-done
+	})
 }
 
-func test_pki_server() {
-	done := make(chan bool)
-
+func test_pki_server(ctx context.Context, done context.CancelFunc) {
 	cl1 := shoset.NewShoset("cl", "cl") // cluster
 	cl1.InitPKI("localhost:8001")
 
-	for {
-		time.Sleep(time.Second * time.Duration(2))
+	loopUntilDone(2*time.Second, ctx, func() {
 		// fmt.Println("\ncl : ", cl1)
-	}
-
-	<-done
+		done()
+		return
+	})
 }
 
-func test_pki_client() {
-	done := make(chan bool)
-
+func test_pki_client(ctx context.Context, done context.CancelFunc) {
 	cl2 := shoset.NewShoset("cl", "cl")
 	cl2.Protocol("localhost:8002", "localhost:8001", "join")
 
@@ -939,19 +907,19 @@ func test_pki_client() {
 	cl4 := shoset.NewShoset("y", "y")
 	cl4.Protocol("localhost:8004", "localhost:8003", "link")
 
-	for {
-		time.Sleep(time.Second * time.Duration(2))
+	loopUntilDone(2*time.Second, ctx, func() {
 		// fmt.Println("\ncl : ", cl2)
-	}
-
-	<-done
+		done()
+	})
 }
 
 func main() {
+	ctx, done := context.WithTimeout(context.Background(), 1*time.Minute)
+
 	//terminal
 	arg := os.Args[1]
 	if arg == "1" {
-		test_pki_server()
+		test_pki_server(ctx, done)
 		// testJoin1()
 		// testJoin2()
 		// testJoin3()
@@ -966,15 +934,14 @@ func main() {
 		// test_link8()
 		// test_pki()
 	} else if arg == "2" {
-		test_pki_client()
-
+		test_pki_client(ctx, done)
 		// simpleCluster()
 		// simpleAgregator()
 		// simpleConnector()
 	} else if arg == "3" {
 		// simplesimpleConnector()
 	} else {
-		test_pki()
+		test_pki(ctx, done)
 	}
 }
 
