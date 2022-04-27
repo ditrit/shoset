@@ -132,21 +132,20 @@ func (c *ShosetConn) SetRemoteAddress(address string) {
 }
 
 func NewShosetConn(c *Shoset, address string, dir string) (*ShosetConn, error) {
-	// Creation
-	conn := ShosetConn{}
-	// Initialisation attributs ShosetConn
-	conn.ch = c
-	conn.dir = dir
-	conn.socket = new(tls.Conn)
-	conn.rb = new(msg.Reader)
-	conn.wb = new(msg.Writer)
 	ipAddress, err := GetIP(address)
 	if err != nil {
 		return nil, err
 	}
-	conn.remoteAddress = ipAddress
-	conn.isValid = true
-	return &conn, nil
+
+	return &ShosetConn{
+		ch:            c,
+		dir:           dir,
+		socket:        new(tls.Conn),
+		rb:            new(msg.Reader),
+		wb:            new(msg.Writer),
+		remoteAddress: ipAddress,
+		isValid:       true,
+	}, nil
 }
 
 func (c *ShosetConn) String() string {

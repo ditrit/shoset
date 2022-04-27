@@ -67,7 +67,7 @@ type Shoset struct {
 	isPki              bool
 	isCertified        bool
 	listener           net.Listener
-	m                  sync.Mutex
+	mu                 sync.RWMutex
 	wentThroughPkiOnce bool
 	fileName           string
 }
@@ -114,13 +114,13 @@ func NewShoset(lName, ShosetType string) *Shoset { //l
 	// Creation
 	shoset := Shoset{
 		// Initialisation
-		Context:          make(map[string]interface{}),
-		lName:            lName,
-		ShosetType:       ShosetType,
-		viperConfig:      viper.New(),
-		ConnsByName:      NewMapSafeMapConn(),
-		LnamesByType:     NewMapSafeStrings(),
-		LnamesByProtocol: NewMapSafeStrings(),
+		Context:            make(map[string]interface{}),
+		lName:              lName,
+		ShosetType:         ShosetType,
+		viperConfig:        viper.New(),
+		ConnsByName:        NewMapSafeMapConn(),
+		LnamesByType:       NewMapSafeStrings(),
+		LnamesByProtocol:   NewMapSafeStrings(),
 		isValid:            true,
 		isPki:              false,
 		isCertified:        false,
@@ -297,78 +297,82 @@ func (c *Shoset) handleBind() error {
 }
 
 func (c *Shoset) Protocol(bindAddress, remoteAddress, protocolType string) {
-	ipAddress, err := GetIP(bindAddress) // parse the address from function parameter to get the IP
-	// fmt.Println(ipAddress, "has id ", c.GetID())
-	if err == nil { // check if IP is ok
+	// init cert if needed
+	if !c.GetIsCertified() && !c.GetWentThroughPkiOnce() {
+		ipAddress, err := GetIP(bindAddress) // parse the address from function parameter to get the IP
+		if err != nil {
+			// IP nok -> return early
+			fmt.Println("wrong IP format:", err)
+			return
+		}
+
 		_ipAddress := strings.Replace(ipAddress, ":", "_", -1)
 		_ipAddress = strings.Replace(_ipAddress, ".", "-", -1)
-		c.SetFileName(_ipAddress)
 
 		dirname, err := os.UserHomeDir()
 		if err != nil {
 			fmt.Println(err)
-		}
-
-		if !fileExists(dirname + "/.shoset/" + c.GetFileName() + "/") {
-			os.Mkdir(dirname+"/.shoset/", 0700)
-			os.Mkdir(dirname+"/.shoset/"+c.GetFileName()+"/", 0700)
-			os.Mkdir(dirname+"/.shoset/"+c.GetFileName()+"/config/", 0700)
-			os.Mkdir(dirname+"/.shoset/"+c.GetFileName()+"/cert/", 0700)
-		}
-	}
-
-	if !c.GetIsCertified() && !c.GetWentThroughPkiOnce() {
-		conn, _ := NewShosetConn(c, remoteAddress, "out")
-		c.SetPkiRequestAddress(ipAddress)
-		c.SetWentThroughPkiOnce(true) // avoid concurrency when multiple protocols are running at the same time
-		conn.runPkiRequest()          // I don't have my certs, I request them
-		if c.GetIsCertified() {
-			conn.socket.Close()
-			c.Protocol(bindAddress, remoteAddress, protocolType)
-		} else {
-			fmt.Println("couldn't certify")
-		}
-	} else {
-		if c.GetBindAddress() == "" {
-			c.Bind(bindAddress) // I have my certs, I can bind
-		}
-
-		switch protocolType {
-		case "join":
-			conns := c.ConnsByName.Get(c.GetLogicalName())
-			if conns != nil {
-				exists := conns.Get(remoteAddress) // check if remoteAddress is already in the map
-				if exists != nil {                 //connection already established for this socket
-					return
-				}
-			}
-			if remoteAddress == c.GetBindAddress() { // connection impossible with itself
-				return
-			}
-			conn, _ := NewShosetConn(c, remoteAddress, "out")
-			go conn.runJoinConn()
-		case "link":
-			conns := c.ConnsByName.Get(c.GetLogicalName())
-			if conns != nil {
-				exists := conns.Get(remoteAddress) // check if remoteAddress is already in the map
-				if exists != nil {                 //connection already established for this socket
-					return
-				}
-			}
-			if remoteAddress == c.GetBindAddress() { // connection impossible with itself
-				return
-			}
-			conn, _ := NewShosetConn(c, remoteAddress, "out")
-			go conn.runLinkConn()
-		case "bye":
-			conn, _ := NewShosetConn(c, remoteAddress, "out")
-			go conn.runByeConn()
-		default:
 			return
 		}
+
+		if !fileExists(dirname + "/.shoset/" + _ipAddress + "/") {
+			os.Mkdir(dirname+"/.shoset/", 0700)
+			os.Mkdir(dirname+"/.shoset/"+_ipAddress+"/", 0700)
+			os.Mkdir(dirname+"/.shoset/"+_ipAddress+"/config/", 0700)
+			os.Mkdir(dirname+"/.shoset/"+_ipAddress+"/cert/", 0700)
+		}
+		// set filename _after_ successful conf creation
+		c.SetFileName(_ipAddress)
+		c.SetPkiRequestAddress(ipAddress)
+		initConn, err := NewShosetConn(c, remoteAddress, "out")
+		if err != nil {
+			fmt.Println("couldn't create shoset:", err)
+			return
+		}
+		initConn.runPkiRequest() // I don't have my certs, I request them
+		if !c.GetIsCertified() {
+			fmt.Println("couldn't certify")
+			return
+		}
+		initConn.socket.Close()
+		c.SetWentThroughPkiOnce(true) // avoid concurrency when multiple protocols are running at the same time
+	}
+
+	if c.GetBindAddress() == "" {
+		c.Bind(bindAddress) // I have my certs, I can bind
+	}
+
+	conn, _ := NewShosetConn(c, remoteAddress, "out")
+	switch protocolType {
+	case "join":
+		conns := c.ConnsByName.Get(c.GetLogicalName())
+		if conns != nil {
+			exists := conns.Get(remoteAddress) // check if remoteAddress is already in the map
+			if exists != nil {                 //connection already established for this socket
+				return
+			}
+		}
+		if remoteAddress == c.GetBindAddress() { // connection impossible with itself
+			return
+		}
+		go conn.runJoinConn()
+	case "link":
+		conns := c.ConnsByName.Get(c.GetLogicalName())
+		if conns != nil {
+			exists := conns.Get(remoteAddress) // check if remoteAddress is already in the map
+			if exists != nil {                 //connection already established for this socket
+				return
+			}
+		}
+		if remoteAddress == c.GetBindAddress() { // connection impossible with itself
+			return
+		}
+		go conn.runLinkConn()
+	case "bye":
+		go conn.runByeConn()
+	default:
 		return
 	}
-	return
 }
 
 func (c *Shoset) deleteConn(connAddr, connLname string) {

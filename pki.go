@@ -215,8 +215,8 @@ func (c *Shoset) SignCertificate(certReq *x509.Certificate, hostPublicKey *rsa.P
 	// check if the certificates generated are valid
 	// openssl s_server -accept 8080 -www -cert yourcert.crt -key yourcert.key -CAfile CAcert.crt
 
-	c.m.Lock()
-	defer c.m.Unlock()
+	c.mu.Lock()
+	defer c.mu.Unlock()
 
 	if c.GetIsPki() {
 		dirname, err := os.UserHomeDir()
