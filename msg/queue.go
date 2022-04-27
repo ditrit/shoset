@@ -75,7 +75,7 @@ func (q *Queue) Push(m Message, RemoteShosetType, RemoteAddress string) bool {
 	if ele != nil {
 		return false
 	}
-  
+
 	ele = q.qlist.PushFront(c)
 	q.dict[c.key] = ele
 	go func() {

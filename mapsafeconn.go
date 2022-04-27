@@ -10,7 +10,6 @@ type MapSafeConn struct {
 	sync.Mutex
 }
 
-
 // NewMapSafeConn : constructor
 func NewMapSafeConn() *MapSafeConn {
 	m := new(MapSafeConn)
@@ -61,11 +60,11 @@ func (m *MapSafeConn) _keys(dir string) []string { // list of addresses
 		if dir != "all" {
 			if m.m[key].GetDir() == dir { // on ne veut pas le in du join
 				addresses[i] = key
-				i++ 
+				i++
 			}
 		} else {
-				addresses[i] = key
-				i++
+			addresses[i] = key
+			i++
 		}
 	}
 	return addresses[:i]
@@ -75,7 +74,7 @@ func (m *MapSafeConn) Keys(dir string) []string { // list of addresses
 	m.Lock()
 	defer m.Unlock()
 	return m._keys(dir)
-	
+
 }
 
 // Delete : delete a value in a MapSafeConn

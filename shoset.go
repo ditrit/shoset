@@ -112,33 +112,38 @@ func (c *Shoset) SetFileName(fileName string) {
 /*       Constructor     */
 func NewShoset(lName, ShosetType string) *Shoset { //l
 	// Creation
-	shoset := Shoset{}
+	shoset := Shoset{
+		// Initialisation
+		Context:          make(map[string]interface{}),
+		lName:            lName,
+		ShosetType:       ShosetType,
+		viperConfig:      viper.New(),
+		ConnsByName:      NewMapSafeMapConn(),
+		LnamesByType:     NewMapSafeStrings(),
+		LnamesByProtocol: NewMapSafeStrings(),
+		isValid:            true,
+		isPki:              false,
+		isCertified:        false,
+		listener:           nil,
+		wentThroughPkiOnce: false,
+		// isSingleTLS: true,
+		ConnsSingle:        NewMapSafeBool(),
+		ConnsSingleAddress: NewSyncMapConn(),
 
-	// Initialisation
-	shoset.Context = make(map[string]interface{})
+		// Dictionnaire des queues de message (par type de message)
+		Queue:  make(map[string]*msg.Queue),
+		Get:    make(map[string]func(*ShosetConn) (msg.Message, error)),
+		Handle: make(map[string]func(*ShosetConn, msg.Message) error),
+		Send:   make(map[string]func(*Shoset, msg.Message)),
+		Wait:   make(map[string]func(*Shoset, *msg.Iterator, map[string]string, int) *msg.Message),
 
-	shoset.lName = lName
-	shoset.ShosetType = ShosetType
-	shoset.viperConfig = viper.New()
-	shoset.ConnsByName = NewMapSafeMapConn()
-	shoset.LnamesByType = NewMapSafeStrings()
-	shoset.LnamesByProtocol = NewMapSafeStrings()
+		// tlsConfig: &tls.Config{InsecureSkipVerify: true}
+		tlsServerOK:        true,
+		tlsConfigSingleWay: &tls.Config{InsecureSkipVerify: true},
+		tlsConfigDoubleWay: nil,
+	}
+
 	shoset.ConnsByName.SetViper(shoset.viperConfig)
-	shoset.isValid = true
-	shoset.isPki = false
-	shoset.isCertified = false
-	shoset.listener = nil
-	shoset.wentThroughPkiOnce = false
-	// shoset.isSingleTLS = true
-	shoset.ConnsSingle = NewMapSafeBool()
-	shoset.ConnsSingleAddress = NewSyncMapConn()
-
-	// Dictionnaire des queues de message (par type de message)
-	shoset.Queue = make(map[string]*msg.Queue)
-	shoset.Get = make(map[string]func(*ShosetConn) (msg.Message, error))
-	shoset.Handle = make(map[string]func(*ShosetConn, msg.Message) error)
-	shoset.Send = make(map[string]func(*Shoset, msg.Message))
-	shoset.Wait = make(map[string]func(*Shoset, *msg.Iterator, map[string]string, int) *msg.Message)
 
 	shoset.Queue["cfglink"] = msg.NewQueue()
 	shoset.Get["cfglink"] = GetConfigLink
@@ -175,12 +180,6 @@ func NewShoset(lName, ShosetType string) *Shoset { //l
 	shoset.Handle["config"] = HandleConfig
 	shoset.Send["config"] = SendConfig
 	shoset.Wait["config"] = WaitConfig
-
-	// shoset.tlsConfig = &tls.Config{InsecureSkipVerify: true}
-	shoset.tlsServerOK = true
-
-	shoset.tlsConfigSingleWay = &tls.Config{InsecureSkipVerify: true}
-	shoset.tlsConfigDoubleWay = nil
 
 	return &shoset
 }
@@ -341,7 +340,6 @@ func (c *Shoset) Protocol(bindAddress, remoteAddress, protocolType string) {
 				exists := conns.Get(remoteAddress) // check if remoteAddress is already in the map
 				if exists != nil {                 //connection already established for this socket
 					return
-
 				}
 			}
 			if remoteAddress == c.GetBindAddress() { // connection impossible with itself

@@ -60,7 +60,7 @@ func HandleConfigLink(c *ShosetConn, message msg.Message) error {
 		if dir == "out" { // this socket wants to link to another
 			c.SetRemoteLogicalName(cfg.GetLogicalName())
 			c.SetRemoteShosetType(cfg.GetShosetType())
-			c.ch.ConnsByName.Set(cfg.GetLogicalName(), c.GetRemoteAddress(), "link", cfg.GetShosetType(), c.ch.GetFileName(),c) // set conns in the other socket
+			c.ch.ConnsByName.Set(cfg.GetLogicalName(), c.GetRemoteAddress(), "link", cfg.GetShosetType(), c.ch.GetFileName(), c) // set conns in the other socket
 			// c.ch.LnamesByProtocol.Set("link", c.GetRemoteLogicalName())
 			// c.ch.LnamesByType.Set(c.ch.GetShosetType(), c.GetRemoteLogicalName())
 
@@ -73,7 +73,7 @@ func HandleConfigLink(c *ShosetConn, message msg.Message) error {
 					if err == nil {
 						conn.SetRemoteLogicalName(c.ch.GetLogicalName())
 						conn.SetRemoteShosetType(c.ch.GetShosetType())
-						c.ch.ConnsByName.Set(c.ch.GetLogicalName(), bro, "link", conn.GetRemoteShosetType(), c.ch.GetFileName(),conn) // musn't be linked !
+						c.ch.ConnsByName.Set(c.ch.GetLogicalName(), bro, "link", conn.GetRemoteShosetType(), c.ch.GetFileName(), conn) // musn't be linked !
 					}
 
 					newLocalBrothers := c.ch.ConnsByName.Get(c.ch.GetLogicalName()).Keys("me")

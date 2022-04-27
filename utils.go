@@ -100,8 +100,6 @@ func GetByType(m *MapSafeConn, shosetType string) []*ShosetConn {
 	return result
 }
 
-
-
 // pki
 // https://github.com/square/certstrap/tree/master/cmd
 var (

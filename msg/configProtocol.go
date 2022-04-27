@@ -1,6 +1,5 @@
 package msg
 
-
 // ConfigProtocol : Gandalf Socket config
 type ConfigProtocol struct {
 	MessageBase

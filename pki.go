@@ -27,9 +27,9 @@ func (c *Shoset) InitPKI(address string) error {
 	if c.GetBindAddress() != "" { // il n'y a pas encore eu de bind (bindadress est vide)
 		fmt.Println("shoset bound")
 		return errors.New("shoset bound")
-	// } else if c.ConnsByName.Len() != 0 { // j'ai déjà fait un link ou un join ou j'ai un fichier de configuration (ce qui veut dire que j'ai des connsbyname)
-	// 	fmt.Println("a protocol already happened on this shoset")
-	// 	return errors.New("a protocol already happened on this shoset")
+		// } else if c.ConnsByName.Len() != 0 { // j'ai déjà fait un link ou un join ou j'ai un fichier de configuration (ce qui veut dire que j'ai des connsbyname)
+		// 	fmt.Println("a protocol already happened on this shoset")
+		// 	return errors.New("a protocol already happened on this shoset")
 	} else if c.GetIsPki() { // il y a eu déjà un init ou j'ai déjà un certificat (mon certificat existe déjà)
 		fmt.Println("shoset already initialized")
 		return errors.New("shoset already initialized")
@@ -39,7 +39,7 @@ func (c *Shoset) InitPKI(address string) error {
 
 	// demarche d'initialisation de bind classique (shoset.go/bind)
 	ipAddress, err := GetIP(address) // parse the address from function parameter to get the IP
-	if err == nil {                      // check if IP is ok
+	if err == nil {                  // check if IP is ok
 		_ipAddress := strings.Replace(ipAddress, ":", "_", -1)
 		_ipAddress = strings.Replace(_ipAddress, ".", "-", -1)
 		c.SetFileName(_ipAddress)
@@ -149,7 +149,7 @@ func (c *Shoset) InitPKI(address string) error {
 	// tls config single way
 	c.tlsConfigSingleWay = &tls.Config{
 		Certificates:       []tls.Certificate{cert},
-		InsecureSkipVerify: false, // peut etre true 
+		InsecureSkipVerify: false, // peut etre true
 	}
 
 	// c.tlsConfig = c.tlsConfigSingleWay

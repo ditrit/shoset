@@ -20,7 +20,6 @@ func HandleConfigJoin(c *ShosetConn, message msg.Message) error {
 	dir := c.GetDir()
 	remoteAddress := cfg.GetAddress()
 
-
 	switch cfg.GetCommandName() {
 	case "join":
 		// fmt.Println(c.ch.GetBindAddress(), "enters join for ", remoteAddress)
