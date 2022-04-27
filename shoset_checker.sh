@@ -8,7 +8,7 @@ number_of_errors=0
 
 for i in {1..10}
 do
-    timeout 60s go run ./test/test.go 4
+    timeout 30s go run ./test/test.go 4
     number_of_files=`find $REPERTORY -type f | wc -l`
     if [ $EXPECTED_FILES_NUMBER -eq $number_of_files ]
         then

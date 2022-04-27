@@ -1,6 +1,7 @@
 package shoset
 
 import (
+	"crypto/rsa"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/pem"
@@ -9,6 +10,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -181,7 +183,6 @@ func (c *ShosetConn) runPkiRequest() {
 	certReq, hostPublicKey, _ := c.ch.PrepareCertificate()
 	if certReq != nil && hostPublicKey != nil {
 		PkiEvent := msg.NewPkiEventInit("pkievt", c.ch.GetPkiRequestAddress(), c.ch.GetLogicalName(), certReq, hostPublicKey) ///////////
-
 		for {
 			// fmt.Println(",,,,,,,,,,,,", c.ch.GetBindAddress())
 			if !c.GetIsValid() { // sockets are not from the same type or don't have the same name / conn ended
@@ -195,113 +196,119 @@ func (c *ShosetConn) runPkiRequest() {
 				time.Sleep(time.Millisecond * time.Duration(100))
 				fmt.Println("err:", err)
 				continue
-			} else {
-				c.socket = conn
-				c.rb.UpdateReader(c.socket)
-				c.wb.UpdateWriter(c.socket)
-				// defer conn.Close()
+			}
+			c.socket = conn
+			c.rb.UpdateReader(c.socket)
+			c.wb.UpdateWriter(c.socket)
+			// defer conn.Close()
 
-				c.SendMessage(PkiEvent)
-				// fmt.Println("reqcert sent to ", c.GetRemoteAddress(), "!!!!!!!!!!!!!!!!!!!!!!")
+			c.SendMessage(PkiEvent)
+			// fmt.Println("reqcert sent to ", c.GetRemoteAddress(), "!!!!!!!!!!!!!!!!!!!!!!")
 
-				// receive messages
-				for {
-					msgType, err := c.rb.ReadString()
-					msgType = strings.Trim(msgType, "\n")
-					time.Sleep(time.Millisecond * time.Duration(10))
-					if msgType != "pkievt" {
-						// fmt.Println("client didn't receive proper msgtype :", msgType)
-						c.socket.Close()
-						break
-					}
-					// fmt.Println(msgType)
-					if err != nil {
-						// fmt.Println("# error : ", err)
-						break
-					} else {
-						fGet, ok := c.ch.Get[msgType]
-						if ok {
-							msgVal, err := fGet(c)
-							cmd := msgVal.GetMsgType()
-							if cmd == "pkievt" {
-								if err == nil {
-									evt := msgVal.(msg.PkiEvent)
-									dirname, _ := os.UserHomeDir()
-
-									if c.ch.GetPkiRequestAddress() == evt.GetRequestAddress() && evt.GetCommand() == "return_pkievt" {
-										// fmt.Println(c.ch.GetPkiRequestAddress(), "return msg received")
-										if evt.GetSignedCert() != nil && evt.GetCAcert() != nil {
-											signedCert := evt.GetSignedCert()
-											certFile, err := os.Create(dirname + "/.shoset/" + c.ch.GetFileName() + "/cert/cert.crt")
-											if err != nil {
-												fmt.Println("couldn't create certfile")
-
-											}
-											pem.Encode(certFile, &pem.Block{Type: "CERTIFICATE", Bytes: signedCert})
-											certFile.Close()
-
-											caCert := evt.GetCAcert()
-											ioutil.WriteFile(dirname+"/.shoset/"+c.ch.GetFileName()+"/cert/CAcert.crt", caCert, 0644)
-
-											if evt.GetCAprivateKey() != nil {
-												caPrivateKey := evt.GetCAprivateKey()
-												CAprivateKeyFile, err := os.OpenFile(dirname+"/.shoset/"+c.ch.GetFileName()+"/cert/privateCAKey.key", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
-												if err != nil {
-													fmt.Println("couldn't create CAprivateKeyFile")
-
-												}
-												pem.Encode(CAprivateKeyFile, &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(caPrivateKey)})
-												CAprivateKeyFile.Close()
-
-												c.ch.SetIsPki(true)
-											}
-											c.ch.SetIsCertified(true)
-
-											// point env variable to our CAcert so that computer does not point elsewhere
-											os.Setenv("SSL_CERT_FILE", dirname+"/.shoset/"+c.ch.GetFileName()+"/cert/CAcert.crt")
-
-											// tls Double way
-											cert, err := tls.LoadX509KeyPair(dirname+"/.shoset/"+c.ch.GetFileName()+"/cert/cert.crt", dirname+"/.shoset/"+c.ch.GetFileName()+"/cert/privateKey.key")
-											if err != nil {
-												fmt.Println("! Unable to Load certificate !")
-											}
-											CAcert, err := ioutil.ReadFile(dirname + "/.shoset/" + c.ch.GetFileName() + "/cert/CAcert.crt")
-											if err != nil {
-												fmt.Println("error read file cacert :", err)
-											}
-											caCertPool := x509.NewCertPool()
-											caCertPool.AppendCertsFromPEM(CAcert)
-											c.ch.tlsConfigDoubleWay = &tls.Config{
-												Certificates:       []tls.Certificate{cert},
-												ClientCAs:          caCertPool,
-												ClientAuth:         tls.RequireAndVerifyClientCert,
-												InsecureSkipVerify: false,
-											}
-											c.ch.tlsConfigDoubleWay.BuildNameToCertificate()
-
-											// tls config single way
-											c.ch.tlsConfigSingleWay = &tls.Config{
-												Certificates:       []tls.Certificate{cert},
-												InsecureSkipVerify: false,
-											}
-											c.socket.Close()
-											// fmt.Println(c.ch.GetPkiRequestAddress(), "!!! I have been certified !!!")
-											return
-										}
-									} else {
-										fmt.Println("return msg does not correspond")
-									}
-								} else {
-									fmt.Println("didn't find function to handle event")
-								}
-							} else {
-								fmt.Println("not the right command client")
-							}
-						} else {
-							fmt.Println(c.ch.GetPkiRequestAddress(), "not ok client", ok)
-						}
-					}
+			// receive messages
+			for {
+				msgType, err := c.rb.ReadString()
+				if err != nil {
+					// fmt.Println("# error : ", err)
+					break
 				}
+				msgType = strings.Trim(msgType, "\n")
+				runtime.Gosched()
+				// time.Sleep(time.Millisecond * time.Duration(10))
+				if msgType != "pkievt" {
+					// fmt.Println("client didn't receive proper msgtype :", msgType)
+					c.socket.Close()
+					break
+				}
+				// fmt.Println(msgType)
+				fGet, ok := c.ch.Get[msgType]
+				if !ok {
+					fmt.Println(c.ch.GetPkiRequestAddress(), "not ok client")
+					continue
+				}
+				msgVal, err := fGet(c)
+				if err != nil {
+					fmt.Println("didn't find function to handle event")
+					continue
+				}
+
+				if cmd := msgVal.GetMsgType(); cmd != "pkievt" {
+					fmt.Println("not the right command client")
+					continue
+				}
+
+				evt := msgVal.(msg.PkiEvent)
+				if c.ch.GetPkiRequestAddress() != evt.GetRequestAddress() || evt.GetCommand() != "return_pkievt" {
+					fmt.Println("return msg does not correspond")
+					continue
+				}
+
+				// fmt.Println(c.ch.GetPkiRequestAddress(), "return msg received")
+				if evt.GetSignedCert() != nil && evt.GetCAcert() != nil {
+					dirname, err := os.UserHomeDir()
+					if err != nil {
+						fmt.Println("did not find home dir", err)
+						continue
+					}
+
+					signedCert := evt.GetSignedCert()
+					certFile, err := os.Create(dirname + "/.shoset/" + c.ch.GetFileName() + "/cert/cert.crt")
+					if err != nil {
+						fmt.Println("couldn't create certfile")
+						continue
+					}
+					pem.Encode(certFile, &pem.Block{Type: "CERTIFICATE", Bytes: signedCert})
+					certFile.Close()
+
+					caCert := evt.GetCAcert()
+					ioutil.WriteFile(dirname+"/.shoset/"+c.ch.GetFileName()+"/cert/CAcert.crt", caCert, 0644)
+
+					if evt.GetCAprivateKey() != nil {
+						caPrivateKey := evt.GetCAprivateKey()
+						CAprivateKeyFile, err := os.OpenFile(dirname+"/.shoset/"+c.ch.GetFileName()+"/cert/privateCAKey.key", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
+						if err != nil {
+							fmt.Println("couldn't create CAprivateKeyFile")
+							continue
+						}
+						pem.Encode(CAprivateKeyFile, &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(caPrivateKey)})
+						CAprivateKeyFile.Close()
+
+						c.ch.SetIsPki(true)
+					}
+					c.ch.SetIsCertified(true)
+
+					// point env variable to our CAcert so that computer does not point elsewhere
+					os.Setenv("SSL_CERT_FILE", dirname+"/.shoset/"+c.ch.GetFileName()+"/cert/CAcert.crt")
+
+					// tls Double way
+					cert, err := tls.LoadX509KeyPair(dirname+"/.shoset/"+c.ch.GetFileName()+"/cert/cert.crt", dirname+"/.shoset/"+c.ch.GetFileName()+"/cert/privateKey.key")
+					if err != nil {
+						fmt.Println("! Unable to Load certificate !")
+					}
+					CAcert, err := ioutil.ReadFile(dirname + "/.shoset/" + c.ch.GetFileName() + "/cert/CAcert.crt")
+					if err != nil {
+						fmt.Println("error read file cacert :", err)
+					}
+					caCertPool := x509.NewCertPool()
+					caCertPool.AppendCertsFromPEM(CAcert)
+					c.ch.tlsConfigDoubleWay = &tls.Config{
+						Certificates:       []tls.Certificate{cert},
+						ClientCAs:          caCertPool,
+						ClientAuth:         tls.RequireAndVerifyClientCert,
+						InsecureSkipVerify: false,
+					}
+					c.ch.tlsConfigDoubleWay.BuildNameToCertificate()
+
+					// tls config single way
+					c.ch.tlsConfigSingleWay = &tls.Config{
+						Certificates:       []tls.Certificate{cert},
+						InsecureSkipVerify: false,
+					}
+					c.socket.Close()
+					// fmt.Println(c.ch.GetPkiRequestAddress(), "!!! I have been certified !!!")
+					return
+				}
+
 			}
 		}
 	}
@@ -435,105 +442,105 @@ func (c *ShosetConn) runInConnSingle(address_ string) {
 	for {
 		msgType, err := c.rb.ReadString()
 		msgType = strings.Trim(msgType, "\n")
-		time.Sleep(time.Millisecond * time.Duration(10))
+		// time.Sleep(time.Millisecond * time.Duration(10))
+		runtime.Gosched()
 		if err != nil {
 			// fmt.Println(c.ch.GetPkiRequestAddress(), "## error : ", err)
 			break
-		} else {
-			fGet, ok := c.ch.Get[msgType]
-			if ok {
-				msgVal, err := fGet(c)
-				cmd := msgVal.GetMsgType()
-				if cmd == "pkievt" {
-					if err == nil {
-						evt := msgVal.(msg.PkiEvent)
-						dirname, err := os.UserHomeDir()
-						if err != nil {
-							fmt.Println("couldn't get dirname")
-						}
+		}
+		fGet, ok := c.ch.Get[msgType]
+		if !ok {
+			fmt.Println("not ok")
+			continue
+		}
+		msgVal, err := fGet(c)
+		if err != nil {
+			fmt.Println("didn't find function to handle event")
+			continue
+		}
+		if cmd := msgVal.GetMsgType(); cmd != "pkievt" {
+			// linkProtocol := msgVal.(msg.ConfigProtocol)
+			fmt.Println("not the right cmd", cmd)
+			// fmt.Println("-------")
+			// fmt.Println(linkProtocol.GetCommandName())
+			// fmt.Println(linkProtocol.GetAddress())
+			// fmt.Println("-------")
+			// descr := fmt.Sprintf("ConnsByName : ")
+			// for _, lName := range c.ch.ConnsByName.Keys() {
+			// 	c.ch.ConnsByName.Iterate(lName,
+			// 		func(key string, val *ShosetConn) {
+			// 			descr = fmt.Sprintf("%s %s\n\t\t\t     ", descr, val)
+			// 		})
+			// }
+			// fmt.Println(descr)
+			// fmt.Println("-------")
+			// fmt.Println(c.ch.ConnsSingle)
+			// fmt.Println("-------")
+			// fmt.Println(c.ch.ConnsSingleAddress)
+			continue
+		}
+		evt := msgVal.(msg.PkiEvent)
+		dirname, err := os.UserHomeDir()
+		if err != nil {
+			fmt.Println("couldn't get dirname")
+			continue
+		}
+		if !c.ch.GetIsPki() {
+			// 2. un nouveau se connecte à moi et je suis passe plat
+			// delete(c.ch.ConnsSingle, address_)
+			c.ch.ConnsSingleAddress.Set(evt.GetRequestAddress(), c)
+			SendPkiEvent(c.ch, msgVal)
+			// c.socket.Close()
+			c.ch.ConnsSingle.Delete(address_)
+			return
+		}
+		// 1. un nouveau se connecte directement à moi et je suis PKI
+		// fmt.Println("received event")
+		if evt.GetCertReq() != nil {
+			CAcert, err := ioutil.ReadFile(dirname + "/.shoset/" + c.ch.GetFileName() + "/cert/CAcert.crt")
+			if err != nil {
+				fmt.Println("couldn't get CAcert")
+				return
+			}
+			signedCert := c.ch.SignCertificate(evt.GetCertReq(), evt.GetHostPublicKey())
+			if signedCert != nil {
+				var returnPkiEvent *msg.PkiEvent
+				var CAprivateKey *rsa.PrivateKey
 
-						if c.ch.GetIsPki() {
-							// 1. un nouveau se connecte directement à moi et je suis PKI
-							// fmt.Println("received event")
-							if evt.GetCertReq() != nil {
-								CAcert, err := ioutil.ReadFile(dirname + "/.shoset/" + c.ch.GetFileName() + "/cert/CAcert.crt")
-								if err != nil {
-									fmt.Println("couldn't get CAcert")
-								}
-								signedCert := c.ch.SignCertificate(evt.GetCertReq(), evt.GetHostPublicKey())
-								if signedCert != nil {
-									var returnPkiEvent *msg.PkiEvent
-
-									if c.ch.GetLogicalName() == evt.GetLogicalName() { // les clusters deviennent à leur tour pki
-										CAprivateKeyBytes, err := ioutil.ReadFile(dirname + "/.shoset/" + c.ch.GetFileName() + "/cert/privateCAKey.key")
-										if err != nil {
-											fmt.Println("couldn't get CAprivateKey")
-										}
-										block, _ := pem.Decode(CAprivateKeyBytes)
-										enc := x509.IsEncryptedPEMBlock(block)
-										b := block.Bytes
-										if enc {
-											b, err = x509.DecryptPEMBlock(block, nil)
-											if err != nil {
-												fmt.Println(err)
-											}
-										}
-										CAprivateKey, err := x509.ParsePKCS1PrivateKey(b)
-										if err != nil {
-											fmt.Println(err)
-										}
-										returnPkiEvent = msg.NewPkiEventReturn("return_pkievt", evt.GetRequestAddress(), signedCert, CAcert, CAprivateKey)
-									} else {
-										returnPkiEvent = msg.NewPkiEventReturn("return_pkievt", evt.GetRequestAddress(), signedCert, CAcert, nil)
-									}
-									returnPkiEvent.SetUUID(evt.GetUUID() + "*") // return event has the same uuid so that network isn't flooded with same events
-									// fmt.Println("return msg sent to ", evt.GetRequestAddress())
-									c.SendMessage(returnPkiEvent)
-									c.socket.Close()
-									c.ch.ConnsSingle.Delete(address_)
-									break
-									// delete(c.ch.ConnsSingle, address_)
-									// return
-								}
-							}
-						} else {
-							// 2. un nouveau se connecte à moi et je suis passe plat
-							// delete(c.ch.ConnsSingle, address_)
-							c.ch.ConnsSingleAddress.Set(evt.GetRequestAddress(), c)
-							SendPkiEvent(c.ch, msgVal)
-							// c.socket.Close()
-							c.ch.ConnsSingle.Delete(address_)
-							break
-						}
-						// 3. j'ai reçu un message autre que pkievt, donc j'ignore
-					} else {
-						fmt.Println("didn't find function to handle event")
+				if c.ch.GetLogicalName() == evt.GetLogicalName() { // les clusters deviennent à leur tour pki
+					CAprivateKeyBytes, err := ioutil.ReadFile(dirname + "/.shoset/" + c.ch.GetFileName() + "/cert/privateCAKey.key")
+					if err != nil {
+						fmt.Println("couldn't get CAprivateKey")
 					}
-				} else {
-					// linkProtocol := msgVal.(msg.ConfigProtocol)
-					fmt.Println("not the right cmd", cmd)
-					// fmt.Println("-------")
-					// fmt.Println(linkProtocol.GetCommandName())
-					// fmt.Println(linkProtocol.GetAddress())
-					// fmt.Println("-------")
-					// descr := fmt.Sprintf("ConnsByName : ")
-					// for _, lName := range c.ch.ConnsByName.Keys() {
-					// 	c.ch.ConnsByName.Iterate(lName,
-					// 		func(key string, val *ShosetConn) {
-					// 			descr = fmt.Sprintf("%s %s\n\t\t\t     ", descr, val)
-					// 		})
-					// }
-					// fmt.Println(descr)
-					// fmt.Println("-------")
-					// fmt.Println(c.ch.ConnsSingle)
-					// fmt.Println("-------")
-					// fmt.Println(c.ch.ConnsSingleAddress)
-
+					block, _ := pem.Decode(CAprivateKeyBytes)
+					enc := x509.IsEncryptedPEMBlock(block)
+					b := block.Bytes
+					if enc {
+						b, err = x509.DecryptPEMBlock(block, nil)
+						if err != nil {
+							fmt.Println(err)
+						}
+					}
+					CAprivateKey, err = x509.ParsePKCS1PrivateKey(b)
+					if err != nil {
+						fmt.Println(err)
+					}
+					// returnPkiEvent = msg.NewPkiEventReturn("return_pkievt", evt.GetRequestAddress(), signedCert, CAcert, CAprivateKey)
 				}
-			} else {
-				fmt.Println("not ok")
+				returnPkiEvent = msg.NewPkiEventReturn("return_pkievt", evt.GetRequestAddress(), signedCert, CAcert, CAprivateKey)
+				returnPkiEvent.SetUUID(evt.GetUUID() + "*") // return event has the same uuid so that network isn't flooded with same events
+				// fmt.Println("return msg sent to ", evt.GetRequestAddress())
+				c.SendMessage(returnPkiEvent)
+				c.socket.Close()
+				c.ch.ConnsSingle.Delete(address_)
+				return
+				// delete(c.ch.ConnsSingle, address_)
+				// return
 			}
 		}
+
+		// 3. j'ai reçu un message autre que pkievt, donc j'ignore
+
 	}
 }
 
@@ -548,7 +555,8 @@ func (c *ShosetConn) runInConnDouble() {
 	// receive messages
 	for {
 		err := c.receiveMsg()
-		time.Sleep(time.Millisecond * time.Duration(10))
+		// time.Sleep(time.Millisecond * time.Duration(10))
+		runtime.Gosched()
 		if err != nil {
 			if err.Error() == "Invalid connection for join - not the same type/name or shosetConn ended" {
 				c.ch.SetIsValid(false)

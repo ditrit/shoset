@@ -100,6 +100,22 @@ func GetByType(m *MapSafeConn, shosetType string) []*ShosetConn {
 	return result
 }
 
+func InitConfFolder(_ipAddress string) (string, error) {
+	dirname, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+
+	if !fileExists(dirname + "/.shoset/" + _ipAddress + "/") {
+		os.Mkdir(dirname+"/.shoset/", 0700)
+		os.Mkdir(dirname+"/.shoset/"+_ipAddress+"/", 0700)
+		os.Mkdir(dirname+"/.shoset/"+_ipAddress+"/config/", 0700)
+		os.Mkdir(dirname+"/.shoset/"+_ipAddress+"/cert/", 0700)
+	}
+
+	return dirname, nil
+}
+
 // pki
 // https://github.com/square/certstrap/tree/master/cmd
 var (

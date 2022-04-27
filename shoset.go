@@ -56,7 +56,6 @@ type Shoset struct {
 	// configuration TLS
 	tlsConfigSingleWay *tls.Config
 	tlsConfigDoubleWay *tls.Config
-	tlsConfig          *tls.Config
 	tlsServerOK        bool
 
 	// synchronisation des goroutines
@@ -211,14 +210,14 @@ func (c *Shoset) Bind(address string) error {
 	dirname, err := os.UserHomeDir()
 	if err != nil {
 		fmt.Println(err)
+		return err
 	}
 
 	c.viperConfig.AddConfigPath(dirname + "/.shoset/" + c.GetFileName() + "/config/")
 	c.viperConfig.SetConfigName(c.GetFileName())
 	c.viperConfig.SetConfigType("yaml")
 
-	if err := c.viperConfig.ReadInConfig(); err != nil {
-	} else {
+	if err := c.viperConfig.ReadInConfig(); err == nil {
 		remotesToJoin, remotesToLink := c.ConnsByName.GetConfig() // get all the sockets we need to join
 		for _, remote := range remotesToJoin {
 			c.Protocol(address, remote, "join")
@@ -228,13 +227,12 @@ func (c *Shoset) Bind(address string) error {
 		}
 	}
 
-	ipAddress, err := GetIP(address)
-	if err == nil {
+	if ipAddress, err := GetIP(address); err == nil {
 		c.SetBindAddress(ipAddress) // bound to the port
 	}
 
-	listener, err := net.Listen("tcp", c.GetBindAddress()) //open a net listener
-	if err != nil {                                        // check if listener is ok
+	//open a net listener
+	if listener, err := net.Listen("tcp", c.GetBindAddress()); err != nil { // check if listener is ok
 		return errors.New("a shoset is already listening on this port")
 	} else {
 		c.listener = listener
@@ -244,12 +242,13 @@ func (c *Shoset) Bind(address string) error {
 	return nil
 }
 
-func (c *Shoset) handleBind() error {
+func (c *Shoset) handleBind() {
 	defer c.listener.Close()
 
 	for {
 		if !c.GetIsValid() { // sockets are not from the same type or don't have the same name / conn ended
-			return errors.New("error : Invalid connection for join - not the same type/name or shosetConn ended")
+			fmt.Println("error : Invalid connection for join - not the same type/name or shosetConn ended")
+			return
 		}
 		unencConn, err := c.listener.Accept()
 		if err != nil {
@@ -270,7 +269,7 @@ func (c *Shoset) handleBind() error {
 			conn.socket = tlsConn                      //we override socket attribut with our securised protocol
 
 			// fmt.Println(c.GetBindAddress(), "enters single")
-			go conn.runInConnSingle(address_)
+			conn.runInConnSingle(address_)
 		} else {
 			// fmt.Println(c.GetBindAddress(), "trying doubleWay")
 			tlsConn := tls.Server(unencConn, c.tlsConfigDoubleWay) // create the securised connection protocol
@@ -293,7 +292,6 @@ func (c *Shoset) handleBind() error {
 			}
 		}
 	}
-	return nil
 }
 
 func (c *Shoset) Protocol(bindAddress, remoteAddress, protocolType string) {
@@ -309,18 +307,12 @@ func (c *Shoset) Protocol(bindAddress, remoteAddress, protocolType string) {
 		_ipAddress := strings.Replace(ipAddress, ":", "_", -1)
 		_ipAddress = strings.Replace(_ipAddress, ".", "-", -1)
 
-		dirname, err := os.UserHomeDir()
-		if err != nil {
+		_, err = InitConfFolder(_ipAddress)
+		if err != nil { // initialization of folder did'nt work
 			fmt.Println(err)
 			return
 		}
 
-		if !fileExists(dirname + "/.shoset/" + _ipAddress + "/") {
-			os.Mkdir(dirname+"/.shoset/", 0700)
-			os.Mkdir(dirname+"/.shoset/"+_ipAddress+"/", 0700)
-			os.Mkdir(dirname+"/.shoset/"+_ipAddress+"/config/", 0700)
-			os.Mkdir(dirname+"/.shoset/"+_ipAddress+"/cert/", 0700)
-		}
 		// set filename _after_ successful conf creation
 		c.SetFileName(_ipAddress)
 		c.SetPkiRequestAddress(ipAddress)

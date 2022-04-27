@@ -39,22 +39,20 @@ func (c *Shoset) InitPKI(address string) error {
 
 	// demarche d'initialisation de bind classique (shoset.go/bind)
 	ipAddress, err := GetIP(address) // parse the address from function parameter to get the IP
-	if err == nil {                  // check if IP is ok
-		_ipAddress := strings.Replace(ipAddress, ":", "_", -1)
-		_ipAddress = strings.Replace(_ipAddress, ".", "-", -1)
-		c.SetFileName(_ipAddress)
-	}
-
-	dirname, err := os.UserHomeDir()
 	if err != nil {
-		fmt.Println("Get UserHomeDir error : ", err)
+		// IP nok -> return early
+		fmt.Println("wrong IP format:", err)
 		return err
 	}
-	if !fileExists(dirname + "/.shoset/" + c.GetFileName() + "/") {
-		os.Mkdir(dirname+"/.shoset/", 0700)
-		os.Mkdir(dirname+"/.shoset/"+c.GetFileName()+"/", 0700)
-		os.Mkdir(dirname+"/.shoset/"+c.GetFileName()+"/config/", 0700)
-		os.Mkdir(dirname+"/.shoset/"+c.GetFileName()+"/cert/", 0700)
+
+	_ipAddress := strings.Replace(ipAddress, ":", "_", -1)
+	_ipAddress = strings.Replace(_ipAddress, ".", "-", -1)
+	c.SetFileName(_ipAddress)
+
+	dirname, err := InitConfFolder(_ipAddress)
+	if err != nil { // initialization of folder did'nt work
+		fmt.Println(err)
+		return err
 	}
 
 	// Create Certificate Authority
@@ -151,10 +149,6 @@ func (c *Shoset) InitPKI(address string) error {
 		Certificates:       []tls.Certificate{cert},
 		InsecureSkipVerify: false, // peut etre true
 	}
-
-	// c.tlsConfig = c.tlsConfigSingleWay
-	// c.tlsConfig = c.tlsConfigDoubleWay
-
 	return nil
 }
 
