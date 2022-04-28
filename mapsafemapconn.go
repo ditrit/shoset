@@ -106,8 +106,13 @@ func (m *MapSafeMapConn) updateFile(lname, protocolType, fileName string, keys [
 		dirname, err := os.UserHomeDir()
 		if err != nil {
 			fmt.Println(err)
+			return
 		}
-		m.viperConfig.WriteConfigAs(dirname + "/.shoset/" + fileName + "/config/config.yaml")
+		err = m.viperConfig.WriteConfigAs(dirname + "/.shoset/" + fileName + "/config/config.yaml")
+		if err != nil {
+			fmt.Println("error in writting config")
+			return
+		}
 	}
 }
 

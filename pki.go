@@ -86,7 +86,11 @@ func (c *Shoset) InitPKI(address string) error {
 	if err != nil {
 		return err
 	}
-	pem.Encode(CAcertFile, &pem.Block{Type: "CERTIFICATE", Bytes: signedCAcert})
+	err = pem.Encode(CAcertFile, &pem.Block{Type: "CERTIFICATE", Bytes: signedCAcert})
+	if err != nil {
+		fmt.Println("Couldn't encode in file")
+		return err
+	}
 	CAcertFile.Close()
 
 	// Private key
@@ -94,7 +98,11 @@ func (c *Shoset) InitPKI(address string) error {
 	if err != nil {
 		return err
 	}
-	pem.Encode(CAprivateKeyFile, &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(CAprivateKey)})
+	err = pem.Encode(CAprivateKeyFile, &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(CAprivateKey)})
+	if err != nil {
+		fmt.Println("Couldn't encode in file")
+		return err
+	}
 	CAprivateKeyFile.Close()
 
 	// Create and sign additional certificates - here the certificate of the socket from the CA
@@ -106,7 +114,11 @@ func (c *Shoset) InitPKI(address string) error {
 			if err != nil {
 				return err
 			}
-			pem.Encode(certFile, &pem.Block{Type: "CERTIFICATE", Bytes: signedHostCert})
+			err = pem.Encode(certFile, &pem.Block{Type: "CERTIFICATE", Bytes: signedHostCert})
+			if err != nil {
+				fmt.Println("Couldn't encode in file")
+				return err
+			}
 			certFile.Close()
 
 			// Public key
@@ -120,7 +132,11 @@ func (c *Shoset) InitPKI(address string) error {
 
 	// 3. Elle associe le rôle 'pki' au nom logique de la shoset
 	c.SetIsCertified(true)
-	c.Bind(address)
+	err = c.Bind(address)
+	if err != nil {
+		fmt.Println("Couldn't bind")
+		return err
+	}
 
 	// point env variable to our CAcert so that computer does not point elsewhere
 	os.Setenv("SSL_CERT_FILE", dirname+"/.shoset/"+c.GetFileName()+"/cert/CAcert.crt")
@@ -200,7 +216,11 @@ func (c *Shoset) PrepareCertificate() (*x509.Certificate, *rsa.PublicKey, *rsa.P
 		fmt.Println("whouuuu !", err)
 		return nil, nil, nil
 	}
-	pem.Encode(hostPrivateKeyFile, &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(hostPrivateKey)})
+	err = pem.Encode(hostPrivateKeyFile, &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(hostPrivateKey)})
+	if err != nil {
+		fmt.Println("Couldn't encode in file")
+		return nil, nil, nil
+	}
 	hostPrivateKeyFile.Close()
 	return certReq, hostPublicKey, hostPrivateKey
 }

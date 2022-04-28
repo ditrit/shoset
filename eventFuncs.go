@@ -17,7 +17,6 @@ func GetEvent(c *ShosetConn) (msg.Message, error) {
 // HandleEvent :
 func HandleEvent(c *ShosetConn, message msg.Message) error {
 	evt := message.(msg.Event)
-	fmt.Println("Shoset")
 	if state := c.GetCh().Queue["evt"].Push(evt, c.GetRemoteShosetType(), c.GetLocalAddress()); state {
 		SendEvent(c.ch, evt)
 	}
@@ -26,14 +25,20 @@ func HandleEvent(c *ShosetConn, message msg.Message) error {
 
 // SendEventConn :
 func SendEventConn(c *ShosetConn, evt interface{}) {
-	fmt.Print("Sending config.\n")
-	c.WriteString("evt")
-	c.WriteMessage(evt)
+	_, err := c.WriteString("evt")
+	if err != nil {
+		fmt.Println("couldn't write string evt")
+		return
+	}
+	err = c.WriteMessage(evt)
+	if err != nil {
+		fmt.Println("couldn't write message evt")
+		return
+	}
 }
 
 // SendEvent :
 func SendEvent(c *Shoset, evt msg.Message) {
-	fmt.Print("Sending event.\n")
 	c.ConnsByName.IterateAll(
 		func(key string, conn *ShosetConn) {
 			conn.SendMessage(evt)

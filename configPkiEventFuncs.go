@@ -164,8 +164,16 @@ func HandlePkiEvent(c *ShosetConn, message msg.Message) error {
 
 // SendEventConn :
 func SendPkiEventConn(c *ShosetConn, evt interface{}) {
-	c.WriteString("pkievt")
-	c.WriteMessage(evt)
+	_, err := c.WriteString("pkievt")
+	if err != nil {
+		fmt.Println("couldn't write string pkievt")
+		return
+	}
+	err = c.WriteMessage(evt)
+	if err != nil {
+		fmt.Println("couldn't write pkievt")
+		return
+	}
 }
 
 // SendEvent :

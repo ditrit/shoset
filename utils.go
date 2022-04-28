@@ -106,12 +106,35 @@ func InitConfFolder(_ipAddress string) (string, error) {
 		return "", err
 	}
 
-	if !fileExists(dirname + "/.shoset/" + _ipAddress + "/") {
-		os.Mkdir(dirname+"/.shoset/", 0700)
-		os.Mkdir(dirname+"/.shoset/"+_ipAddress+"/", 0700)
-		os.Mkdir(dirname+"/.shoset/"+_ipAddress+"/config/", 0700)
-		os.Mkdir(dirname+"/.shoset/"+_ipAddress+"/cert/", 0700)
+	if !fileExists(dirname + "/.shoset/") {
+		err := os.Mkdir(dirname+"/.shoset/", 0700)
+		if err != nil {
+			fmt.Println("couldn't create folder shoset")
+			return "", err
+		}
 	}
+	if !fileExists(dirname + "/.shoset/" + _ipAddress + "/") {
+		err = os.Mkdir(dirname+"/.shoset/"+_ipAddress+"/", 0700)
+		if err != nil {
+			fmt.Println("couldn't create folder ip")
+			return "", err
+		}
+	}
+	if !fileExists(dirname + "/.shoset/" + _ipAddress + "/config/") {
+		err = os.Mkdir(dirname+"/.shoset/"+_ipAddress+"/config/", 0700)
+		if err != nil {
+			fmt.Println("couldn't create folder config")
+			return "", err
+		}
+	}
+	if !fileExists(dirname + "/.shoset/" + _ipAddress + "/cert/") {
+		err = os.Mkdir(dirname+"/.shoset/"+_ipAddress+"/cert/", 0700)
+		if err != nil {
+			fmt.Println("couldn't create folder cert")
+			return "", err
+		}
+	}
+	
 
 	return dirname, nil
 }

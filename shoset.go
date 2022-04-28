@@ -68,6 +68,7 @@ type Shoset struct {
 	listener           net.Listener
 	mu                 sync.RWMutex
 	wentThroughPkiOnce bool
+	wentThroughHandleBindOnce bool
 	fileName           string
 }
 
@@ -80,6 +81,7 @@ func (c *Shoset) GetIsValid() bool             { return c.isValid }
 func (c *Shoset) GetIsPki() bool               { return c.isPki }
 func (c *Shoset) GetIsCertified() bool         { return c.isCertified }
 func (c *Shoset) GetWentThroughPkiOnce() bool  { return c.wentThroughPkiOnce }
+func (c *Shoset) GetWentThroughHandleBindOnce() bool  { return c.wentThroughHandleBindOnce }
 func (c *Shoset) GetFileName() string          { return c.fileName }
 
 func (c *Shoset) SetBindAddress(bindAddress string) {
@@ -102,6 +104,10 @@ func (c *Shoset) SetIsCertified(state bool) {
 
 func (c *Shoset) SetWentThroughPkiOnce(state bool) {
 	c.wentThroughPkiOnce = state
+}
+
+func (c *Shoset) SetWentThroughHandleBindOnce(state bool) {
+	c.wentThroughHandleBindOnce = state
 }
 
 func (c *Shoset) SetFileName(fileName string) {
@@ -269,7 +275,7 @@ func (c *Shoset) handleBind() {
 			conn.socket = tlsConn                      //we override socket attribut with our securised protocol
 
 			// fmt.Println(c.GetBindAddress(), "enters single")
-			conn.runInConnSingle(address_)
+			go conn.runInConnSingle(address_)
 		} else {
 			// fmt.Println(c.GetBindAddress(), "trying doubleWay")
 			tlsConn := tls.Server(unencConn, c.tlsConfigDoubleWay) // create the securised connection protocol
@@ -283,6 +289,10 @@ func (c *Shoset) handleBind() {
 			// fmt.Println("msg sent")
 			if err == nil {
 				// fmt.Println(c.GetBindAddress(), "enters double and exit single")
+				// if !c.GetWentThroughHandleBindOnce() {
+				// 	c.SetWentThroughHandleBindOnce(true)
+				// 	go conn.runInConnDouble()
+				// }
 				go conn.runInConnDouble()
 				// return nil
 			} else {
@@ -331,7 +341,10 @@ func (c *Shoset) Protocol(bindAddress, remoteAddress, protocolType string) {
 	}
 
 	if c.GetBindAddress() == "" {
-		c.Bind(bindAddress) // I have my certs, I can bind
+		err := c.Bind(bindAddress) // I have my certs, I can bind
+		if err != nil {
+			fmt.Println("Couldn't bind")
+		}
 	}
 
 	conn, _ := NewShosetConn(c, remoteAddress, "out")
