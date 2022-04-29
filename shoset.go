@@ -61,28 +61,28 @@ type Shoset struct {
 	// synchronisation des goroutines
 	Done chan bool
 
-	viperConfig        *viper.Viper
-	isValid            bool
-	isPki              bool
-	isCertified        bool
-	listener           net.Listener
-	mu                 sync.RWMutex
-	wentThroughPkiOnce bool
+	viperConfig               *viper.Viper
+	isValid                   bool
+	isPki                     bool
+	isCertified               bool
+	listener                  net.Listener
+	mu                        sync.RWMutex
+	wentThroughPkiOnce        bool
 	wentThroughHandleBindOnce bool
-	fileName           string
+	fileName                  string
 }
 
 /*           Accessors            */
-func (c *Shoset) GetBindAddress() string       { return c.bindAddress }
-func (c *Shoset) GetPkiRequestAddress() string { return c.pkiRequestAddress }
-func (c *Shoset) GetLogicalName() string       { return c.lName }
-func (c *Shoset) GetShosetType() string        { return c.ShosetType }
-func (c *Shoset) GetIsValid() bool             { return c.isValid }
-func (c *Shoset) GetIsPki() bool               { return c.isPki }
-func (c *Shoset) GetIsCertified() bool         { return c.isCertified }
-func (c *Shoset) GetWentThroughPkiOnce() bool  { return c.wentThroughPkiOnce }
-func (c *Shoset) GetWentThroughHandleBindOnce() bool  { return c.wentThroughHandleBindOnce }
-func (c *Shoset) GetFileName() string          { return c.fileName }
+func (c *Shoset) GetBindAddress() string             { return c.bindAddress }
+func (c *Shoset) GetPkiRequestAddress() string       { return c.pkiRequestAddress }
+func (c *Shoset) GetLogicalName() string             { return c.lName }
+func (c *Shoset) GetShosetType() string              { return c.ShosetType }
+func (c *Shoset) GetIsValid() bool                   { return c.isValid }
+func (c *Shoset) GetIsPki() bool                     { return c.isPki }
+func (c *Shoset) GetIsCertified() bool               { return c.isCertified }
+func (c *Shoset) GetWentThroughPkiOnce() bool        { return c.wentThroughPkiOnce }
+func (c *Shoset) GetWentThroughHandleBindOnce() bool { return c.wentThroughHandleBindOnce }
+func (c *Shoset) GetFileName() string                { return c.fileName }
 
 func (c *Shoset) SetBindAddress(bindAddress string) {
 	c.bindAddress = bindAddress
@@ -263,7 +263,6 @@ func (c *Shoset) handleBind() {
 			break
 		}
 		// fmt.Println("accept conn")
-
 
 		address_port := unencConn.RemoteAddr().String()
 		address_parts := strings.Split(address_port, ":")

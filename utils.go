@@ -134,7 +134,6 @@ func InitConfFolder(_ipAddress string) (string, error) {
 			return "", err
 		}
 	}
-	
 
 	return dirname, nil
 }

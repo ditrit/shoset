@@ -82,7 +82,8 @@ func (c *Shoset) InitPKI(address string) error {
 		return errors.New("couldn't create CA")
 	}
 
-	CAcertFile, err := os.Create(dirname + "/.shoset/" + c.GetFileName() + "/cert/CAcert.crt")
+	fname := c.GetFileName()
+	CAcertFile, err := os.Create(dirname + "/.shoset/" + fname + "/cert/CAcert.crt")
 	if err != nil {
 		return err
 	}
@@ -94,7 +95,7 @@ func (c *Shoset) InitPKI(address string) error {
 	CAcertFile.Close()
 
 	// Private key
-	CAprivateKeyFile, err := os.OpenFile(dirname+"/.shoset/"+c.GetFileName()+"/cert/privateCAKey.key", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
+	CAprivateKeyFile, err := os.OpenFile(dirname+"/.shoset/"+fname+"/cert/privateCAKey.key", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
 		return err
 	}
@@ -107,28 +108,26 @@ func (c *Shoset) InitPKI(address string) error {
 
 	// Create and sign additional certificates - here the certificate of the socket from the CA
 	certReq, hostPublicKey, _ := c.PrepareCertificate()
-	if certReq != nil && hostPublicKey != nil {
-		signedHostCert := c.SignCertificate(certReq, hostPublicKey)
-		if signedHostCert != nil {
-			certFile, err := os.Create(dirname + "/.shoset/" + c.GetFileName() + "/cert/cert.crt")
-			if err != nil {
-				return err
-			}
-			err = pem.Encode(certFile, &pem.Block{Type: "CERTIFICATE", Bytes: signedHostCert})
-			if err != nil {
-				fmt.Println("Couldn't encode in file")
-				return err
-			}
-			certFile.Close()
-
-			// Public key
-			// ioutil.WriteFile(dirname+"/.shoset/"+c.GetFileName()+"/cert/cert.crt", signedHostCert, 0644)
-		} else {
-			return errors.New("prepare certificate didn't work")
-		}
-	} else {
+	if certReq == nil || hostPublicKey == nil {
 		return errors.New("prepare certificate didn't work")
 	}
+	signedHostCert := c.SignCertificate(certReq, hostPublicKey)
+	if signedHostCert == nil {
+		return errors.New("prepare certificate didn't work")
+	}
+	certFile, err := os.Create(dirname + "/.shoset/" + fname + "/cert/cert.crt")
+	if err != nil {
+		return err
+	}
+	err = pem.Encode(certFile, &pem.Block{Type: "CERTIFICATE", Bytes: signedHostCert})
+	if err != nil {
+		fmt.Println("Couldn't encode in file")
+		return err
+	}
+	certFile.Close()
+
+	// Public key
+	// ioutil.WriteFile(dirname+"/.shoset/"+fname+"/cert/cert.crt", signedHostCert, 0644)
 
 	// 3. Elle associe le rôle 'pki' au nom logique de la shoset
 	c.SetIsCertified(true)
@@ -139,14 +138,14 @@ func (c *Shoset) InitPKI(address string) error {
 	}
 
 	// point env variable to our CAcert so that computer does not point elsewhere
-	os.Setenv("SSL_CERT_FILE", dirname+"/.shoset/"+c.GetFileName()+"/cert/CAcert.crt")
+	os.Setenv("SSL_CERT_FILE", dirname+"/.shoset/"+fname+"/cert/CAcert.crt")
 
 	// tls Double way
-	cert, err := tls.LoadX509KeyPair(dirname+"/.shoset/"+c.GetFileName()+"/cert/cert.crt", dirname+"/.shoset/"+c.GetFileName()+"/cert/privateKey.key")
+	cert, err := tls.LoadX509KeyPair(dirname+"/.shoset/"+fname+"/cert/cert.crt", dirname+"/.shoset/"+fname+"/cert/privateKey.key")
 	if err != nil {
 		fmt.Println("! Unable to Load certificate !")
 	}
-	CAcertBytes, err := ioutil.ReadFile(dirname + "/.shoset/" + c.GetFileName() + "/cert/CAcert.crt")
+	CAcertBytes, err := ioutil.ReadFile(dirname + "/.shoset/" + fname + "/cert/CAcert.crt")
 	if err != nil {
 		fmt.Println("error read file cacert :", err)
 	}
