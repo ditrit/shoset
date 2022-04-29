@@ -11,6 +11,9 @@ import (
 	"strings"
 
 	"github.com/ditrit/shoset/msg"
+	uuid "github.com/kjk/betterguid"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
 )
 
@@ -32,6 +35,7 @@ type MessageHandlers interface {
 
 //Shoset :
 type Shoset struct {
+	logger  zerolog.Logger
 	Context map[string]interface{} //TOTO
 
 	//	id          string
@@ -117,8 +121,9 @@ func (c *Shoset) SetFileName(fileName string) {
 /*       Constructor     */
 func NewShoset(lName, ShosetType string) *Shoset { //l
 	// Creation
-	shoset := Shoset{
+	shst := Shoset{
 		// Initialisation
+		logger:             log.With().Str("uuid", uuid.New()).Logger(),
 		Context:            make(map[string]interface{}),
 		lName:              lName,
 		ShosetType:         ShosetType,
@@ -148,45 +153,46 @@ func NewShoset(lName, ShosetType string) *Shoset { //l
 		tlsConfigDoubleWay: nil,
 	}
 
-	shoset.ConnsByName.SetViper(shoset.viperConfig)
+	shst.ConnsByName.SetViper(shst.viperConfig)
 
-	shoset.Queue["cfglink"] = msg.NewQueue()
-	shoset.Get["cfglink"] = GetConfigLink
-	shoset.Handle["cfglink"] = HandleConfigLink
+	shst.Queue["cfglink"] = msg.NewQueue()
+	shst.Get["cfglink"] = GetConfigLink
+	shst.Handle["cfglink"] = HandleConfigLink
 
-	shoset.Queue["cfgjoin"] = msg.NewQueue()
-	shoset.Get["cfgjoin"] = GetConfigJoin
-	shoset.Handle["cfgjoin"] = HandleConfigJoin
+	shst.Queue["cfgjoin"] = msg.NewQueue()
+	shst.Get["cfgjoin"] = GetConfigJoin
+	shst.Handle["cfgjoin"] = HandleConfigJoin
 
-	shoset.Queue["cfgbye"] = msg.NewQueue()
-	shoset.Get["cfgbye"] = GetConfigBye
-	shoset.Handle["cfgbye"] = HandleConfigBye
+	shst.Queue["cfgbye"] = msg.NewQueue()
+	shst.Get["cfgbye"] = GetConfigBye
+	shst.Handle["cfgbye"] = HandleConfigBye
 
-	shoset.Queue["evt"] = msg.NewQueue()
-	shoset.Get["evt"] = GetEvent
-	shoset.Handle["evt"] = HandleEvent
-	shoset.Send["evt"] = SendEvent
-	shoset.Wait["evt"] = WaitEvent
+	shst.Queue["evt"] = msg.NewQueue()
+	shst.Get["evt"] = GetEvent
+	shst.Handle["evt"] = HandleEvent
+	shst.Send["evt"] = SendEvent
+	shst.Wait["evt"] = WaitEvent
 
-	shoset.Queue["pkievt"] = msg.NewQueue()
-	shoset.Get["pkievt"] = GetPkiEvent
-	shoset.Handle["pkievt"] = HandlePkiEvent
-	shoset.Send["pkievt"] = SendPkiEvent
+	shst.Queue["pkievt"] = msg.NewQueue()
+	shst.Get["pkievt"] = GetPkiEvent
+	shst.Handle["pkievt"] = HandlePkiEvent
+	shst.Send["pkievt"] = SendPkiEvent
 
-	shoset.Queue["cmd"] = msg.NewQueue()
-	shoset.Get["cmd"] = GetCommand
-	shoset.Handle["cmd"] = HandleCommand
-	shoset.Send["cmd"] = SendCommand
-	shoset.Wait["cmd"] = WaitCommand
+	shst.Queue["cmd"] = msg.NewQueue()
+	shst.Get["cmd"] = GetCommand
+	shst.Handle["cmd"] = HandleCommand
+	shst.Send["cmd"] = SendCommand
+	shst.Wait["cmd"] = WaitCommand
 
 	//TODO MOVE TO GANDALF
-	shoset.Queue["config"] = msg.NewQueue()
-	shoset.Get["config"] = GetConfig
-	shoset.Handle["config"] = HandleConfig
-	shoset.Send["config"] = SendConfig
-	shoset.Wait["config"] = WaitConfig
+	shst.Queue["config"] = msg.NewQueue()
+	shst.Get["config"] = GetConfig
+	shst.Handle["config"] = HandleConfig
+	shst.Send["config"] = SendConfig
+	shst.Wait["config"] = WaitConfig
 
-	return &shoset
+	shst.logger.Debug().Str("lname", lName).Msg("shoset created")
+	return &shst
 }
 
 // Display with fmt - override the print of the object
@@ -308,6 +314,7 @@ func (c *Shoset) handleBind() {
 
 func (c *Shoset) Protocol(bindAddress, remoteAddress, protocolType string) {
 	// init cert if needed
+	c.logger.Debug().Strs("params", []string{bindAddress, remoteAddress, protocolType}).Msg("protocol init")
 	if !c.GetIsCertified() && !c.GetWentThroughPkiOnce() {
 		ipAddress, err := GetIP(bindAddress) // parse the address from function parameter to get the IP
 		if err != nil {

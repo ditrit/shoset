@@ -914,11 +914,13 @@ func test_pki_client(ctx context.Context, done context.CancelFunc) {
 }
 
 func main() {
+	shoset.InitPrettyLogger(false)
 	ctx, done := context.WithTimeout(context.Background(), 1*time.Minute)
 
 	//terminal
 	arg := os.Args[1]
 	if arg == "1" {
+		shoset.Log("test_pki_server")
 		test_pki_server(ctx, done)
 		// testJoin1()
 		// testJoin2()
@@ -934,13 +936,16 @@ func main() {
 		// test_link8()
 		// test_pki()
 	} else if arg == "2" {
+		shoset.Log("test_pki_client")
 		test_pki_client(ctx, done)
 		// simpleCluster()
 		// simpleAgregator()
 		// simpleConnector()
 	} else if arg == "3" {
+		shoset.Log("simplesimpleConnector")
 		// simplesimpleConnector()
 	} else {
+		shoset.Log("test_pki")
 		test_pki(ctx, done)
 	}
 }
