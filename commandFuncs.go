@@ -1,7 +1,6 @@
 package shoset
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/ditrit/shoset/msg"
@@ -23,12 +22,10 @@ func HandleCommand(c *ShosetConn, message msg.Message) error {
 
 // SendCommand :
 func SendCommand(c *Shoset, cmd msg.Message) {
-	fmt.Print("Sending Command.\n")
 	c.ConnsByName.IterateAll(
 		func(key string, conn *ShosetConn) {
 			err := conn.SendMessage(cmd)
 			if err != nil {
-				fmt.Println("couldn't send cmd", err)
 			}
 		},
 	)

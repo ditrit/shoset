@@ -1,10 +1,6 @@
 package shoset
 
 import (
-	// "fmt"
-
-	"fmt"
-
 	"github.com/ditrit/shoset/msg"
 )
 
@@ -31,7 +27,7 @@ func HandleConfigBye(c *ShosetConn, message msg.Message) error {
 					if address != remoteAddress {
 						err := bro.SendMessage(*cfgNewDelete)
 						if err != nil {
-							fmt.Println("couldn't send cfgnewdelete", err)
+							bro.ch.logger.Warn().Msg("couldn't send cfgnewdelete : " + err.Error())
 						}
 					}
 				},

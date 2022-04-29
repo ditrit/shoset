@@ -27,12 +27,12 @@ func HandleEvent(c *ShosetConn, message msg.Message) error {
 func SendEventConn(c *ShosetConn, evt interface{}) {
 	_, err := c.WriteString("evt")
 	if err != nil {
-		fmt.Println("couldn't write string evt")
+		fmt.Println("couldn't write string evt : ", err)
 		return
 	}
 	err = c.WriteMessage(evt)
 	if err != nil {
-		fmt.Println("couldn't write message evt")
+		fmt.Println("couldn't write message evt : ", err)
 		return
 	}
 }
@@ -43,7 +43,7 @@ func SendEvent(c *Shoset, evt msg.Message) {
 		func(key string, conn *ShosetConn) {
 			err := conn.SendMessage(evt)
 			if err != nil {
-				fmt.Println("couldn't send evt", err)
+				fmt.Println("couldn't send evt : ", err)
 			}
 		},
 	)

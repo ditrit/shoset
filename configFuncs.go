@@ -1,7 +1,6 @@
 package shoset
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/ditrit/shoset/msg"
@@ -24,12 +23,11 @@ func HandleConfig(c *ShosetConn, message msg.Message) error {
 
 // SendConfig :
 func SendConfig(c *Shoset, cmd msg.Message) {
-	fmt.Print("Sending Config.\n")
 	c.ConnsByName.IterateAll(
 		func(key string, conn *ShosetConn) {
 			err := conn.SendMessage(cmd)
 			if err != nil {
-				fmt.Println("couldn't send config msg", err)
+				conn.ch.logger.Warn().Msg("couldn't send config msg : " + err.Error())
 			}
 		},
 	)

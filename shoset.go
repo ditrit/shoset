@@ -51,7 +51,8 @@ type Shoset struct {
 	pkiRequestAddress string // La même que bindaddress mais seulement pour la pki cas la chaussette n'est pas encore bindée
 
 	// Dictionnaire des queues de message (par type de message)
-	Queue  map[string]*msg.Queue
+	Queue map[string]*msg.Queue
+
 	Get    map[string]func(*ShosetConn) (msg.Message, error)
 	Handle map[string]func(*ShosetConn, msg.Message) error
 	Send   map[string]func(*Shoset, msg.Message)
@@ -136,7 +137,6 @@ func NewShoset(lName, ShosetType string) *Shoset { //l
 		isCertified:        false,
 		listener:           nil,
 		wentThroughPkiOnce: false,
-		// isSingleTLS: true,
 		ConnsSingle:        NewMapSafeBool(),
 		ConnsSingleAddress: NewSyncMapConn(),
 
@@ -195,7 +195,7 @@ func NewShoset(lName, ShosetType string) *Shoset { //l
 	return &shst
 }
 
-// Display with fmt - override the print of the object
+// Display properly - override the print of the object
 func (c *Shoset) String() string {
 	descr := fmt.Sprintf("Shoset -  lName: %s,\n\t\tbindAddr : %s,\n\t\ttype : %s, \n\t\tisPki : %t, \n\t\tisCertified : %t, \n\t\tConnsByName : ", c.GetLogicalName(), c.GetBindAddress(), c.GetShosetType(), c.GetIsPki(), c.GetIsCertified())
 	for _, lName := range c.ConnsByName.Keys() {
@@ -204,24 +204,24 @@ func (c *Shoset) String() string {
 				descr = fmt.Sprintf("%s %s\n\t\t\t     ", descr, val)
 			})
 	}
-	// descr = fmt.Sprintf("%s \n\t\tLnamesByProtocol : MapSafeStrings{%s\n\t       ", descr, c.LnamesByProtocol)
-	// descr = fmt.Sprintf("%s LnamesByType : MapSafeStrings{%s\n\t      ", descr, c.LnamesByType)
 	return descr
 }
 
 //Bind : Connect to another Shoset
 func (c *Shoset) Bind(address string) error {
 	if c.GetBindAddress() != "" && c.GetBindAddress() != address { //socket already bounded to a port (already passed this Bind function once)
-		return errors.New("Shoset already bound")
+		c.logger.Error().Msg("shoset already bound")
+		return errors.New("shoset already bound")
 	}
 	if !c.tlsServerOK { // TLS configuration not ok (security problem)
+		c.logger.Error().Msg("TLS configuration not OK (certificate not found / loaded)")
 		return errors.New("TLS configuration not OK (certificate not found / loaded)")
 	}
 
 	// viper config
 	dirname, err := os.UserHomeDir()
 	if err != nil {
-		fmt.Println(err)
+		c.logger.Error().Msg("couldn't get dirname : " + err.Error())
 		return err
 	}
 
@@ -239,36 +239,43 @@ func (c *Shoset) Bind(address string) error {
 		}
 	}
 
-	if ipAddress, err := GetIP(address); err == nil {
-		c.SetBindAddress(ipAddress) // bound to the port
+	ipAddress, err := GetIP(address)
+	if err != nil {
+		c.logger.Error().Msg("couldn't set bindAddress : " + err.Error())
+		return err
 	}
+	c.SetBindAddress(ipAddress) // bound to the port
 
 	//open a net listener
-	if listener, err := net.Listen("tcp", c.GetBindAddress()); err != nil { // check if listener is ok
-		return errors.New("a shoset is already listening on this port")
-	} else {
-		c.listener = listener
+	listener, err := net.Listen("tcp", "0.0.0.0:"+strings.Split(ipAddress, ":")[1]) // listen on each ipaddresses 
+	if err != nil { // check if listener is ok
+		c.logger.Error().Msg("a shoset is already listening on this port")
+		return err
 	}
+	c.listener = listener
 
-	go c.handleBind()
+	wg := new(sync.WaitGroup)
+	wg.Add(1)
+	go c.handleBind(wg)
+	wg.Wait()
 	return nil
 }
 
-func (c *Shoset) handleBind() {
+func (c *Shoset) handleBind(wg *sync.WaitGroup) {
 	defer c.listener.Close()
 
+	wg.Done()
 	for {
-		// fmt.Println("waiting for new conn")
-		if !c.GetIsValid() { // sockets are not from the same type or don't have the same name / conn ended
-			fmt.Println("error : Invalid connection for join - not the same type/name or shosetConn ended")
-			return
-		}
 		unencConn, err := c.listener.Accept()
 		if err != nil {
-			fmt.Printf("serverShoset accept error: %s", err)
+			c.logger.Error().Msg("serverShoset accept error : " + err.Error())
 			break
 		}
 		// fmt.Println("accept conn")
+		if !c.GetIsValid() { // sockets are not from the same type or don't have the same name / conn ended
+			c.logger.Error().Msg("Invalid connection for join - not the same type/name or shosetConn ended")
+			return
+		}
 
 		address_port := unencConn.RemoteAddr().String()
 		address_parts := strings.Split(address_port, ":")
@@ -282,7 +289,6 @@ func (c *Shoset) handleBind() {
 			conn, _ := NewShosetConn(c, address, "in") // create the securised connection
 			conn.socket = tlsConn                      //we override socket attribut with our securised protocol
 
-			// fmt.Println(c.GetBindAddress(), "enters single")
 			go conn.runInConnSingle(address_)
 		} else {
 			// fmt.Println(c.GetBindAddress(), "trying doubleWay")
@@ -292,11 +298,8 @@ func (c *Shoset) handleBind() {
 			conn, _ := NewShosetConn(c, address, "in") // create the securised connection
 			conn.socket = tlsConn                      //we override socket attribut with our securised protocol
 
-			// fmt.Println("sending msg")
 			_, err = conn.socket.Write([]byte("hello double\n"))
-			// fmt.Println("msg sent")
 			if err == nil {
-				// fmt.Println(c.GetBindAddress(), "enters double and exit single")
 				// if !c.GetWentThroughHandleBindOnce() {
 				// 	c.SetWentThroughHandleBindOnce(true)
 				// 	go conn.runInConnDouble()
@@ -304,7 +307,6 @@ func (c *Shoset) handleBind() {
 				go conn.runInConnDouble()
 				// return nil
 			} else {
-				// fmt.Println("err double : ", err)
 				c.ConnsSingle.Set(address_, true)
 				conn.socket.Close()
 			}
@@ -319,7 +321,7 @@ func (c *Shoset) Protocol(bindAddress, remoteAddress, protocolType string) {
 		ipAddress, err := GetIP(bindAddress) // parse the address from function parameter to get the IP
 		if err != nil {
 			// IP nok -> return early
-			fmt.Println("wrong IP format:", err)
+			c.logger.Error().Msg("wrong IP format : " + err.Error())
 			return
 		}
 
@@ -328,7 +330,7 @@ func (c *Shoset) Protocol(bindAddress, remoteAddress, protocolType string) {
 
 		_, err = InitConfFolder(_ipAddress)
 		if err != nil { // initialization of folder did'nt work
-			fmt.Println(err)
+			c.logger.Error().Msg("couldn't init folder : " + err.Error())
 			return
 		}
 
@@ -337,7 +339,7 @@ func (c *Shoset) Protocol(bindAddress, remoteAddress, protocolType string) {
 		c.SetPkiRequestAddress(ipAddress)
 		initConn, err := NewShosetConn(c, remoteAddress, "out")
 		if err != nil {
-			fmt.Println("couldn't create shoset:", err)
+			c.logger.Error().Msg("couldn't create shoset : " + err.Error())
 			return
 		}
 		err = initConn.runPkiRequest() // I don't have my certs, I request them
@@ -351,12 +353,13 @@ func (c *Shoset) Protocol(bindAddress, remoteAddress, protocolType string) {
 		}
 		initConn.socket.Close()
 		c.SetWentThroughPkiOnce(true) // avoid concurrency when multiple protocols are running at the same time
+		c.logger.Info().Msg("shoset certified")
 	}
-
 	if c.GetBindAddress() == "" {
 		err := c.Bind(bindAddress) // I have my certs, I can bind
 		if err != nil {
-			fmt.Println("Couldn't bind")
+			c.logger.Error().Msg("couldn't set bindAddress : " + err.Error())
+			return
 		}
 	}
 
@@ -394,10 +397,8 @@ func (c *Shoset) Protocol(bindAddress, remoteAddress, protocolType string) {
 }
 
 func (c *Shoset) deleteConn(connAddr, connLname string) {
-	// fmt.Println(c.GetBindAddress(), " enter deleteConn")
 	if conns := c.ConnsByName.Get(connLname); conns != nil {
 		if conns.Get(connAddr) != nil {
-			// fmt.Println(c.GetBindAddress(), " is ok in deleteConn")
 			c.ConnsByName.Delete(connLname, connAddr, c.fileName)
 		}
 	}

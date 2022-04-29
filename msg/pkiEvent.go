@@ -43,11 +43,6 @@ func NewPkiEventReturn(command, requestAddress string, signedCert, CAcert []byte
 	return e
 }
 
-// func (e PkiEvent) GetMsgType() string {
-// 	fmt.Println(e.GetCommand())
-// 	return "pkievt"
-// }
-
 func (e PkiEvent) GetMsgType() string {
 	switch e.GetCommand() {
 	case "pkievt":

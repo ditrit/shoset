@@ -1,10 +1,6 @@
 package shoset
 
 import (
-	// "fmt"
-
-	"fmt"
-
 	"github.com/ditrit/shoset/msg"
 )
 
@@ -23,7 +19,6 @@ func HandleConfigLink(c *ShosetConn, message msg.Message) error {
 
 	switch cfg.GetCommandName() {
 	case "link":
-		// fmt.Println(c.ch.GetBindAddress(), "enters link for ", remoteAddress)
 		if dir == "in" { // a socket wants to link to this one
 			if connsLink := c.ch.ConnsByName.Get(c.ch.GetLogicalName()); connsLink != nil { //already linked
 				if connsLink.Get(remoteAddress) != nil {
@@ -55,7 +50,7 @@ func HandleConfigLink(c *ShosetConn, message msg.Message) error {
 				func(address string, remoteBro *ShosetConn) {
 					err := remoteBro.SendMessage(*brothers) //send config to others
 					if err != nil {
-						fmt.Println("couldn't send brothers", err)
+						remoteBro.ch.logger.Warn().Msg("couldn't send brothers : " + err.Error())
 					}
 				},
 			)
@@ -92,7 +87,7 @@ func HandleConfigLink(c *ShosetConn, message msg.Message) error {
 								// val.wb = msg.NewWriter(c.socket)
 								err := val.SendMessage(*brothers)
 								if err != nil {
-									fmt.Println("couldn't send newLocalBrothers", err)
+									val.ch.logger.Warn().Msg("couldn't send newLocalBrothers : " + err.Error())
 								}
 							})
 					}

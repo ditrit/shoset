@@ -7,8 +7,6 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
-	"errors"
-	"fmt"
 	"io/ioutil"
 	"net"
 
@@ -22,17 +20,14 @@ import (
 	"github.com/google/uuid"
 )
 
-func (c *Shoset) InitPKI(address string) error {
+func (c *Shoset) InitPKI(address string) {
 	// elle sort immédiatement si :
 	if c.GetBindAddress() != "" { // il n'y a pas encore eu de bind (bindadress est vide)
-		fmt.Println("shoset bound")
-		return errors.New("shoset bound")
-		// } else if c.ConnsByName.Len() != 0 { // j'ai déjà fait un link ou un join ou j'ai un fichier de configuration (ce qui veut dire que j'ai des connsbyname)
-		// 	fmt.Println("a protocol already happened on this shoset")
-		// 	return errors.New("a protocol already happened on this shoset")
+		c.logger.Error().Msg("shoset already bound")
+		return
 	} else if c.GetIsPki() { // il y a eu déjà un init ou j'ai déjà un certificat (mon certificat existe déjà)
-		fmt.Println("shoset already initialized")
-		return errors.New("shoset already initialized")
+		c.logger.Error().Msg("shoset already pki")
+		return
 	}
 
 	c.SetIsPki(true) // je prends le role de CA de la PKI
@@ -41,8 +36,8 @@ func (c *Shoset) InitPKI(address string) error {
 	ipAddress, err := GetIP(address) // parse the address from function parameter to get the IP
 	if err != nil {
 		// IP nok -> return early
-		fmt.Println("wrong IP format:", err)
-		return err
+		c.logger.Error().Msg("wrong IP format : " + err.Error())
+		return
 	}
 
 	_ipAddress := strings.Replace(ipAddress, ":", "_", -1)
@@ -51,8 +46,8 @@ func (c *Shoset) InitPKI(address string) error {
 
 	dirname, err := InitConfFolder(_ipAddress)
 	if err != nil { // initialization of folder did'nt work
-		fmt.Println(err)
-		return err
+		c.logger.Error().Msg("couldn't get dirname : " + err.Error())
+		return
 	}
 
 	// Create Certificate Authority
@@ -79,62 +74,67 @@ func (c *Shoset) InitPKI(address string) error {
 	CApublicKey := &CAprivateKey.PublicKey                                                              // we extract the public key (CA cert) from the private key
 	signedCAcert, err := x509.CreateCertificate(rand.Reader, CAcert, CAcert, CApublicKey, CAprivateKey) // we sign the certificate
 	if err != nil {
-		return errors.New("couldn't create CA")
+		c.logger.Error().Msg("couldn't create CA : " + err.Error())
+		return
 	}
 
 	fname := c.GetFileName()
 	CAcertFile, err := os.Create(dirname + "/.shoset/" + fname + "/cert/CAcert.crt")
 	if err != nil {
-		return err
+		c.logger.Error().Msg("couldn't create CAcertFile : " + err.Error())
+		return
 	}
 	err = pem.Encode(CAcertFile, &pem.Block{Type: "CERTIFICATE", Bytes: signedCAcert})
 	if err != nil {
-		fmt.Println("Couldn't encode in file")
-		return err
+		c.logger.Error().Msg("couldn't encode in file : " + err.Error())
+		return
 	}
 	CAcertFile.Close()
 
 	// Private key
 	CAprivateKeyFile, err := os.OpenFile(dirname+"/.shoset/"+fname+"/cert/privateCAKey.key", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
-		return err
+		c.logger.Error().Msg("couldn't open CAprivateKeyfile : " + err.Error())
+		return
 	}
 	err = pem.Encode(CAprivateKeyFile, &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(CAprivateKey)})
 	if err != nil {
-		fmt.Println("Couldn't encode in file")
-		return err
+		c.logger.Error().Msg("couldn't encode in CAprivateKeyfile : " + err.Error())
+		return
 	}
 	CAprivateKeyFile.Close()
 
+	// Public key
 	// Create and sign additional certificates - here the certificate of the socket from the CA
 	certReq, hostPublicKey, _ := c.PrepareCertificate()
 	if certReq == nil || hostPublicKey == nil {
-		return errors.New("prepare certificate didn't work")
+		c.logger.Error().Msg("prepare certificate didn't work")
+		return
 	}
 	signedHostCert := c.SignCertificate(certReq, hostPublicKey)
 	if signedHostCert == nil {
-		return errors.New("prepare certificate didn't work")
+		c.logger.Error().Msg("dign cert didn't work")
+		return
 	}
 	certFile, err := os.Create(dirname + "/.shoset/" + fname + "/cert/cert.crt")
 	if err != nil {
-		return err
+		c.logger.Error().Msg("couldn't create certFile : " + err.Error())
+		return
 	}
 	err = pem.Encode(certFile, &pem.Block{Type: "CERTIFICATE", Bytes: signedHostCert})
 	if err != nil {
-		fmt.Println("Couldn't encode in file")
-		return err
+		c.logger.Error().Msg("couldn't encode in file : " + err.Error())
+		return
 	}
 	certFile.Close()
 
-	// Public key
-	// ioutil.WriteFile(dirname+"/.shoset/"+fname+"/cert/cert.crt", signedHostCert, 0644)
-
 	// 3. Elle associe le rôle 'pki' au nom logique de la shoset
 	c.SetIsCertified(true)
-	err = c.Bind(address)
-	if err != nil {
-		fmt.Println("Couldn't bind")
-		return err
+	c.Bind(address)
+
+	if c.GetBindAddress() == "" {
+		c.logger.Error().Msg("couldn't set bindAddress")
+		return
 	}
 
 	// point env variable to our CAcert so that computer does not point elsewhere
@@ -143,11 +143,13 @@ func (c *Shoset) InitPKI(address string) error {
 	// tls Double way
 	cert, err := tls.LoadX509KeyPair(dirname+"/.shoset/"+fname+"/cert/cert.crt", dirname+"/.shoset/"+fname+"/cert/privateKey.key")
 	if err != nil {
-		fmt.Println("! Unable to Load certificate !")
+		c.logger.Error().Msg("Unable to Load certificate : " + err.Error())
+		return
 	}
 	CAcertBytes, err := ioutil.ReadFile(dirname + "/.shoset/" + fname + "/cert/CAcert.crt")
 	if err != nil {
-		fmt.Println("error read file cacert :", err)
+		c.logger.Error().Msg("error read file cacert : " + err.Error())
+		return
 	}
 	caCertPool := x509.NewCertPool()
 	caCertPool.AppendCertsFromPEM(CAcertBytes)
@@ -164,7 +166,6 @@ func (c *Shoset) InitPKI(address string) error {
 		Certificates:       []tls.Certificate{cert},
 		InsecureSkipVerify: false, // peut etre true
 	}
-	return nil
 }
 
 // pour les shoset ayant le rôle 'pki' :
@@ -212,12 +213,12 @@ func (c *Shoset) PrepareCertificate() (*x509.Certificate, *rsa.PublicKey, *rsa.P
 	// Private key
 	hostPrivateKeyFile, err := os.OpenFile(dirname+"/.shoset/"+c.GetFileName()+"/cert/privateKey.key", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
-		fmt.Println("whouuuu !", err)
+		c.logger.Error().Msg("error open hostPrivateKeyFile : " + err.Error())
 		return nil, nil, nil
 	}
 	err = pem.Encode(hostPrivateKeyFile, &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(hostPrivateKey)})
 	if err != nil {
-		fmt.Println("Couldn't encode in file")
+		c.logger.Error().Msg("couldn't encode in file : " + err.Error())
 		return nil, nil, nil
 	}
 	hostPrivateKeyFile.Close()
@@ -234,27 +235,27 @@ func (c *Shoset) SignCertificate(certReq *x509.Certificate, hostPublicKey *rsa.P
 	if c.GetIsPki() {
 		dirname, err := os.UserHomeDir()
 		if err != nil {
-			fmt.Println("err", err)
+			c.logger.Error().Msg("couldn't get dirname : " + err.Error())
 			return nil
 		}
 
 		// Load CA
 		catls, err := tls.LoadX509KeyPair(dirname+"/.shoset/"+c.GetFileName()+"/cert/CAcert.crt", dirname+"/.shoset/"+c.GetFileName()+"/cert/privateCAKey.key")
 		if err != nil {
-			fmt.Println("err", err)
+			c.logger.Error().Msg("couldn't load keypair : " + err.Error())
 			return nil
 		}
 
 		ca, err := x509.ParseCertificate(catls.Certificate[0]) // we parse the previous certificate
 		if err != nil {
-			fmt.Println("err", err)
+			c.logger.Error().Msg("couldn't parse cert : " + err.Error())
 			return nil
 		}
 
 		// Sign the certificate
 		signedHostCert, err := x509.CreateCertificate(rand.Reader, certReq, ca, hostPublicKey, catls.PrivateKey)
 		if err != nil {
-			fmt.Println("err", err)
+			c.logger.Error().Msg("couldn't sign certreq : " + err.Error())
 			return nil
 		}
 		return signedHostCert

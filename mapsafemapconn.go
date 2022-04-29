@@ -30,12 +30,6 @@ func (m *MapSafeMapConn) Get(key string) *SyncMapConn {
 	return value.(*SyncMapConn)
 }
 
-// func (m *MapSafeMapConn) GetConfig() ([]string, []string) {
-// 	// m.Lock()
-// 	// defer m.Unlock()
-// 	return m._getConfig()
-// }
-
 func (m *MapSafeMapConn) GetConfig() ([]string, []string) {
 	return m.viperConfig.GetStringSlice("join"), m.viperConfig.GetStringSlice("link")
 }
@@ -105,12 +99,12 @@ func (m *MapSafeMapConn) updateFile(lname, protocolType, fileName string, keys [
 		m.viperConfig.Set(protocolType, keys)
 		dirname, err := os.UserHomeDir()
 		if err != nil {
-			fmt.Println(err)
+			fmt.Println("couldn't get dirname : ", err)
 			return
 		}
 		err = m.viperConfig.WriteConfigAs(dirname + "/.shoset/" + fileName + "/config/config.yaml")
 		if err != nil {
-			fmt.Println("error in writting config")
+			fmt.Println("error in writting config : ", err)
 			return
 		}
 	}

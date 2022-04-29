@@ -1,8 +1,6 @@
 package shoset
 
 import (
-	// "fmt"
-	// "fmt"
 	"sync"
 )
 
@@ -18,18 +16,6 @@ func NewMapSafeStrings() *MapSafeStrings {
 	m.m = make(map[string]map[string]bool)
 	return m
 }
-
-// func (m *MapSafeStrings) String() string {
-// 	var descr string
-// 	for key, lNames := range m.m {
-// 		descr = descr + fmt.Sprintf("%s key : %s, lName : ", descr, key)
-// 		for lName := range lNames {
-// 			descr = fmt.Sprintf("%s %s", descr, lName)
-// 		}
-// 		descr = descr + "} \n\t\t\t"
-// 	}
-// 	return descr
-// }
 
 // Get : Get a value from a MapSafeStrings
 func (m *MapSafeStrings) Get(key string) map[string]bool {

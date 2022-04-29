@@ -3,7 +3,6 @@ package shoset
 import (
 	"crypto/x509"
 	"encoding/pem"
-	"fmt"
 	"io/ioutil"
 	"os"
 
@@ -25,11 +24,6 @@ func HandlePkiEvent(c *ShosetConn, message msg.Message) error {
 		return err
 	}
 
-	// for k := range c.ch.ConnsSingleAddress {
-	// 	fmt.Printf("key[%s] value[%s]\n", k, c.ch.ConnsSingleAddress[k])
-	// 	fmt.Println(evt.GetRequestAddress())
-	// }
-
 	if c.ch.GetIsPki() && evt.GetCommand() == "pkievt" {
 		// si je suis pki :
 		//   si on m'envoie un certreq
@@ -42,7 +36,6 @@ func HandlePkiEvent(c *ShosetConn, message msg.Message) error {
 		//   fi
 
 		// 4. une shoset en double way me transmet une certreq et je suis pki
-		// fmt.Println("received event 2")
 		if evt.GetCertReq() != nil {
 			CAcert, err := ioutil.ReadFile(dirname + "/.shoset/" + c.ch.GetFileName() + "/cert/CAcert.crt")
 			if err != nil {
@@ -63,19 +56,20 @@ func HandlePkiEvent(c *ShosetConn, message msg.Message) error {
 					if enc {
 						b, err = x509.DecryptPEMBlock(block, nil)
 						if err != nil {
-							fmt.Println(err)
+							c.ch.logger.Error().Msg("err in decrypt : " + err.Error())
+							return err
 						}
 					}
 					CAprivateKey, err := x509.ParsePKCS1PrivateKey(b)
 					if err != nil {
-						fmt.Println(err)
+						c.ch.logger.Error().Msg("err in parse private key : " + err.Error())
+						return err
 					}
 					returnPkiEvent = msg.NewPkiEventReturn("return_pkievt", evt.GetRequestAddress(), signedCert, CAcert, CAprivateKey)
 				} else {
 					returnPkiEvent = msg.NewPkiEventReturn("return_pkievt", evt.GetRequestAddress(), signedCert, CAcert, nil)
 				}
 				returnPkiEvent.SetUUID(evt.GetUUID() + "*") // return event has the same uuid so that network isn't flooded with same events
-				// fmt.Println("return msg 2 sent to ", evt.GetRequestAddress())
 				SendPkiEvent(c.ch, returnPkiEvent)
 
 			}
@@ -89,95 +83,23 @@ func HandlePkiEvent(c *ShosetConn, message msg.Message) error {
 
 		// 5. je reçois une signedReq et je suis relié en singleWay au demandeur
 
-		// fmt.Println("I'm ", c.ch.GetBindAddress(), " and I have received a msg for", evt.GetRequestAddress())
 		// c.SendMessage(evt)
 		err := conn.SendMessage(evt)
 		if err != nil {
-			fmt.Println("couldn't send returnpkievt", err)
+			conn.ch.logger.Warn().Msg("couldn't send returnpkievt : " + err.Error())
 			return err
 		}
 		// c.ch.ConnsSingleAddress[evt.GetRequestAddress()].socket.Close()
 		c.socket.Close()
 		c.ch.ConnsSingleAddress.Delete(evt.GetRequestAddress())
-
-		// fmt.Println("msg sent to ", c.ch.ConnsSingleAddress[evt.GetRequestAddress()].GetLocalAddress(), c.ch.ConnsSingleAddress[evt.GetRequestAddress()].GetRemoteAddress())
-
-		// if evt.GetSignedCert() != nil && evt.GetCAcert() != nil {
-		// 	signedCert := evt.GetSignedCert()
-		// 	certFile, err := os.Create(dirname + "/.shoset/" + c.ch.GetFileName() + "/cert/cert.crt")
-		// 	if err != nil {
-		// 		return err
-		// 	}
-		// 	pem.Encode(certFile, &pem.Block{Type: "CERTIFICATE", Bytes: signedCert})
-		// 	certFile.Close()
-
-		// 	caCert := evt.GetCAcert()
-		// 	ioutil.WriteFile(dirname+"/.shoset/"+c.ch.GetFileName()+"/cert/CAcert.crt", caCert, 0644)
-
-		// 	if evt.GetCAprivateKey() != nil {
-		// 		caPrivateKey := evt.GetCAprivateKey()
-		// 		CAprivateKeyFile, err := os.OpenFile(dirname+"/.shoset/"+c.ch.GetFileName()+"/cert/privateCAKey.key", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
-		// 		if err != nil {
-		// 			return err
-		// 		}
-		// 		pem.Encode(CAprivateKeyFile, &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(caPrivateKey)})
-		// 		CAprivateKeyFile.Close()
-
-		// 		c.ch.SetIsPki(true)
-		// 	}
-		// 	c.ch.SetIsCertified(true)
-
-		// 	// point env variable to our CAcert so that computer does not point elsewhere
-		// 	os.Setenv("SSL_CERT_FILE", dirname+"/.shoset/"+c.ch.GetFileName()+"/cert/CAcert.crt")
-
-		// 	// tls Double way
-		// 	cert, err := tls.LoadX509KeyPair(dirname+"/.shoset/"+c.ch.GetFileName()+"/cert/cert.crt", dirname+"/.shoset/"+c.ch.GetFileName()+"/cert/privateKey.key")
-		// 	if err != nil {
-		// 		fmt.Println("! Unable to Load certificate !")
-		// 	}
-		// 	CAcert, err := ioutil.ReadFile(dirname + "/.shoset/" + c.ch.GetFileName() + "/cert/CAcert.crt")
-		// 	if err != nil {
-		// 		fmt.Println("error read file cacert :", err)
-		// 	}
-		// 	caCertPool := x509.NewCertPool()
-		// 	caCertPool.AppendCertsFromPEM(CAcert)
-		// 	c.ch.tlsConfigDoubleWay = &tls.Config{
-		// 		Certificates:       []tls.Certificate{cert},
-		// 		ClientCAs:          caCertPool,
-		// 		ClientAuth:         tls.RequireAndVerifyClientCert,
-		// 		InsecureSkipVerify: false,
-		// 	}
-		// 	c.ch.tlsConfigDoubleWay.BuildNameToCertificate()
-
-		// 	// tls config single way
-		// 	c.ch.tlsConfigSingleWay = &tls.Config{
-		// 		Certificates:       []tls.Certificate{cert},
-		// 		InsecureSkipVerify: false,
-		// 	}
-		// }
 	} else {
 		// je transmet le msg puisque je suis ni pki ni demandeur
 		// 6. une shoset en double way me transmet une reqcert et je suis passe plat
 		if state := c.GetCh().Queue["pkievt"].Push(evt, c.GetRemoteShosetType(), c.GetLocalAddress()); state {
-			// fmt.Println(c.ch.GetPkiRequestAddress(), "transmits msg from ", evt.GetRequestAddress())
 			SendPkiEvent(c.ch, evt)
 		}
 	}
 	return nil
-}
-
-// SendEventConn :
-func SendPkiEventConn(c *ShosetConn, evt interface{}) {
-	_, err := c.WriteString("pkievt")
-	if err != nil {
-		fmt.Println("couldn't write string pkievt")
-		return
-	}
-	err = c.WriteMessage(evt)
-	if err != nil {
-		fmt.Println("couldn't write pkievt")
-		return
-	}
 }
 
 // SendEvent :
@@ -188,7 +110,7 @@ func SendPkiEvent(c *Shoset, evt msg.Message) {
 			// conn.wb = msg.NewWriter(conn.socket)
 			err := conn.SendMessage(evt)
 			if err != nil {
-				fmt.Println("couldn't send pkievt", err)
+			conn.ch.logger.Warn().Msg("couldn't send pkievt : " + err.Error())
 			}
 		},
 	)

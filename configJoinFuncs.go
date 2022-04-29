@@ -2,7 +2,6 @@ package shoset
 
 import (
 	"errors"
-	"fmt"
 
 	"github.com/ditrit/shoset/msg"
 )
@@ -23,7 +22,6 @@ func HandleConfigJoin(c *ShosetConn, message msg.Message) error {
 
 	switch cfg.GetCommandName() {
 	case "join":
-		// fmt.Println(c.ch.GetBindAddress(), "enters join for ", remoteAddress)
 		if dir == "in" { // a socket wants to join this one
 			if connsJoin := c.ch.ConnsByName.Get(c.ch.GetLogicalName()); connsJoin != nil { //already joined
 				if connsJoin.Get(remoteAddress) != nil {
@@ -42,7 +40,7 @@ func HandleConfigJoin(c *ShosetConn, message msg.Message) error {
 				configOk := msg.NewCfg(remoteAddress, ch.GetLogicalName(), ch.GetShosetType(), "aknowledge_join")
 				err := c.SendMessage(*configOk)
 				if err != nil {
-					fmt.Println("couldn't send configOk", err)
+					c.ch.logger.Warn().Msg("couldn't send configOk : " + err.Error())
 				}
 			} else {
 				c.SetIsValid(false)
@@ -50,7 +48,7 @@ func HandleConfigJoin(c *ShosetConn, message msg.Message) error {
 				configNotOk := msg.NewCfg(remoteAddress, ch.GetLogicalName(), ch.GetShosetType(), "unaknowledge_join")
 				err := c.SendMessage(*configNotOk)
 				if err != nil {
-					fmt.Println("couldn't send configNotOk", err)
+					c.ch.logger.Warn().Msg("couldn't send configNotOk : " + err.Error())
 				}
 				return errors.New("error : Invalid connection for join - not the same type/name")
 			}
@@ -62,7 +60,7 @@ func HandleConfigJoin(c *ShosetConn, message msg.Message) error {
 				if address != remoteAddress {
 					err := bro.SendMessage(*cfgNewMember) //tell to the other members that there is a new member to join
 					if err != nil {
-						fmt.Println("couldn't send cfgnewMember", err)
+						bro.ch.logger.Warn().Msg("couldn't send cfgnewMember : " + err.Error())
 					}
 				}
 			},
@@ -90,7 +88,7 @@ func HandleConfigJoin(c *ShosetConn, message msg.Message) error {
 						if address != remoteAddress {
 							err := bro.SendMessage(*cfgNewMember) //tell to the other members that there is a new member to join
 							if err != nil {
-								fmt.Println("couldn't send cfgNewMember2", err)
+								bro.ch.logger.Warn().Msg("couldn't send cfgnewMember2 : " + err.Error())
 							}
 						}
 					},

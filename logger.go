@@ -14,15 +14,15 @@ func SetLogLevel(lv string) {
 	default:
 		fallthrough
 	case "info":
-		log.Level(zerolog.InfoLevel)
+		log.Logger = log.Level(zerolog.InfoLevel)
 	case "trace":
-		log.Level(zerolog.TraceLevel)
+		log.Logger = log.Level(zerolog.TraceLevel)
 	case "debug":
-		log.Level(zerolog.DebugLevel)
+		log.Logger = log.Level(zerolog.DebugLevel)
 	case "warn", "warning":
-		log.Level(zerolog.WarnLevel)
+		log.Logger = log.Level(zerolog.WarnLevel)
 	case "error":
-		log.Level(zerolog.ErrorLevel)
+		log.Logger = log.Level(zerolog.ErrorLevel)
 	}
 }
 

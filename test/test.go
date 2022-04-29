@@ -866,18 +866,18 @@ func test_pki(ctx context.Context, done context.CancelFunc) {
 	loopUntilDone(1*time.Second, ctx, func() {
 		fmt.Println("in_callback")
 		// fmt.Println(cl1.GetTLSconfig())
-		// fmt.Println("\ncl : ", cl1)
-		// fmt.Println("\ncl : ", cl2)
-		// fmt.Println("\ncl : ", cl3)
-		// fmt.Println("\ncl : ", cl4)
-		// fmt.Println("\nag : ", aga1)
-		// fmt.Println("\nag : ", aga2)
-		// fmt.Println("\nca : ", Ca1)
-		// fmt.Println("\nca : ", Ca2)
-		// fmt.Println("\nw : ", w)
-		// fmt.Println("\nx : ", x)
-		// fmt.Println("\ny : ", y)
-		// fmt.Println("\nz : ", z)
+		fmt.Println("\ncl : ", cl1)
+		fmt.Println("\ncl : ", cl2)
+		fmt.Println("\ncl : ", cl3)
+		fmt.Println("\ncl : ", cl4)
+		fmt.Println("\nag : ", aga1)
+		fmt.Println("\nag : ", aga2)
+		fmt.Println("\nca : ", Ca1)
+		fmt.Println("\nca : ", Ca2)
+		fmt.Println("\nw : ", w)
+		fmt.Println("\nx : ", x)
+		fmt.Println("\ny : ", y)
+		fmt.Println("\nz : ", z)
 		done()
 		// fmt.Println("wait 10s")
 		// time.Sleep(time.Second * time.Duration(10))
@@ -915,6 +915,7 @@ func test_pki_client(ctx context.Context, done context.CancelFunc) {
 
 func main() {
 	shoset.InitPrettyLogger(false)
+	shoset.SetLogLevel("debug")
 	ctx, done := context.WithTimeout(context.Background(), 1*time.Minute)
 
 	//terminal
