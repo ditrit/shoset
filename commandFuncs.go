@@ -26,7 +26,10 @@ func SendCommand(c *Shoset, cmd msg.Message) {
 	fmt.Print("Sending Command.\n")
 	c.ConnsByName.IterateAll(
 		func(key string, conn *ShosetConn) {
-			conn.SendMessage(cmd)
+			err := conn.SendMessage(cmd)
+			if err != nil {
+				fmt.Println("couldn't send cmd", err)
+			}
 		},
 	)
 }

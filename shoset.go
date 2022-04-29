@@ -252,6 +252,7 @@ func (c *Shoset) handleBind() {
 	defer c.listener.Close()
 
 	for {
+		// fmt.Println("waiting for new conn")
 		if !c.GetIsValid() { // sockets are not from the same type or don't have the same name / conn ended
 			fmt.Println("error : Invalid connection for join - not the same type/name or shosetConn ended")
 			return
@@ -261,6 +262,8 @@ func (c *Shoset) handleBind() {
 			fmt.Printf("serverShoset accept error: %s", err)
 			break
 		}
+		// fmt.Println("accept conn")
+
 
 		address_port := unencConn.RemoteAddr().String()
 		address_parts := strings.Split(address_port, ":")
@@ -331,7 +334,11 @@ func (c *Shoset) Protocol(bindAddress, remoteAddress, protocolType string) {
 			fmt.Println("couldn't create shoset:", err)
 			return
 		}
-		initConn.runPkiRequest() // I don't have my certs, I request them
+		err = initConn.runPkiRequest() // I don't have my certs, I request them
+		if err != nil {
+			fmt.Println(c.GetPkiRequestAddress(), "runPkiRequest didn't work", err)
+			return
+		}
 		if !c.GetIsCertified() {
 			fmt.Println("couldn't certify")
 			return

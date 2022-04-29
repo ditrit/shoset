@@ -158,7 +158,7 @@ func (c *Shoset) InitPKI(address string) error {
 		ClientAuth:         tls.RequireAndVerifyClientCert,
 		InsecureSkipVerify: false,
 	}
-	c.tlsConfigDoubleWay.BuildNameToCertificate()
+	// c.tlsConfigDoubleWay.BuildNameToCertificate()
 
 	// tls config single way
 	c.tlsConfigSingleWay = &tls.Config{

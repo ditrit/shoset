@@ -2,6 +2,7 @@ package shoset
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/ditrit/shoset/msg"
 )
@@ -39,12 +40,18 @@ func HandleConfigJoin(c *ShosetConn, message msg.Message) error {
 				// ch.LnamesByType.Set(c.ch.GetShosetType(), c.GetRemoteLogicalName())
 
 				configOk := msg.NewCfg(remoteAddress, ch.GetLogicalName(), ch.GetShosetType(), "aknowledge_join")
-				c.SendMessage(configOk)
+				err := c.SendMessage(*configOk)
+				if err != nil {
+					fmt.Println("couldn't send configOk", err)
+				}
 			} else {
 				c.SetIsValid(false)
 
 				configNotOk := msg.NewCfg(remoteAddress, ch.GetLogicalName(), ch.GetShosetType(), "unaknowledge_join")
-				c.SendMessage(configNotOk)
+				err := c.SendMessage(*configNotOk)
+				if err != nil {
+					fmt.Println("couldn't send configNotOk", err)
+				}
 				return errors.New("error : Invalid connection for join - not the same type/name")
 			}
 		}
@@ -53,7 +60,10 @@ func HandleConfigJoin(c *ShosetConn, message msg.Message) error {
 		ch.ConnsByName.Get(ch.GetLogicalName()).Iterate(
 			func(address string, bro *ShosetConn) {
 				if address != remoteAddress {
-					bro.SendMessage(cfgNewMember) //tell to the other members that there is a new member to join
+					err := bro.SendMessage(*cfgNewMember) //tell to the other members that there is a new member to join
+					if err != nil {
+						fmt.Println("couldn't send cfgnewMember", err)
+					}
 				}
 			},
 		)
@@ -78,7 +88,10 @@ func HandleConfigJoin(c *ShosetConn, message msg.Message) error {
 				ch.ConnsByName.Get(ch.GetLogicalName()).Iterate(
 					func(address string, bro *ShosetConn) {
 						if address != remoteAddress {
-							bro.SendMessage(cfgNewMember) //tell to the other members that there is a new member to join
+							err := bro.SendMessage(*cfgNewMember) //tell to the other members that there is a new member to join
+							if err != nil {
+								fmt.Println("couldn't send cfgNewMember2", err)
+							}
 						}
 					},
 				)

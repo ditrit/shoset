@@ -4,8 +4,6 @@ import (
 	"bufio"
 	"encoding/gob"
 	"errors"
-
-	// "fmt"
 	"io"
 	"sync"
 )
@@ -16,12 +14,18 @@ type Writer struct {
 	m sync.Mutex
 }
 
-// NewWriter : constructor
-func NewWriter(wd io.Writer) *Writer {
-	s := new(Writer)
-	s.b = bufio.NewWriter(wd)
-	return s
+func (w *Writer) GetBufioWriter() *bufio.Writer {
+	w.m.Lock()
+	defer w.m.Unlock()
+	return w.b
 }
+
+// NewWriter : constructor
+// func NewWriter(wd io.Writer) *Writer {
+// 	s := new(Writer)
+// 	s.b = bufio.NewWriter(wd)
+// 	return s
+// }
 
 func (r *Writer) UpdateWriter(wd io.Writer) {
 	r.m.Lock()

@@ -3,6 +3,8 @@ package shoset
 import (
 	// "fmt"
 
+	"fmt"
+
 	"github.com/ditrit/shoset/msg"
 )
 
@@ -27,7 +29,10 @@ func HandleConfigBye(c *ShosetConn, message msg.Message) error {
 			ch.ConnsByName.IterateAll(
 				func(address string, bro *ShosetConn) {
 					if address != remoteAddress {
-						bro.SendMessage(cfgNewDelete)
+						err := bro.SendMessage(*cfgNewDelete)
+						if err != nil {
+							fmt.Println("couldn't send cfgnewdelete", err)
+						}
 					}
 				},
 			)

@@ -3,6 +3,8 @@ package shoset
 import (
 	// "fmt"
 
+	"fmt"
+
 	"github.com/ditrit/shoset/msg"
 )
 
@@ -51,7 +53,10 @@ func HandleConfigLink(c *ShosetConn, message msg.Message) error {
 			brothers := msg.NewCfgBrothers(localBrothersArray, remoteBrothersArray, c.ch.GetLogicalName(), "brothers", c.ch.GetShosetType())
 			remoteBrothers.Iterate(
 				func(address string, remoteBro *ShosetConn) {
-					remoteBro.SendMessage(brothers) //send config to others
+					err := remoteBro.SendMessage(*brothers) //send config to others
+					if err != nil {
+						fmt.Println("couldn't send brothers", err)
+					}
 				},
 			)
 		}
@@ -83,7 +88,12 @@ func HandleConfigLink(c *ShosetConn, message msg.Message) error {
 						brothers := msg.NewCfgBrothers(newLocalBrothers, addresses, c.ch.GetLogicalName(), "brothers", c.ch.GetShosetType())
 						lNameConns.Iterate(
 							func(key string, val *ShosetConn) {
-								val.SendMessage(brothers)
+								// val.rb = msg.NewReader(c.socket)
+								// val.wb = msg.NewWriter(c.socket)
+								err := val.SendMessage(*brothers)
+								if err != nil {
+									fmt.Println("couldn't send newLocalBrothers", err)
+								}
 							})
 					}
 				}

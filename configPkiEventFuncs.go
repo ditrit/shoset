@@ -91,7 +91,11 @@ func HandlePkiEvent(c *ShosetConn, message msg.Message) error {
 
 		// fmt.Println("I'm ", c.ch.GetBindAddress(), " and I have received a msg for", evt.GetRequestAddress())
 		// c.SendMessage(evt)
-		conn.SendMessage(evt)
+		err := conn.SendMessage(evt)
+		if err != nil {
+			fmt.Println("couldn't send returnpkievt", err)
+			return err
+		}
 		// c.ch.ConnsSingleAddress[evt.GetRequestAddress()].socket.Close()
 		c.socket.Close()
 		c.ch.ConnsSingleAddress.Delete(evt.GetRequestAddress())
@@ -180,7 +184,12 @@ func SendPkiEventConn(c *ShosetConn, evt interface{}) {
 func SendPkiEvent(c *Shoset, evt msg.Message) {
 	c.ConnsByName.IterateAll(
 		func(key string, conn *ShosetConn) {
-			conn.SendMessage(evt)
+			// conn.rb = msg.NewReader(conn.socket)
+			// conn.wb = msg.NewWriter(conn.socket)
+			err := conn.SendMessage(evt)
+			if err != nil {
+				fmt.Println("couldn't send pkievt", err)
+			}
 		},
 	)
 }

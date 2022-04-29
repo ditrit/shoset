@@ -27,7 +27,10 @@ func SendConfig(c *Shoset, cmd msg.Message) {
 	fmt.Print("Sending Config.\n")
 	c.ConnsByName.IterateAll(
 		func(key string, conn *ShosetConn) {
-			conn.SendMessage(cmd)
+			err := conn.SendMessage(cmd)
+			if err != nil {
+				fmt.Println("couldn't send config msg", err)
+			}
 		},
 	)
 }

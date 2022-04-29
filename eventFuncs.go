@@ -41,7 +41,10 @@ func SendEventConn(c *ShosetConn, evt interface{}) {
 func SendEvent(c *Shoset, evt msg.Message) {
 	c.ConnsByName.IterateAll(
 		func(key string, conn *ShosetConn) {
-			conn.SendMessage(evt)
+			err := conn.SendMessage(evt)
+			if err != nil {
+				fmt.Println("couldn't send evt", err)
+			}
 		},
 	)
 }

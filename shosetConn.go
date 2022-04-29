@@ -13,6 +13,7 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	//	uuid "github.com/kjk/betterguid"
@@ -179,14 +180,14 @@ func (c *ShosetConn) WriteMessage(data interface{}) error {
 	return c.wb.WriteMessage(data)
 }
 
-func (c *ShosetConn) runPkiRequest() {
+func (c *ShosetConn) runPkiRequest() error {
 	certReq, hostPublicKey, _ := c.ch.PrepareCertificate()
 	if certReq != nil && hostPublicKey != nil {
-		PkiEvent := msg.NewPkiEventInit("pkievt", c.ch.GetPkiRequestAddress(), c.ch.GetLogicalName(), certReq, hostPublicKey) ///////////
+		PkiEvent := msg.NewPkiEventInit("pkievt", c.ch.GetPkiRequestAddress(), c.ch.GetLogicalName(), certReq, hostPublicKey)
 		for {
 			// fmt.Println(",,,,,,,,,,,,", c.ch.GetBindAddress())
 			if !c.GetIsValid() { // sockets are not from the same type or don't have the same name / conn ended
-				break
+				return errors.New("shoset not valid")
 			}
 
 			// fmt.Println(c.ch.GetPkiRequestAddress(), "init new single connection")
@@ -202,7 +203,7 @@ func (c *ShosetConn) runPkiRequest() {
 			c.wb.UpdateWriter(c.socket)
 			// defer conn.Close()
 
-			c.SendMessage(PkiEvent)
+			c.SendMessage(*PkiEvent)
 			// fmt.Println("reqcert sent to ", c.GetRemoteAddress(), "!!!!!!!!!!!!!!!!!!!!!!")
 
 			// receive messages
@@ -214,22 +215,16 @@ func (c *ShosetConn) runPkiRequest() {
 				}
 				msgType = strings.Trim(msgType, "\n")
 				runtime.Gosched()
-				// time.Sleep(time.Millisecond * time.Duration(10))
-				// if msgType != "pkievt" {
-				// 	fmt.Println("client didn't receive proper msgtype :", msgType)
-				// 	c.socket.Close()
-				// 	break
-				// }
-				// fmt.Println(msgType)
+
 				fGet, ok := c.ch.Get[msgType]
 				if !ok {
 					fmt.Println(c.ch.GetPkiRequestAddress(), "not ok client")
-					continue
+					break
 				}
 				msgVal, err := fGet(c)
 				if err != nil {
 					fmt.Println("didn't find function to handle event")
-					continue
+					break
 				}
 
 				if cmd := msgVal.GetMsgType(); cmd != "pkievt" {
@@ -241,7 +236,7 @@ func (c *ShosetConn) runPkiRequest() {
 				evt := msgVal.(msg.PkiEvent)
 				if c.ch.GetPkiRequestAddress() != evt.GetRequestAddress() || evt.GetCommand() != "return_pkievt" {
 					fmt.Println("return msg does not correspond")
-					continue
+					break
 				}
 
 				// fmt.Println(c.ch.GetPkiRequestAddress(), "return msg received")
@@ -249,14 +244,14 @@ func (c *ShosetConn) runPkiRequest() {
 					dirname, err := os.UserHomeDir()
 					if err != nil {
 						fmt.Println("did not find home dir", err)
-						continue
+						return err
 					}
 
 					signedCert := evt.GetSignedCert()
 					certFile, err := os.Create(dirname + "/.shoset/" + c.ch.GetFileName() + "/cert/cert.crt")
 					if err != nil {
 						fmt.Println("couldn't create certfile")
-						continue
+						break
 					}
 					pem.Encode(certFile, &pem.Block{Type: "CERTIFICATE", Bytes: signedCert})
 					certFile.Close()
@@ -265,7 +260,7 @@ func (c *ShosetConn) runPkiRequest() {
 					err = ioutil.WriteFile(dirname+"/.shoset/"+c.ch.GetFileName()+"/cert/CAcert.crt", caCert, 0644)
 					if err != nil {
 						fmt.Println("couldn't write CAcert")
-						return
+						break
 					}
 
 					if evt.GetCAprivateKey() != nil {
@@ -273,7 +268,7 @@ func (c *ShosetConn) runPkiRequest() {
 						CAprivateKeyFile, err := os.OpenFile(dirname+"/.shoset/"+c.ch.GetFileName()+"/cert/privateCAKey.key", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 						if err != nil {
 							fmt.Println("couldn't create CAprivateKeyFile")
-							continue
+							break
 						}
 						pem.Encode(CAprivateKeyFile, &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(caPrivateKey)})
 						CAprivateKeyFile.Close()
@@ -302,7 +297,7 @@ func (c *ShosetConn) runPkiRequest() {
 						ClientAuth:         tls.RequireAndVerifyClientCert,
 						InsecureSkipVerify: false,
 					}
-					c.ch.tlsConfigDoubleWay.BuildNameToCertificate()
+					// c.ch.tlsConfigDoubleWay.BuildNameToCertificate()
 
 					// tls config single way
 					c.ch.tlsConfigSingleWay = &tls.Config{
@@ -311,12 +306,13 @@ func (c *ShosetConn) runPkiRequest() {
 					}
 					c.socket.Close()
 					// fmt.Println(c.ch.GetPkiRequestAddress(), "!!! I have been certified !!!")
-					return
+					return nil
 				}
 
 			}
 		}
 	}
+	return nil
 }
 
 // RunOutConn : handler for the socket, for Link()
@@ -335,12 +331,17 @@ func (c *ShosetConn) runLinkConn() {
 		c.socket = conn
 		c.rb.UpdateReader(c.socket)
 		c.wb.UpdateWriter(c.socket)
+		// c.rb = msg.NewReader(c.socket)
+		// c.wb = msg.NewWriter(c.socket)
 		// defer conn.Close()
 
 		// receive messages
 		for {
 			if c.GetRemoteLogicalName() == "" {
-				c.SendMessage(*linkConfig)
+				err := c.SendMessage(*linkConfig)
+				if err != nil {
+					fmt.Println("couldn't send linkcfg", err)
+				}
 			}
 
 			err := c.receiveMsg()
@@ -377,13 +378,18 @@ func (c *ShosetConn) runJoinConn() {
 		c.socket = conn
 		c.rb.UpdateReader(c.socket)
 		c.wb.UpdateWriter(c.socket)
+		// c.rb = msg.NewReader(c.socket)
+		// c.wb = msg.NewWriter(c.socket)
 		// defer conn.Close()
 
 		// receive messages
 		for {
 			// fmt.Println(" second new loop", c.ch.GetBindAddress())
 			if c.GetRemoteLogicalName() == "" {
-				c.SendMessage(*joinConfig)
+				err := c.SendMessage(*joinConfig)
+				if err != nil {
+					fmt.Println("couldn't send joincfg", err)
+				}
 			}
 
 			err := c.receiveMsg()
@@ -417,12 +423,17 @@ func (c *ShosetConn) runByeConn() {
 		c.socket = conn
 		c.rb.UpdateReader(c.socket)
 		c.wb.UpdateWriter(c.socket)
+		// c.rb = msg.NewReader(c.socket)
+		// c.wb = msg.NewWriter(c.socket)
 		// defer conn.Close()
 
 		// receive messages
 		for {
 			if c.GetRemoteLogicalName() == "" {
-				c.SendMessage(*byeConfig)
+				err := c.SendMessage(*byeConfig)
+				if err != nil {
+					fmt.Println("couldn't send byecfg", err)
+				}
 			}
 
 			err := c.receiveMsg()
@@ -442,6 +453,8 @@ func (c *ShosetConn) runInConnSingle(address_ string) {
 	// fmt.Println(c.ch)
 	c.rb.UpdateReader(c.socket)
 	c.wb.UpdateWriter(c.socket)
+	// c.rb = msg.NewReader(c.socket)
+	// c.wb = msg.NewWriter(c.socket)
 	// defer c.socket.Close()
 
 	// delete(c.ch.ConnsSingle, address_)
@@ -538,7 +551,10 @@ func (c *ShosetConn) runInConnSingle(address_ string) {
 			returnPkiEvent = msg.NewPkiEventReturn("return_pkievt", evt.GetRequestAddress(), signedCert, CAcert, CAprivateKey)
 			returnPkiEvent.SetUUID(evt.GetUUID() + "*") // return event has the same uuid so that network isn't flooded with same events
 			// fmt.Println("return msg sent to ", evt.GetRequestAddress())
-			c.SendMessage(returnPkiEvent)
+			err := c.SendMessage(*returnPkiEvent)
+			if err != nil {
+				fmt.Println("couldn't send singleConn returnpkievt", err)
+			}
 			c.socket.Close()
 			c.ch.ConnsSingle.Delete(address_)
 			return
@@ -554,6 +570,8 @@ func (c *ShosetConn) runInConnDouble() {
 	// fmt.Println(c.ch.GetBindAddress(), "in runDoubleConn")
 	c.rb.UpdateReader(c.socket)
 	c.wb.UpdateWriter(c.socket)
+	// c.rb = msg.NewReader(c.socket)
+	// c.wb = msg.NewWriter(c.socket)
 
 	defer c.socket.Close()
 
@@ -572,17 +590,28 @@ func (c *ShosetConn) runInConnDouble() {
 }
 
 // SendMessage :
-func (c *ShosetConn) SendMessage(msg msg.Message) {
+func (c *ShosetConn) SendMessage(msg msg.Message) error {
 	_, err := c.WriteString(msg.GetMsgType())
 	if err != nil {
-		fmt.Println("couldn't write string msg", err)
-		return
+		if errors.Is(err, syscall.EPIPE) {
+			return nil
+		}
+		fmt.Println(msg.GetMsgType(), "couldn't write string msg", err)
+		return err
 	}
 	err = c.WriteMessage(msg)
 	if err != nil {
+		if errors.Is(err, syscall.EPIPE) {
+			// https://gosamples.dev/broken-pipe/
+			return nil
+		} else if errors.Is(err, syscall.ECONNRESET) {
+			// https://gosamples.dev/connection-reset-by-peer/
+            return nil
+        }
 		fmt.Println("couldn't write message msg", err)
-		return
+		return err
 	}
+	return nil
 }
 
 func (c *ShosetConn) receiveMsg() error {
