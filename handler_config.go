@@ -1,32 +1,36 @@
 package shoset
 
 import (
+	"errors"
 	"time"
 
 	"github.com/ditrit/shoset/msg"
 )
 
+type ConfigHandler struct{}
+
 //TODO MOVE TO GANDALF
 // GetConfig :
-func GetConfig(c *ShosetConn) (msg.Message, error) {
+func (ch *ConfigHandler) Get(c *ShosetConn) (msg.Message, error) {
 	var conf msg.Config
 	err := c.ReadMessage(&conf)
 	return conf, err
 }
 
 // HandleConfig :config
-func HandleConfig(c *ShosetConn, message msg.Message) error {
+func (ch *ConfigHandler) Handle(c *ShosetConn, message msg.Message) error {
 	conf := message.(msg.Config)
-	c.GetCh().Queue["cmd"].Push(conf, c.GetRemoteShosetType(), c.GetLocalAddress())
+	if !c.GetCh().Queue["cmd"].Push(conf, c.GetRemoteShosetType(), c.GetLocalAddress()) {
+		return errors.New("failed to handle command")
+	}
 	return nil
 }
 
 // SendConfig :
-func SendConfig(c *Shoset, cmd msg.Message) {
+func (ch *ConfigHandler) Send(c *Shoset, cmd msg.Message) {
 	c.ConnsByName.IterateAll(
 		func(key string, conn *ShosetConn) {
-			err := conn.SendMessage(cmd)
-			if err != nil {
+			if err := conn.SendMessage(cmd); err != nil {
 				conn.ch.logger.Warn().Msg("couldn't send config msg : " + err.Error())
 			}
 		},
@@ -34,7 +38,7 @@ func SendConfig(c *Shoset, cmd msg.Message) {
 }
 
 // WaitConfig :
-func WaitConfig(c *Shoset, replies *msg.Iterator, args map[string]string, timeout int) *msg.Message {
+func (ch *ConfigHandler) Wait(c *Shoset, replies *msg.Iterator, args map[string]string, timeout int) *msg.Message {
 	commandName, ok := args["name"]
 	if !ok {
 		return nil
@@ -44,13 +48,13 @@ func WaitConfig(c *Shoset, replies *msg.Iterator, args map[string]string, timeou
 	go func() {
 		for cont {
 			message := replies.Get().GetMessage()
-			if message != nil {
-				config := message.(msg.Config)
-				if config.GetCommand() == commandName {
-					term <- &message
-				}
-			} else {
+			if message == nil {
 				time.Sleep(time.Duration(10) * time.Millisecond)
+				continue
+			}
+			config := message.(msg.Config)
+			if config.GetCommand() == commandName {
+				term <- &message
 			}
 		}
 	}()

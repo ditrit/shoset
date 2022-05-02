@@ -4,17 +4,20 @@ import (
 	"errors"
 
 	"github.com/ditrit/shoset/msg"
+	"github.com/rs/zerolog/log"
 )
 
+type ConfigJoinHandler struct{}
+
 // GetConfigJoin :
-func GetConfigJoin(c *ShosetConn) (msg.Message, error) {
+func (cjh *ConfigJoinHandler) Get(c *ShosetConn) (msg.Message, error) {
 	var cfg msg.ConfigProtocol
 	err := c.ReadMessage(&cfg)
 	return cfg, err
 }
 
 // HandleConfigJoin :
-func HandleConfigJoin(c *ShosetConn, message msg.Message) error {
+func (cjh *ConfigJoinHandler) Handle(c *ShosetConn, message msg.Message) error {
 	cfg := message.(msg.ConfigProtocol) // compute config from message
 	ch := c.GetCh()
 	dir := c.GetDir()
@@ -58,8 +61,8 @@ func HandleConfigJoin(c *ShosetConn, message msg.Message) error {
 		ch.ConnsByName.Get(ch.GetLogicalName()).Iterate(
 			func(address string, bro *ShosetConn) {
 				if address != remoteAddress {
-					err := bro.SendMessage(*cfgNewMember) //tell to the other members that there is a new member to join
-					if err != nil {
+					//tell to the other members that there is a new member to join
+					if err := bro.SendMessage(*cfgNewMember); err != nil {
 						bro.ch.logger.Warn().Msg("couldn't send cfgnewMember : " + err.Error())
 					}
 				}
@@ -79,23 +82,38 @@ func HandleConfigJoin(c *ShosetConn, message msg.Message) error {
 
 	case "member":
 		if connsJoin := c.ch.ConnsByName.Get(c.ch.GetLogicalName()); connsJoin != nil { //already joined
-			if connsJoin.Get(remoteAddress) == nil {
-				ch.Protocol(c.ch.GetBindAddress(), remoteAddress, "join")
-
-				cfgNewMember := msg.NewCfg(remoteAddress, ch.GetLogicalName(), ch.GetShosetType(), "member")
-				ch.ConnsByName.Get(ch.GetLogicalName()).Iterate(
-					func(address string, bro *ShosetConn) {
-						if address != remoteAddress {
-							err := bro.SendMessage(*cfgNewMember) //tell to the other members that there is a new member to join
-							if err != nil {
-								bro.ch.logger.Warn().Msg("couldn't send cfgnewMember2 : " + err.Error())
-							}
-						}
-					},
-				)
+			if connsJoin.Get(remoteAddress) != nil {
+				return nil
 			}
+			ch.Protocol(c.ch.GetBindAddress(), remoteAddress, "join")
+
+			cfgNewMember := msg.NewCfg(remoteAddress, ch.GetLogicalName(), ch.GetShosetType(), "member")
+			ch.ConnsByName.Get(ch.GetLogicalName()).Iterate(
+				func(address string, bro *ShosetConn) {
+					if address != remoteAddress {
+						//tell to the other members that there is a new member to join
+						if err := bro.SendMessage(*cfgNewMember); err != nil {
+							bro.ch.logger.Warn().Msg("couldn't send cfgnewMember2 : " + err.Error())
+						}
+					}
+				},
+			)
 		}
 
 	}
+	return nil
+}
+
+// SendConfigBye :
+func (cjh *ConfigJoinHandler) Send(c *Shoset, m msg.Message) {
+	// no-op
+	log.Warn().Msg("ConfigJoinHandler.Send not implemented")
+	return
+}
+
+// WaitConfig :
+func (cjh *ConfigJoinHandler) Wait(c *Shoset, replies *msg.Iterator, args map[string]string, timeout int) *msg.Message {
+	// no-op
+	log.Warn().Msg("ConfigJoinHandler.Wait not implemented")
 	return nil
 }

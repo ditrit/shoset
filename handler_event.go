@@ -6,52 +6,55 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/ditrit/shoset/msg"
+	"github.com/rs/zerolog/log"
 )
 
+type EventHandler struct{}
+
 // GetEvent :
-func GetEvent(c *ShosetConn) (msg.Message, error) {
+func (eh *EventHandler) Get(c *ShosetConn) (msg.Message, error) {
 	var evt msg.Event
 	err := c.ReadMessage(&evt)
 	return evt, err
 }
 
 // HandleEvent :
-func HandleEvent(c *ShosetConn, message msg.Message) error {
+func (eh *EventHandler) Handle(c *ShosetConn, message msg.Message) error {
 	evt := message.(msg.Event)
 	if state := c.GetCh().Queue["evt"].Push(evt, c.GetRemoteShosetType(), c.GetLocalAddress()); state {
-		SendEvent(c.ch, evt)
+		eh.Send(c.ch, evt)
 	}
 	return nil
 }
 
 // SendEventConn :
-func SendEventConn(c *ShosetConn, evt interface{}) {
+func (eh *EventHandler) SendEventConn(c *ShosetConn, evt interface{}) {
 	_, err := c.WriteString("evt")
 	if err != nil {
-		log.Error().Msg("couldn't write string evt : " + err.Error())
+		log.Warn().Msg("couldn't write string evt : " + err.Error())
 		return
 	}
 	err = c.WriteMessage(evt)
 	if err != nil {
-		log.Error().Msg("couldn't write message evt : " + err.Error())
+		log.Warn().Msg("couldn't write message evt : " + err.Error())
 		return
 	}
 }
 
 // SendEvent :
-func SendEvent(c *Shoset, evt msg.Message) {
+func (eh *EventHandler) Send(c *Shoset, evt msg.Message) {
 	c.ConnsByName.IterateAll(
 		func(key string, conn *ShosetConn) {
 			err := conn.SendMessage(evt)
 			if err != nil {
-				log.Error().Msg("couldn't send evt : " + err.Error())
+				log.Warn().Msg("couldn't send evt : " + err.Error())
 			}
 		},
 	)
 }
 
 // WaitEvent :
-func WaitEvent(c *Shoset, replies *msg.Iterator, args map[string]string, timeout int) *msg.Message {
+func (eh *EventHandler) Wait(c *Shoset, replies *msg.Iterator, args map[string]string, timeout int) *msg.Message {
 	topicName, ok := args["topic"]
 	if !ok {
 		return nil
@@ -62,13 +65,13 @@ func WaitEvent(c *Shoset, replies *msg.Iterator, args map[string]string, timeout
 	go func() {
 		for cont {
 			message := replies.Get().GetMessage()
-			if message != nil {
-				event := message.(msg.Event)
-				if event.GetTopic() == topicName && (eventName == "" || event.GetEvent() == eventName) {
-					term <- &message
-				}
-			} else {
+			if message == nil {
 				time.Sleep(time.Duration(10) * time.Millisecond)
+				continue
+			}
+			event := message.(msg.Event)
+			if event.GetTopic() == topicName && (eventName == "" || event.GetEvent() == eventName) {
+				term <- &message
 			}
 		}
 	}()

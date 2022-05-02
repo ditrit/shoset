@@ -27,10 +27,10 @@ import (
 
 // MessageHandlers interface
 type MessageHandlers interface {
-	Handle(*ShosetConn) error
-	SendConn(*ShosetConn, *msg.Message)
-	Send(*Shoset, *msg.Message)
-	Wait(*Shoset, *msg.Iterator, string, int) *msg.Message
+	Get(c *ShosetConn) (msg.Message, error)
+	Handle(c *ShosetConn, message msg.Message) error
+	Send(c *Shoset, m msg.Message)
+	Wait(c *Shoset, replies *msg.Iterator, args map[string]string, timeout int) *msg.Message
 }
 
 //Shoset :
@@ -51,12 +51,8 @@ type Shoset struct {
 	pkiRequestAddress string // La même que bindaddress mais seulement pour la pki cas la chaussette n'est pas encore bindée
 
 	// Dictionnaire des queues de message (par type de message)
-	Queue map[string]*msg.Queue
-
-	Get    map[string]func(*ShosetConn) (msg.Message, error)
-	Handle map[string]func(*ShosetConn, msg.Message) error
-	Send   map[string]func(*Shoset, msg.Message)
-	Wait   map[string]func(*Shoset, *msg.Iterator, map[string]string, int) *msg.Message
+	Queue    map[string]*msg.Queue
+	Handlers map[string]MessageHandlers
 
 	// configuration TLS
 	tlsConfigSingleWay *tls.Config
@@ -141,11 +137,8 @@ func NewShoset(lName, ShosetType string) *Shoset { //l
 		ConnsSingleAddress: NewSyncMapConn(),
 
 		// Dictionnaire des queues de message (par type de message)
-		Queue:  make(map[string]*msg.Queue),
-		Get:    make(map[string]func(*ShosetConn) (msg.Message, error)),
-		Handle: make(map[string]func(*ShosetConn, msg.Message) error),
-		Send:   make(map[string]func(*Shoset, msg.Message)),
-		Wait:   make(map[string]func(*Shoset, *msg.Iterator, map[string]string, int) *msg.Message),
+		Queue:    make(map[string]*msg.Queue),
+		Handlers: make(map[string]MessageHandlers),
 
 		// tlsConfig: &tls.Config{InsecureSkipVerify: true}
 		tlsServerOK:        true,
@@ -156,40 +149,26 @@ func NewShoset(lName, ShosetType string) *Shoset { //l
 	shst.ConnsByName.SetViper(shst.viperConfig)
 
 	shst.Queue["cfglink"] = msg.NewQueue()
-	shst.Get["cfglink"] = GetConfigLink
-	shst.Handle["cfglink"] = HandleConfigLink
+	shst.Handlers["cfglink"] = new(ConfigLinkHandler)
 
 	shst.Queue["cfgjoin"] = msg.NewQueue()
-	shst.Get["cfgjoin"] = GetConfigJoin
-	shst.Handle["cfgjoin"] = HandleConfigJoin
+	shst.Handlers["cfgjoin"] = new(ConfigJoinHandler)
 
 	shst.Queue["cfgbye"] = msg.NewQueue()
-	shst.Get["cfgbye"] = GetConfigBye
-	shst.Handle["cfgbye"] = HandleConfigBye
+	shst.Handlers["cfgbye"] = new(ConfigByeHandler)
 
 	shst.Queue["evt"] = msg.NewQueue()
-	shst.Get["evt"] = GetEvent
-	shst.Handle["evt"] = HandleEvent
-	shst.Send["evt"] = SendEvent
-	shst.Wait["evt"] = WaitEvent
+	shst.Handlers["evt"] = new(EventHandler)
 
 	shst.Queue["pkievt"] = msg.NewQueue()
-	shst.Get["pkievt"] = GetPkiEvent
-	shst.Handle["pkievt"] = HandlePkiEvent
-	shst.Send["pkievt"] = SendPkiEvent
+	shst.Handlers["pkievt"] = new(PkiEventHandler)
 
 	shst.Queue["cmd"] = msg.NewQueue()
-	shst.Get["cmd"] = GetCommand
-	shst.Handle["cmd"] = HandleCommand
-	shst.Send["cmd"] = SendCommand
-	shst.Wait["cmd"] = WaitCommand
+	shst.Handlers["cmd"] = new(CommandHandler)
 
 	//TODO MOVE TO GANDALF
 	shst.Queue["config"] = msg.NewQueue()
-	shst.Get["config"] = GetConfig
-	shst.Handle["config"] = HandleConfig
-	shst.Send["config"] = SendConfig
-	shst.Wait["config"] = WaitConfig
+	shst.Handlers["cfgbye"] = new(ConfigHandler)
 
 	shst.logger.Debug().Str("lname", lName).Msg("shoset created")
 	return &shst
@@ -286,15 +265,15 @@ func (c *Shoset) handleBind(wg *sync.WaitGroup) {
 			tlsConn := tls.Server(unencConn, c.tlsConfigSingleWay) // create the securised connection protocol
 
 			conn, _ := NewShosetConn(c, address_port, "in") // create the securised connection
-			conn.socket = tlsConn                      //we override socket attribut with our securised protocol
+			conn.socket = tlsConn                           //we override socket attribut with our securised protocol
 
 			go conn.runInConnSingle(ipAddress)
 		} else {
 			// fmt.Println(c.GetBindAddress(), "trying doubleWay")
 			tlsConn := tls.Server(unencConn, c.tlsConfigDoubleWay)
 
-			conn, _ := NewShosetConn(c, address_port, "in") 
-			conn.socket = tlsConn                      
+			conn, _ := NewShosetConn(c, address_port, "in")
+			conn.socket = tlsConn
 
 			_, err = conn.socket.Write([]byte("hello double\n"))
 			if err == nil {

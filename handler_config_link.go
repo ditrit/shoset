@@ -2,23 +2,26 @@ package shoset
 
 import (
 	"github.com/ditrit/shoset/msg"
+	"github.com/rs/zerolog/log"
 )
 
+type ConfigLinkHandler struct{}
+
 // GetConfigLink :
-func GetConfigLink(c *ShosetConn) (msg.Message, error) {
+func (clh *ConfigLinkHandler) Get(c *ShosetConn) (msg.Message, error) {
 	var cfg msg.ConfigProtocol
 	err := c.ReadMessage(&cfg)
 	return cfg, err
 }
 
 // HandleConfigLink :
-func HandleConfigLink(c *ShosetConn, message msg.Message) error {
+func (clh *ConfigLinkHandler) Handle(c *ShosetConn, message msg.Message) error {
 	cfg := message.(msg.ConfigProtocol)
-	remoteAddress := cfg.GetAddress()
 	dir := c.GetDir()
 
 	switch cfg.GetCommandName() {
 	case "link":
+		remoteAddress := cfg.GetAddress()
 		if dir == "in" { // a socket wants to link to this one
 			if connsLink := c.ch.ConnsByName.Get(c.ch.GetLogicalName()); connsLink != nil { //already linked
 				if connsLink.Get(remoteAddress) != nil {
@@ -48,8 +51,8 @@ func HandleConfigLink(c *ShosetConn, message msg.Message) error {
 			brothers := msg.NewCfgBrothers(localBrothersArray, remoteBrothersArray, c.ch.GetLogicalName(), "brothers", c.ch.GetShosetType())
 			remoteBrothers.Iterate(
 				func(address string, remoteBro *ShosetConn) {
-					err := remoteBro.SendMessage(*brothers) //send config to others
-					if err != nil {
+					//send config to others
+					if err := remoteBro.SendMessage(*brothers); err != nil {
 						remoteBro.ch.logger.Warn().Msg("couldn't send brothers : " + err.Error())
 					}
 				},
@@ -85,8 +88,7 @@ func HandleConfigLink(c *ShosetConn, message msg.Message) error {
 							func(key string, val *ShosetConn) {
 								// val.rb = msg.NewReader(c.socket)
 								// val.wb = msg.NewWriter(c.socket)
-								err := val.SendMessage(*brothers)
-								if err != nil {
+								if err := val.SendMessage(*brothers); err != nil {
 									val.ch.logger.Warn().Msg("couldn't send newLocalBrothers : " + err.Error())
 								}
 							})
@@ -104,5 +106,19 @@ func HandleConfigLink(c *ShosetConn, message msg.Message) error {
 			}
 		}
 	}
+	return nil
+}
+
+// SendConfigLink :
+func (clh *ConfigLinkHandler) Send(c *Shoset, m msg.Message) {
+	// no-op
+	log.Warn().Msg("ConfigLinkHandler.Send not implemented")
+	return
+}
+
+// WaitConfigLink :
+func (clh *ConfigLinkHandler) Wait(c *Shoset, replies *msg.Iterator, args map[string]string, timeout int) *msg.Message {
+	// no-op
+	log.Warn().Msg("ConfigLinkHandler.Wait not implemented")
 	return nil
 }

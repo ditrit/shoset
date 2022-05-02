@@ -7,17 +7,20 @@ import (
 	"os"
 
 	"github.com/ditrit/shoset/msg"
+	"github.com/rs/zerolog/log"
 )
 
-// GetEvent :
-func GetPkiEvent(c *ShosetConn) (msg.Message, error) {
+type PkiEventHandler struct{}
+
+// GetConfigPkiEvent :
+func (ceh *PkiEventHandler) Get(c *ShosetConn) (msg.Message, error) {
 	var evt msg.PkiEvent
 	err := c.ReadMessage(&evt)
 	return evt, err
 }
 
-// HandleEvent :
-func HandlePkiEvent(c *ShosetConn, message msg.Message) error {
+// HandleConfigPkiEvent :
+func (ceh *PkiEventHandler) Handle(c *ShosetConn, message msg.Message) error {
 	evt := message.(msg.PkiEvent)
 	dirname, err := os.UserHomeDir()
 	if err != nil {
@@ -70,7 +73,7 @@ func HandlePkiEvent(c *ShosetConn, message msg.Message) error {
 					returnPkiEvent = msg.NewPkiEventReturn("return_pkievt", evt.GetRequestAddress(), signedCert, CAcert, nil)
 				}
 				returnPkiEvent.SetUUID(evt.GetUUID() + "*") // return event has the same uuid so that network isn't flooded with same events
-				SendPkiEvent(c.ch, returnPkiEvent)
+				ceh.Send(c.ch, returnPkiEvent)
 
 			}
 		}
@@ -96,22 +99,28 @@ func HandlePkiEvent(c *ShosetConn, message msg.Message) error {
 		// je transmet le msg puisque je suis ni pki ni demandeur
 		// 6. une shoset en double way me transmet une reqcert et je suis passe plat
 		if state := c.GetCh().Queue["pkievt"].Push(evt, c.GetRemoteShosetType(), c.GetLocalAddress()); state {
-			SendPkiEvent(c.ch, evt)
+			ceh.Send(c.ch, evt)
 		}
 	}
 	return nil
 }
 
-// SendEvent :
-func SendPkiEvent(c *Shoset, evt msg.Message) {
+// SendConfigPkiEvent :
+func (ceh *PkiEventHandler) Send(c *Shoset, evt msg.Message) {
 	c.ConnsByName.IterateAll(
 		func(key string, conn *ShosetConn) {
 			// conn.rb = msg.NewReader(conn.socket)
 			// conn.wb = msg.NewWriter(conn.socket)
-			err := conn.SendMessage(evt)
-			if err != nil {
-			conn.ch.logger.Warn().Msg("couldn't send pkievt : " + err.Error())
+			if err := conn.SendMessage(evt); err != nil {
+				conn.ch.logger.Warn().Msg("couldn't send pkievt : " + err.Error())
 			}
 		},
 	)
+}
+
+// WaitConfigPkiEvent :
+func (ceh *PkiEventHandler) Wait(c *Shoset, replies *msg.Iterator, args map[string]string, timeout int) *msg.Message {
+	// no-op
+	log.Warn().Msg("PkiEventHandler.Wait not implemented")
+	return nil
 }

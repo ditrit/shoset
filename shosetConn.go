@@ -217,12 +217,12 @@ func (c *ShosetConn) runPkiRequest() error {
 				msgType = strings.Trim(msgType, "\n")
 				runtime.Gosched()
 
-				fGet, ok := c.ch.Get[msgType]
+				handler, ok := c.ch.Handlers[msgType]
 				if !ok {
 					c.ch.logger.Error().Msg("not ok client")
 					break
 				}
-				msgVal, err := fGet(c)
+				msgVal, err := handler.Get(c)
 				if err != nil {
 					c.ch.logger.Error().Msg("didn't find function to handle event")
 					break
@@ -461,12 +461,12 @@ func (c *ShosetConn) runInConnSingle(address_ string) {
 		// fmt.Println(c.ch.GetPkiRequestAddress(), "## error : ", err)
 		return
 	}
-	fGet, ok := c.ch.Get[msgType]
+	handler, ok := c.ch.Handlers[msgType]
 	if !ok {
 		c.ch.logger.Error().Msg("not ok")
 		return
 	}
-	msgVal, err := fGet(c)
+	msgVal, err := handler.Get(c)
 	if err != nil {
 		c.ch.logger.Error().Msg("didn't find function to handle event : " + err.Error())
 		return
@@ -502,7 +502,8 @@ func (c *ShosetConn) runInConnSingle(address_ string) {
 	if !c.ch.GetIsPki() {
 		// 2. un nouveau se connecte à moi et je suis passe plat
 		c.ch.ConnsSingleAddress.Set(evt.GetRequestAddress(), c)
-		SendPkiEvent(c.ch, msgVal)
+		pkievt := c.ch.Handlers["pkievt"]
+		pkievt.Send(c.ch, msgVal)
 		// c.socket.Close()
 		c.ch.ConnsSingle.Delete(address_)
 		return
@@ -630,28 +631,22 @@ func (c *ShosetConn) receiveMsg() error {
 	}
 
 	// read Message Value
-	fGet, ok := c.ch.Get[msgType]
-	if ok {
-		msgVal, err := fGet(c)
-		if err == nil {
-			// read message data and handle it with the proper function
-			fHandle, ok := c.ch.Handle[msgType]
-			if ok {
-				go fHandle(c, msgVal)
-			}
-		} else {
-			if c.GetDir() == "in" {
-				c.ch.deleteConn(c.GetRemoteAddress(), c.GetRemoteLogicalName())
-			}
-			return errors.New("receiveMsg : can not read value of " + msgType)
-		}
-	}
+	handler, ok := c.ch.Handlers[msgType]
 	if !ok {
 		if c.GetDir() == "in" {
 			c.ch.deleteConn(c.GetRemoteAddress(), c.GetRemoteLogicalName())
 		}
 		return errors.New("receiveMsg : non implemented type of message " + msgType)
 	}
+	msgVal, err := handler.Get(c)
+	if err != nil {
+		if c.GetDir() == "in" {
+			c.ch.deleteConn(c.GetRemoteAddress(), c.GetRemoteLogicalName())
+		}
+		return errors.New("receiveMsg : can not read value of " + msgType)
+	}
+	// read message data and handle it with the proper function
+	go handler.Handle(c, msgVal)                      // ? dlo: pq en goroutine là
 	time.Sleep(time.Millisecond * time.Duration(100)) // maybe we can remove this sleep time
 	return nil
 }
