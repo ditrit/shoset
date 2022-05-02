@@ -108,7 +108,6 @@ func (cjh *ConfigJoinHandler) Handle(c *ShosetConn, message msg.Message) error {
 func (cjh *ConfigJoinHandler) Send(c *Shoset, m msg.Message) {
 	// no-op
 	log.Warn().Msg("ConfigJoinHandler.Send not implemented")
-	return
 }
 
 // WaitConfig :

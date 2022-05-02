@@ -232,33 +232,34 @@ func (c *Shoset) SignCertificate(certReq *x509.Certificate, hostPublicKey *rsa.P
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	if c.GetIsPki() {
-		dirname, err := os.UserHomeDir()
-		if err != nil {
-			c.logger.Error().Msg("couldn't get dirname : " + err.Error())
-			return nil
-		}
-
-		// Load CA
-		catls, err := tls.LoadX509KeyPair(dirname+"/.shoset/"+c.GetFileName()+"/cert/CAcert.crt", dirname+"/.shoset/"+c.GetFileName()+"/cert/privateCAKey.key")
-		if err != nil {
-			c.logger.Error().Msg("couldn't load keypair : " + err.Error())
-			return nil
-		}
-
-		ca, err := x509.ParseCertificate(catls.Certificate[0]) // we parse the previous certificate
-		if err != nil {
-			c.logger.Error().Msg("couldn't parse cert : " + err.Error())
-			return nil
-		}
-
-		// Sign the certificate
-		signedHostCert, err := x509.CreateCertificate(rand.Reader, certReq, ca, hostPublicKey, catls.PrivateKey)
-		if err != nil {
-			c.logger.Error().Msg("couldn't sign certreq : " + err.Error())
-			return nil
-		}
-		return signedHostCert
+	if !c.GetIsPki() {
+		return nil
 	}
-	return nil
+
+	dirname, err := os.UserHomeDir()
+	if err != nil {
+		c.logger.Error().Msg("couldn't get dirname : " + err.Error())
+		return nil
+	}
+
+	// Load CA
+	catls, err := tls.LoadX509KeyPair(dirname+"/.shoset/"+c.GetFileName()+"/cert/CAcert.crt", dirname+"/.shoset/"+c.GetFileName()+"/cert/privateCAKey.key")
+	if err != nil {
+		c.logger.Error().Msg("couldn't load keypair : " + err.Error())
+		return nil
+	}
+
+	ca, err := x509.ParseCertificate(catls.Certificate[0]) // we parse the previous certificate
+	if err != nil {
+		c.logger.Error().Msg("couldn't parse cert : " + err.Error())
+		return nil
+	}
+
+	// Sign the certificate
+	signedHostCert, err := x509.CreateCertificate(rand.Reader, certReq, ca, hostPublicKey, catls.PrivateKey)
+	if err != nil {
+		c.logger.Error().Msg("couldn't sign certreq : " + err.Error())
+		return nil
+	}
+	return signedHostCert
 }

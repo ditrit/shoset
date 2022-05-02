@@ -4,12 +4,10 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"time"
 
 	// "os"
-
 	// "log"
-
-	"time"
 
 	"github.com/ditrit/shoset"
 )
@@ -97,7 +95,8 @@ func loopUntilDone(tick time.Duration, ctx context.Context, callback func()) {
 // }
 
 // func shosetTest() {
-// 	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+// 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+// 	defer cancel()
 
 // 	c1 := shoset.NewShoset("c", "c")
 // 	c1.Bind("localhost:8301")
@@ -153,7 +152,8 @@ func loopUntilDone(tick time.Duration, ctx context.Context, callback func()) {
 // }
 
 // func shosetTestEtoile() {
-// 	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+// 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+// 	defer cancel()
 
 // 	cl1 := shoset.NewShoset("cl", "cl")
 // 	cl1.Bind("localhost:8001")
@@ -286,8 +286,10 @@ func loopUntilDone(tick time.Duration, ctx context.Context, callback func()) {
 // }
 
 // func testQueue() {
-// 	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
-// 	/*	// First let's make 2 sockets talk each other
+// 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+// 	defer cancel()
+//
+//      /*      // First let's make 2 sockets talk each other
 // 		C1 := shoset.NewShoset("C1", "c")
 // 		C1.Bind("localhost:8261")
 // 		C1.Protocol("localhost:8262","link")
@@ -317,7 +319,8 @@ func loopUntilDone(tick time.Duration, ctx context.Context, callback func()) {
 // }
 
 func simpleCluster() {
-	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 	cl1 := shoset.NewShoset("cl", "cl")
 	cl1.Bind("localhost:8001") //we take the port 8001 for our first socket
 
@@ -327,7 +330,8 @@ func simpleCluster() {
 }
 
 func simpleAgregator() {
-	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 	aga1 := shoset.NewShoset("aga", "a") // agregateur
 	aga1.Protocol("localhost:8111", "localhost:8001", "link")
 
@@ -337,7 +341,8 @@ func simpleAgregator() {
 }
 
 func simpleConnector() {
-	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 	Ca1 := shoset.NewShoset("Ca", "c") // agregateur
 	Ca1.Protocol("localhost:8211", "localhost:8111", "link")
 
@@ -347,7 +352,8 @@ func simpleConnector() {
 }
 
 func simplesimpleConnector() {
-	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 	Ca1 := shoset.NewShoset("Ca", "c") // agregateur
 	Ca1.Bind("localhost:8211")
 
@@ -357,7 +363,8 @@ func simplesimpleConnector() {
 }
 
 func testJoin1() {
-	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 
 	cl1 := shoset.NewShoset("cl", "cl")
 	cl1.Bind("localhost:8001")
@@ -376,7 +383,8 @@ func testJoin1() {
 }
 
 func testJoin2() {
-	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 
 	cl2 := shoset.NewShoset("cl", "cl")                      // always "cl" "cl" for gandalf
 	cl2.Protocol("localhost:8002", "localhost:8001", "join") // we join it to our first socket
@@ -392,7 +400,8 @@ func testJoin2() {
 }
 
 func testJoin3() {
-	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 
 	cl1 := shoset.NewShoset("cl", "cl") // cluster
 	cl1.Bind("localhost:8001")
@@ -419,7 +428,8 @@ func testJoin3() {
 }
 
 func testJoin4() {
-	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 
 	cl2 := shoset.NewShoset("cl", "cl")                      // always "cl" "cl" for gandalf
 	cl2.Protocol("localhost:8002", "localhost:8001", "join") // we join it to our first socket
@@ -442,7 +452,8 @@ func testJoin4() {
 }
 
 // func testJoin() {
-// 	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+// 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+// 	defer cancel()
 
 // 	cl2 := shoset.NewShoset("cl", "cl") // always "cl" "cl" for gandalf
 // 	fmt.Println("\ncl : ", cl2)
@@ -469,7 +480,8 @@ func testJoin4() {
 // }
 
 // func test_link() {
-// 	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+// 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+// 	defer cancel()
 
 // 	cl1 := shoset.NewShoset("cl", "cl") // cluster
 // 	cl1.Bind("localhost:8001")
@@ -520,7 +532,8 @@ func testJoin4() {
 // }
 
 func test_link1() {
-	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 
 	cl1 := shoset.NewShoset("cl", "cl") // cluster
 	cl1.Bind("localhost:8001")
@@ -551,7 +564,8 @@ func test_link1() {
 }
 
 func test_link2() {
-	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 
 	cl2 := shoset.NewShoset("cl", "cl")
 	cl2.Protocol("localhost:8002", "localhost:8001", "join")
@@ -578,7 +592,8 @@ func test_link2() {
 }
 
 func test_link3() {
-	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 
 	cl1 := shoset.NewShoset("cl", "cl") // cluster
 	cl1.Bind("localhost:8001")
@@ -609,7 +624,8 @@ func test_link3() {
 }
 
 func test_link4() {
-	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 
 	cl2 := shoset.NewShoset("cl", "cl")
 	cl2.Protocol("localhost:8002", "localhost:8001", "join")
@@ -636,7 +652,8 @@ func test_link4() {
 }
 
 func test_link5() {
-	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 
 	cl1 := shoset.NewShoset("cl", "cl") // cluster
 	cl1.Bind("localhost:8001")
@@ -675,7 +692,8 @@ func test_link5() {
 }
 
 func test_link6() {
-	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 
 	cl2 := shoset.NewShoset("cl", "cl")
 	cl2.Protocol("localhost:8002", "localhost:8001", "join")
@@ -710,7 +728,8 @@ func test_link6() {
 }
 
 func test_link7() {
-	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 
 	cl1 := shoset.NewShoset("cl", "cl") // cluster
 	cl1.Bind("localhost:8001")
@@ -745,7 +764,8 @@ func test_link7() {
 }
 
 func test_link8() {
-	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 
 	cl1 := shoset.NewShoset("cl", "cl") // cluster
 	cl1.InitPKI("localhost:8001")

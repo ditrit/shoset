@@ -30,6 +30,7 @@ func (ch *CommandHandler) Send(c *Shoset, m msg.Message) {
 	c.ConnsByName.IterateAll(
 		func(key string, conn *ShosetConn) {
 			if err := conn.SendMessage(m); err != nil {
+				conn.ch.logger.Warn().Msg("couldn't send command msg : " + err.Error())
 			}
 		},
 	)

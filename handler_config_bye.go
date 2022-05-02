@@ -49,7 +49,6 @@ func (cbh *ConfigByeHandler) Handle(c *ShosetConn, message msg.Message) error {
 func (cbh *ConfigByeHandler) Send(c *Shoset, m msg.Message) {
 	// no-op
 	log.Warn().Msg("ConfigByeHandler.Send not implemented")
-	return
 }
 
 // WaitConfig :

@@ -113,7 +113,6 @@ func (clh *ConfigLinkHandler) Handle(c *ShosetConn, message msg.Message) error {
 func (clh *ConfigLinkHandler) Send(c *Shoset, m msg.Message) {
 	// no-op
 	log.Warn().Msg("ConfigLinkHandler.Send not implemented")
-	return
 }
 
 // WaitConfigLink :
