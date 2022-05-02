@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/rs/zerolog/log"
 	"io/ioutil"
 	"net"
 	"os"
@@ -109,28 +110,28 @@ func InitConfFolder(_ipAddress string) (string, error) {
 	if !fileExists(dirname + "/.shoset/") {
 		err := os.Mkdir(dirname+"/.shoset/", 0700)
 		if err != nil {
-			fmt.Println("couldn't create folder shoset")
+			log.Error().Msg("couldn't create folder shoset : " + err.Error())
 			return "", err
 		}
 	}
 	if !fileExists(dirname + "/.shoset/" + _ipAddress + "/") {
 		err = os.Mkdir(dirname+"/.shoset/"+_ipAddress+"/", 0700)
 		if err != nil {
-			fmt.Println("couldn't create folder ip")
+			log.Error().Msg("couldn't create folder ip : " + err.Error())
 			return "", err
 		}
 	}
 	if !fileExists(dirname + "/.shoset/" + _ipAddress + "/config/") {
 		err = os.Mkdir(dirname+"/.shoset/"+_ipAddress+"/config/", 0700)
 		if err != nil {
-			fmt.Println("couldn't create folder config")
+			log.Error().Msg("couldn't create folder config : " + err.Error())
 			return "", err
 		}
 	}
 	if !fileExists(dirname + "/.shoset/" + _ipAddress + "/cert/") {
 		err = os.Mkdir(dirname+"/.shoset/"+_ipAddress+"/cert/", 0700)
 		if err != nil {
-			fmt.Println("couldn't create folder cert")
+			log.Error().Msg("couldn't create folder cert : " + err.Error())
 			return "", err
 		}
 	}

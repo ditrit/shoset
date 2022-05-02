@@ -3,7 +3,7 @@ package msg
 import (
 	"bufio"
 	"encoding/gob"
-	"fmt"
+	"github.com/rs/zerolog/log"
 	"io"
 	"sync"
 )
@@ -41,7 +41,7 @@ func (r *Reader) ReadMessage(data interface{}) error {
 	enc := gob.NewDecoder(r.b)
 	err := enc.Decode(data)
 	if err != nil {
-		fmt.Printf("error in ReadMessage : %s\n", err)
+		log.Error().Msg("error in ReadMessage : " + err.Error())
 	}
 	return err
 }

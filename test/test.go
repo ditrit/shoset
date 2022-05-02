@@ -916,6 +916,7 @@ func test_pki_client(ctx context.Context, done context.CancelFunc) {
 func main() {
 	shoset.InitPrettyLogger(false)
 	shoset.SetLogLevel("debug")
+
 	ctx, done := context.WithTimeout(context.Background(), 1*time.Minute)
 
 	//terminal

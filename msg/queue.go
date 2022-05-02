@@ -57,13 +57,9 @@ func (q *Queue) GetByReferencesUUID(uuid string) *Event {
 
 // Push : insert a new value in the queue except if the UUID is already present and remove after timeout expiration
 func (q *Queue) Push(m Message, RemoteShosetType, RemoteAddress string) bool {
-	// fmt.Printf("Push a message!\n")
-
 	// Let's first initialize the Cell with all our data
 	var c Cell
 	c.key = m.GetUUID()
-	// fmt.Println("key")
-	// fmt.Println(c.key)
 	c.timeout = m.GetTimeout()
 	c.RemoteShosetType = RemoteShosetType
 	c.RemoteAddress = RemoteAddress

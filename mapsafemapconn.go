@@ -1,7 +1,7 @@
 package shoset
 
 import (
-	"fmt"
+	"github.com/rs/zerolog/log"
 	"os"
 	"sync"
 
@@ -99,12 +99,12 @@ func (m *MapSafeMapConn) updateFile(lname, protocolType, fileName string, keys [
 		m.viperConfig.Set(protocolType, keys)
 		dirname, err := os.UserHomeDir()
 		if err != nil {
-			fmt.Println("couldn't get dirname : ", err)
+			log.Error().Msg("couldn't get dirname : " + err.Error())
 			return
 		}
 		err = m.viperConfig.WriteConfigAs(dirname + "/.shoset/" + fileName + "/config/config.yaml")
 		if err != nil {
-			fmt.Println("error in writting config : ", err)
+			log.Error().Msg("error in writting config : " + err.Error())
 			return
 		}
 	}
@@ -127,11 +127,6 @@ func (m *MapSafeMapConn) IterateAll(iter func(string, *ShosetConn)) {
 	}
 }
 
-// Len : return length of the map
-// func (m *MapSafeMapConn) Len() int {
-// 	return len(m.m)
-// }
-
 func (m *MapSafeMapConn) SetViper(viperConfig *viper.Viper) {
 	m.viperConfig = viperConfig
 }
@@ -144,9 +139,3 @@ func (m *MapSafeMapConn) Keys() []string { // list of logical names inside Conns
 	})
 	return lNames
 }
-
-// func (m *MapSafeMapConn) Keys() []string { // list of logical names inside ConnsByName
-// 	m.Lock()
-// 	defer m.Unlock()
-// 	return m._keys()
-// }

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -27,20 +28,17 @@ func SetLogLevel(lv string) {
 }
 
 func LogWithCaller() {
-	log.Logger = log.With().Caller().Logger()
-
+	log.Logger = log.With().Caller().Logger() // Add file and line number to log
 }
 
 func InitPrettyLogger(colored bool) {
-	format := "2006-01-02T15:04:05.999Z07:00" // RFC3339 w/ millisecond
-	output := zerolog.ConsoleWriter{Out: os.Stdout, TimeFormat: format, NoColor: !colored}
+	// format := "2006-01-02T15:04:05.999Z07:00" // RFC3339 w/ millisecond
+	output := zerolog.ConsoleWriter{Out: os.Stdout, TimeFormat: time.RFC3339Nano, NoColor: !colored}
 	output.FormatLevel = func(i interface{}) string {
 		return strings.ToUpper(fmt.Sprintf("| %-6s|", i))
 	}
 	log.Logger = log.Output(output)
 	LogWithCaller()
-	// log.Info().Str("foo", "bar").Msg("Logger initialised!")
-	log.Info().Msg("Logger initialised!")
 }
 
 func Log(msg string) {

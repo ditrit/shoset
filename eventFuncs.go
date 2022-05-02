@@ -1,8 +1,9 @@
 package shoset
 
 import (
-	"fmt"
 	"time"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/ditrit/shoset/msg"
 )
@@ -27,12 +28,12 @@ func HandleEvent(c *ShosetConn, message msg.Message) error {
 func SendEventConn(c *ShosetConn, evt interface{}) {
 	_, err := c.WriteString("evt")
 	if err != nil {
-		fmt.Println("couldn't write string evt : ", err)
+		log.Error().Msg("couldn't write string evt : " + err.Error())
 		return
 	}
 	err = c.WriteMessage(evt)
 	if err != nil {
-		fmt.Println("couldn't write message evt : ", err)
+		log.Error().Msg("couldn't write message evt : " + err.Error())
 		return
 	}
 }
@@ -43,7 +44,7 @@ func SendEvent(c *Shoset, evt msg.Message) {
 		func(key string, conn *ShosetConn) {
 			err := conn.SendMessage(evt)
 			if err != nil {
-				fmt.Println("couldn't send evt : ", err)
+				log.Error().Msg("couldn't send evt : " + err.Error())
 			}
 		},
 	)
