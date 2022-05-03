@@ -60,7 +60,7 @@ func (m *SyncMapConn) Keys(dir string) []string { // list of addresses depending
 		})
 	} else {
 		m.m.Range(func(key, value interface{}) bool {
-			if m.Get(key.(string)).GetDir() == dir {
+			if value.(*ShosetConn).GetDir() == dir {
 				addresses = append(addresses, key.(string))
 			}
 			return true

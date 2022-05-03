@@ -4,7 +4,6 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"io/ioutil"
-	"os"
 
 	"github.com/ditrit/shoset/msg"
 	"github.com/rs/zerolog/log"
@@ -22,10 +21,6 @@ func (ceh *PkiEventHandler) Get(c *ShosetConn) (msg.Message, error) {
 // HandleConfigPkiEvent :
 func (ceh *PkiEventHandler) Handle(c *ShosetConn, message msg.Message) error {
 	evt := message.(msg.PkiEvent)
-	dirname, err := os.UserHomeDir()
-	if err != nil {
-		return err
-	}
 
 	if c.ch.GetIsPki() && evt.GetCommand() == "pkievt" {
 		// si je suis pki :
@@ -40,7 +35,8 @@ func (ceh *PkiEventHandler) Handle(c *ShosetConn, message msg.Message) error {
 
 		// 4. une shoset en double way me transmet une certreq et je suis pki
 		if evt.GetCertReq() != nil {
-			CAcert, err := ioutil.ReadFile(dirname + "/.shoset/" + c.ch.GetFileName() + "/cert/CAcert.crt")
+			cfgDir := c.ch.GetConfigDir()
+			CAcert, err := ioutil.ReadFile(cfgDir + c.ch.GetFileName() + "/cert/CAcert.crt")
 			if err != nil {
 				return err
 			}
@@ -49,7 +45,7 @@ func (ceh *PkiEventHandler) Handle(c *ShosetConn, message msg.Message) error {
 				var returnPkiEvent *msg.PkiEvent
 
 				if c.ch.GetLogicalName() == evt.GetLogicalName() { // les clusters deviennent à leur tour pki
-					CAprivateKeyBytes, err := ioutil.ReadFile(dirname + "/.shoset/" + c.ch.GetFileName() + "/cert/privateCAKey.key")
+					CAprivateKeyBytes, err := ioutil.ReadFile(cfgDir + c.ch.GetFileName() + "/cert/privateCAKey.key")
 					if err != nil {
 						return err
 					}

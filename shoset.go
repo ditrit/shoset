@@ -4,17 +4,14 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
-	"sync"
-
 	"net"
-	"os"
 	"strings"
+	"sync"
 
 	"github.com/ditrit/shoset/msg"
 	uuid "github.com/kjk/betterguid"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
-	"github.com/spf13/viper"
 )
 
 //terminal
@@ -62,7 +59,7 @@ type Shoset struct {
 	// synchronisation des goroutines
 	Done chan bool
 
-	viperConfig               *viper.Viper
+	config                    *Config
 	isValid                   bool
 	isPki                     bool
 	isCertified               bool
@@ -84,6 +81,7 @@ func (c *Shoset) GetIsCertified() bool               { return c.isCertified }
 func (c *Shoset) GetWentThroughPkiOnce() bool        { return c.wentThroughPkiOnce }
 func (c *Shoset) GetWentThroughHandleBindOnce() bool { return c.wentThroughHandleBindOnce }
 func (c *Shoset) GetFileName() string                { return c.fileName }
+func (c *Shoset) GetConfigDir() string               { return c.config.GetBaseDir() }
 
 func (c *Shoset) SetBindAddress(bindAddress string) {
 	c.bindAddress = bindAddress
@@ -124,7 +122,7 @@ func NewShoset(lName, ShosetType string) *Shoset { //l
 		Context:            make(map[string]interface{}),
 		lName:              lName,
 		ShosetType:         ShosetType,
-		viperConfig:        viper.New(),
+		config:             NewConfig(),
 		ConnsByName:        NewMapSafeMapConn(),
 		LnamesByType:       NewMapSafeStrings(),
 		LnamesByProtocol:   NewMapSafeStrings(),
@@ -146,7 +144,7 @@ func NewShoset(lName, ShosetType string) *Shoset { //l
 		tlsConfigDoubleWay: nil,
 	}
 
-	shst.ConnsByName.SetViper(shst.viperConfig)
+	shst.ConnsByName.SetConfig(shst.config)
 
 	shst.Queue["cfglink"] = msg.NewQueue()
 	shst.Handlers["cfglink"] = new(ConfigLinkHandler)
@@ -197,18 +195,7 @@ func (c *Shoset) Bind(address string) error {
 		return errors.New("TLS configuration not OK (certificate not found / loaded)")
 	}
 
-	// viper config
-	dirname, err := os.UserHomeDir()
-	if err != nil {
-		c.logger.Error().Msg("couldn't get dirname : " + err.Error())
-		return err
-	}
-
-	c.viperConfig.AddConfigPath(dirname + "/.shoset/" + c.GetFileName() + "/config/")
-	c.viperConfig.SetConfigName(c.GetFileName())
-	c.viperConfig.SetConfigType("yaml")
-
-	if err := c.viperConfig.ReadInConfig(); err == nil {
+	if err := c.config.ReadConfig(c.GetFileName()); err == nil {
 		remotesToJoin, remotesToLink := c.ConnsByName.GetConfig() // get all the sockets we need to join
 		for _, remote := range remotesToJoin {
 			c.Protocol(address, remote, "join")
@@ -305,9 +292,9 @@ func (c *Shoset) Protocol(bindAddress, remoteAddress, protocolType string) {
 		_ipAddress := strings.Replace(ipAddress, ":", "_", -1)
 		_ipAddress = strings.Replace(_ipAddress, ".", "-", -1)
 
-		_, err = InitConfFolder(_ipAddress)
-		if err != nil { // initialization of folder did'nt work
-			c.logger.Error().Msg("couldn't init folder : " + err.Error())
+		_, err = c.config.InitFolders(_ipAddress)
+		if err != nil { // initialization of folders did not work
+			c.logger.Error().Msg("couldn't init folder: " + err.Error())
 			return
 		}
 

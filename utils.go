@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/rs/zerolog/log"
 	"io/ioutil"
 	"net"
 	"os"
@@ -99,44 +98,6 @@ func GetByType(m *MapSafeConn, shosetType string) []*ShosetConn {
 	}
 	//m.Unlock()
 	return result
-}
-
-func InitConfFolder(_ipAddress string) (string, error) {
-	dirname, err := os.UserHomeDir()
-	if err != nil {
-		return "", err
-	}
-
-	if !fileExists(dirname + "/.shoset/") {
-		err := os.Mkdir(dirname+"/.shoset/", 0700)
-		if err != nil {
-			log.Error().Msg("couldn't create folder shoset : " + err.Error())
-			return "", err
-		}
-	}
-	if !fileExists(dirname + "/.shoset/" + _ipAddress + "/") {
-		err = os.Mkdir(dirname+"/.shoset/"+_ipAddress+"/", 0700)
-		if err != nil {
-			log.Error().Msg("couldn't create folder ip : " + err.Error())
-			return "", err
-		}
-	}
-	if !fileExists(dirname + "/.shoset/" + _ipAddress + "/config/") {
-		err = os.Mkdir(dirname+"/.shoset/"+_ipAddress+"/config/", 0700)
-		if err != nil {
-			log.Error().Msg("couldn't create folder config : " + err.Error())
-			return "", err
-		}
-	}
-	if !fileExists(dirname + "/.shoset/" + _ipAddress + "/cert/") {
-		err = os.Mkdir(dirname+"/.shoset/"+_ipAddress+"/cert/", 0700)
-		if err != nil {
-			log.Error().Msg("couldn't create folder cert : " + err.Error())
-			return "", err
-		}
-	}
-
-	return dirname, nil
 }
 
 // pki
@@ -255,6 +216,13 @@ func putPrivateKey(c *cli.Context, d *depot.FileDepot, name string, key *pkix.Ke
 func fileExists(filepath string) bool {
 	_, err := os.Stat(filepath)
 	return !os.IsNotExist(err)
+}
+
+func maybeMkdir(path string) error {
+	if !fileExists(path) {
+		return os.Mkdir(path, 0700)
+	}
+	return nil
 }
 
 func contains(s []string, str string) bool {

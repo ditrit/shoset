@@ -44,8 +44,8 @@ func (c *Shoset) InitPKI(address string) {
 	_ipAddress = strings.Replace(_ipAddress, ".", "-", -1)
 	c.SetFileName(_ipAddress)
 
-	dirname, err := InitConfFolder(_ipAddress)
-	if err != nil { // initialization of folder did'nt work
+	cfgDir, err := c.config.InitFolders(_ipAddress)
+	if err != nil { // initialization of folders did not work
 		c.logger.Error().Msg("couldn't get dirname : " + err.Error())
 		return
 	}
@@ -79,7 +79,7 @@ func (c *Shoset) InitPKI(address string) {
 	}
 
 	fname := c.GetFileName()
-	CAcertFile, err := os.Create(dirname + "/.shoset/" + fname + "/cert/CAcert.crt")
+	CAcertFile, err := os.Create(cfgDir + fname + "/cert/CAcert.crt")
 	if err != nil {
 		c.logger.Error().Msg("couldn't create CAcertFile : " + err.Error())
 		return
@@ -92,7 +92,7 @@ func (c *Shoset) InitPKI(address string) {
 	CAcertFile.Close()
 
 	// Private key
-	CAprivateKeyFile, err := os.OpenFile(dirname+"/.shoset/"+fname+"/cert/privateCAKey.key", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
+	CAprivateKeyFile, err := os.OpenFile(cfgDir+fname+"/cert/privateCAKey.key", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
 		c.logger.Error().Msg("couldn't open CAprivateKeyfile : " + err.Error())
 		return
@@ -116,7 +116,7 @@ func (c *Shoset) InitPKI(address string) {
 		c.logger.Error().Msg("dign cert didn't work")
 		return
 	}
-	certFile, err := os.Create(dirname + "/.shoset/" + fname + "/cert/cert.crt")
+	certFile, err := os.Create(cfgDir + fname + "/cert/cert.crt")
 	if err != nil {
 		c.logger.Error().Msg("couldn't create certFile : " + err.Error())
 		return
@@ -138,15 +138,15 @@ func (c *Shoset) InitPKI(address string) {
 	}
 
 	// point env variable to our CAcert so that computer does not point elsewhere
-	os.Setenv("SSL_CERT_FILE", dirname+"/.shoset/"+fname+"/cert/CAcert.crt")
+	os.Setenv("SSL_CERT_FILE", cfgDir+fname+"/cert/CAcert.crt")
 
 	// tls Double way
-	cert, err := tls.LoadX509KeyPair(dirname+"/.shoset/"+fname+"/cert/cert.crt", dirname+"/.shoset/"+fname+"/cert/privateKey.key")
+	cert, err := tls.LoadX509KeyPair(cfgDir+fname+"/cert/cert.crt", cfgDir+fname+"/cert/privateKey.key")
 	if err != nil {
 		c.logger.Error().Msg("Unable to Load certificate : " + err.Error())
 		return
 	}
-	CAcertBytes, err := ioutil.ReadFile(dirname + "/.shoset/" + fname + "/cert/CAcert.crt")
+	CAcertBytes, err := ioutil.ReadFile(cfgDir + fname + "/cert/CAcert.crt")
 	if err != nil {
 		c.logger.Error().Msg("error read file cacert : " + err.Error())
 		return
@@ -180,11 +180,6 @@ func (c *Shoset) GenerateSecret(login, password string) string {
 }
 
 func (c *Shoset) PrepareCertificate() (*x509.Certificate, *rsa.PublicKey, *rsa.PrivateKey) {
-	dirname, err := os.UserHomeDir()
-	if err != nil {
-		return nil, nil, nil
-	}
-
 	// Prepare new certificate
 	// voir infos du certificat généré
 	// openssl x509 -in ./cert.crt -text -noout
@@ -211,7 +206,7 @@ func (c *Shoset) PrepareCertificate() (*x509.Certificate, *rsa.PublicKey, *rsa.P
 	hostPublicKey := &hostPrivateKey.PublicKey
 
 	// Private key
-	hostPrivateKeyFile, err := os.OpenFile(dirname+"/.shoset/"+c.GetFileName()+"/cert/privateKey.key", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
+	hostPrivateKeyFile, err := os.OpenFile(c.GetConfigDir()+c.GetFileName()+"/cert/privateKey.key", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
 		c.logger.Error().Msg("error open hostPrivateKeyFile : " + err.Error())
 		return nil, nil, nil
@@ -236,14 +231,9 @@ func (c *Shoset) SignCertificate(certReq *x509.Certificate, hostPublicKey *rsa.P
 		return nil
 	}
 
-	dirname, err := os.UserHomeDir()
-	if err != nil {
-		c.logger.Error().Msg("couldn't get dirname : " + err.Error())
-		return nil
-	}
-
 	// Load CA
-	catls, err := tls.LoadX509KeyPair(dirname+"/.shoset/"+c.GetFileName()+"/cert/CAcert.crt", dirname+"/.shoset/"+c.GetFileName()+"/cert/privateCAKey.key")
+	fileDir := c.GetConfigDir() + c.GetFileName() + "/cert"
+	catls, err := tls.LoadX509KeyPair(fileDir+"/CAcert.crt", fileDir+"/privateCAKey.key")
 	if err != nil {
 		c.logger.Error().Msg("couldn't load keypair : " + err.Error())
 		return nil

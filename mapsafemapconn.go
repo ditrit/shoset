@@ -1,18 +1,15 @@
 package shoset
 
 import (
-	"github.com/rs/zerolog/log"
-	"os"
 	"sync"
 
-	"github.com/spf13/viper"
+	"github.com/rs/zerolog/log"
 )
 
 // MapSafeMapConn : simple key map safe for goroutines...
 type MapSafeMapConn struct {
-	m           sync.Map
-	viperConfig *viper.Viper
-	sync.Mutex
+	m   sync.Map
+	cfg *Config
 }
 
 // NewMapSafeMapConn : constructor
@@ -31,7 +28,7 @@ func (m *MapSafeMapConn) Get(key string) *SyncMapConn {
 }
 
 func (m *MapSafeMapConn) GetConfig() ([]string, []string) {
-	return m.viperConfig.GetStringSlice("join"), m.viperConfig.GetStringSlice("link")
+	return m.cfg.GetSlice("join"), m.cfg.GetSlice("link")
 }
 
 // Set : assign a value to a MapSafeMapConn
@@ -92,21 +89,15 @@ func (m *MapSafeMapConn) Delete(lname, key, fileName string) {
 }
 
 func (m *MapSafeMapConn) updateFile(lname, protocolType, fileName string, keys []string) {
-	m.Lock()
-	defer m.Unlock()
+	if m.cfg == nil || fileName == "" {
+		// no-op
+		return
+	}
 
-	if fileName != "" {
-		m.viperConfig.Set(protocolType, keys)
-		dirname, err := os.UserHomeDir()
-		if err != nil {
-			log.Error().Msg("couldn't get dirname : " + err.Error())
-			return
-		}
-		err = m.viperConfig.WriteConfigAs(dirname + "/.shoset/" + fileName + "/config/config.yaml")
-		if err != nil {
-			log.Error().Msg("error in writting config : " + err.Error())
-			return
-		}
+	m.cfg.Set(protocolType, keys)
+	if err := m.cfg.WriteConfig(fileName); err != nil {
+		log.Error().Msg("error writing config: " + err.Error())
+		return
 	}
 }
 
@@ -127,8 +118,8 @@ func (m *MapSafeMapConn) IterateAll(iter func(string, *ShosetConn)) {
 	}
 }
 
-func (m *MapSafeMapConn) SetViper(viperConfig *viper.Viper) {
-	m.viperConfig = viperConfig
+func (m *MapSafeMapConn) SetConfig(cfg *Config) {
+	m.cfg = cfg
 }
 
 func (m *MapSafeMapConn) Keys() []string { // list of logical names inside ConnsByName

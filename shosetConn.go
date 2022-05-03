@@ -189,9 +189,7 @@ func (c *ShosetConn) runPkiRequest() error {
 				return errors.New("shoset not valid")
 			}
 
-			c.ch.logger.Info().Msg("gonna dial")
 			conn, err := tls.Dial("tcp", c.GetRemoteAddress(), c.ch.tlsConfigSingleWay)
-			c.ch.logger.Info().Msg("dial done")
 			if err != nil {
 				time.Sleep(time.Millisecond * time.Duration(100))
 				c.ch.logger.Error().Msg(err.Error())
@@ -241,14 +239,9 @@ func (c *ShosetConn) runPkiRequest() error {
 				}
 
 				if evt.GetSignedCert() != nil && evt.GetCAcert() != nil {
-					dirname, err := os.UserHomeDir()
-					if err != nil {
-						c.ch.logger.Error().Msg("did not find home dir : " + err.Error())
-						return err
-					}
-
+					certDir := c.ch.GetConfigDir() + c.ch.GetFileName() + "/cert"
 					signedCert := evt.GetSignedCert()
-					certFile, err := os.Create(dirname + "/.shoset/" + c.ch.GetFileName() + "/cert/cert.crt")
+					certFile, err := os.Create(certDir + "/cert.crt")
 					if err != nil {
 						c.ch.logger.Error().Msg("couldn't create certfile : " + err.Error())
 						break
@@ -257,7 +250,7 @@ func (c *ShosetConn) runPkiRequest() error {
 					certFile.Close()
 
 					caCert := evt.GetCAcert()
-					err = ioutil.WriteFile(dirname+"/.shoset/"+c.ch.GetFileName()+"/cert/CAcert.crt", caCert, 0644)
+					err = ioutil.WriteFile(certDir+"/CAcert.crt", caCert, 0644)
 					if err != nil {
 						c.ch.logger.Error().Msg("couldn't write CAcert : " + err.Error())
 						break
@@ -265,7 +258,7 @@ func (c *ShosetConn) runPkiRequest() error {
 
 					if evt.GetCAprivateKey() != nil {
 						caPrivateKey := evt.GetCAprivateKey()
-						CAprivateKeyFile, err := os.OpenFile(dirname+"/.shoset/"+c.ch.GetFileName()+"/cert/privateCAKey.key", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
+						CAprivateKeyFile, err := os.OpenFile(certDir+"/privateCAKey.key", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 						if err != nil {
 							c.ch.logger.Error().Msg("couldn't create CAprivateKeyFile : " + err.Error())
 							break
@@ -278,14 +271,14 @@ func (c *ShosetConn) runPkiRequest() error {
 					c.ch.SetIsCertified(true)
 
 					// point env variable to our CAcert so that computer does not point elsewhere
-					os.Setenv("SSL_CERT_FILE", dirname+"/.shoset/"+c.ch.GetFileName()+"/cert/CAcert.crt")
+					os.Setenv("SSL_CERT_FILE", certDir+"/CAcert.crt")
 
 					// tls Double way
-					cert, err := tls.LoadX509KeyPair(dirname+"/.shoset/"+c.ch.GetFileName()+"/cert/cert.crt", dirname+"/.shoset/"+c.ch.GetFileName()+"/cert/privateKey.key")
+					cert, err := tls.LoadX509KeyPair(certDir+"/cert.crt", certDir+"/privateKey.key")
 					if err != nil {
 						c.ch.logger.Error().Msg("Unable to Load certificate : " + err.Error())
 					}
-					CAcert, err := ioutil.ReadFile(dirname + "/.shoset/" + c.ch.GetFileName() + "/cert/CAcert.crt")
+					CAcert, err := ioutil.ReadFile(certDir + "/CAcert.crt")
 					if err != nil {
 						c.ch.logger.Error().Msg("error read file cacert : " + err.Error())
 					}
@@ -494,11 +487,6 @@ func (c *ShosetConn) runInConnSingle(address_ string) {
 		return
 	}
 	evt := msgVal.(msg.PkiEvent)
-	dirname, err := os.UserHomeDir()
-	if err != nil {
-		c.ch.logger.Error().Msg("couldn't get dirname : " + err.Error())
-		return
-	}
 	if !c.ch.GetIsPki() {
 		// 2. un nouveau se connecte à moi et je suis passe plat
 		c.ch.ConnsSingleAddress.Set(evt.GetRequestAddress(), c)
@@ -510,7 +498,8 @@ func (c *ShosetConn) runInConnSingle(address_ string) {
 	}
 	// 1. un nouveau se connecte directement à moi et je suis PKI
 	if evt.GetCertReq() != nil {
-		CAcert, err := ioutil.ReadFile(dirname + "/.shoset/" + c.ch.GetFileName() + "/cert/CAcert.crt")
+		certDir := c.ch.GetConfigDir() + c.ch.GetFileName() + "/cert"
+		CAcert, err := ioutil.ReadFile(certDir + "/CAcert.crt")
 		if err != nil {
 			c.ch.logger.Error().Msg("couldn't get CAcert : " + err.Error())
 			return
@@ -521,7 +510,7 @@ func (c *ShosetConn) runInConnSingle(address_ string) {
 			var CAprivateKey *rsa.PrivateKey
 
 			if c.ch.GetLogicalName() == evt.GetLogicalName() { // les clusters deviennent à leur tour pki
-				CAprivateKeyBytes, err := ioutil.ReadFile(dirname + "/.shoset/" + c.ch.GetFileName() + "/cert/privateCAKey.key")
+				CAprivateKeyBytes, err := ioutil.ReadFile(certDir + "/privateCAKey.key")
 				if err != nil {
 					c.ch.logger.Error().Msg("couldn't get CAprivateKey : " + err.Error())
 				}
@@ -617,7 +606,8 @@ func (c *ShosetConn) receiveMsg() error {
 		if c.GetDir() == "in" {
 			c.ch.deleteConn(c.GetRemoteAddress(), c.GetRemoteLogicalName())
 		}
-		return errors.New(err.Error())
+		// return errors.New(err.Error())
+		return nil
 	case err != nil:
 		if c.GetDir() == "in" {
 			c.ch.deleteConn(c.GetRemoteAddress(), c.GetRemoteLogicalName())
