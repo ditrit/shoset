@@ -130,12 +130,6 @@ func (c *Shoset) InitPKI(address string) {
 
 	// 3. Elle associe le rôle 'pki' au nom logique de la shoset
 	c.SetIsCertified(true)
-	c.Bind(address)
-
-	if c.GetBindAddress() == "" {
-		c.logger.Error().Msg("couldn't set bindAddress")
-		return
-	}
 
 	// point env variable to our CAcert so that computer does not point elsewhere
 	os.Setenv("SSL_CERT_FILE", cfgDir+fname+"/cert/CAcert.crt")
@@ -166,6 +160,8 @@ func (c *Shoset) InitPKI(address string) {
 		Certificates:       []tls.Certificate{cert},
 		InsecureSkipVerify: false, // peut etre true
 	}
+
+	c.Bind(ipAddress)
 }
 
 // pour les shoset ayant le rôle 'pki' :
