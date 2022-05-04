@@ -11,5 +11,6 @@
 !/go.sum
 !/LICENSE
 !/README.md
+!/Dockerfile
 
 vendor
