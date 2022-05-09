@@ -436,14 +436,14 @@ func (c *ShosetConn) runByeConn() {
 	}
 }
 
-func (c *ShosetConn) runInConnSingle(address_ string) {
+func (c *ShosetConn) runInConnSingle(address string) {
 	c.rb.UpdateReader(c.socket)
 	c.wb.UpdateWriter(c.socket)
 	// c.rb = msg.NewReader(c.socket)
 	// c.wb = msg.NewWriter(c.socket)
 	// defer c.socket.Close()
 
-	// delete(c.ch.ConnsSingle, address_)
+	// delete(c.ch.ConnsSingle, address)
 
 	// receive messages
 	msgType, err := c.rb.ReadString()
@@ -493,7 +493,7 @@ func (c *ShosetConn) runInConnSingle(address_ string) {
 		pkievt := c.ch.Handlers["pkievt"]
 		pkievt.Send(c.ch, msgVal)
 		// c.socket.Close()
-		c.ch.ConnsSingle.Delete(address_)
+		c.ch.ConnsSingle.Delete(address)
 		return
 	}
 	// 1. un nouveau se connecte directement à moi et je suis PKI
@@ -535,7 +535,7 @@ func (c *ShosetConn) runInConnSingle(address_ string) {
 				c.ch.logger.Error().Msg("couldn't send singleConn returnpkievt : " + err.Error())
 			}
 			c.socket.Close()
-			c.ch.ConnsSingle.Delete(address_)
+			c.ch.ConnsSingle.Delete(address)
 			return
 		}
 	}

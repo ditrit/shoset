@@ -6,7 +6,6 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/ditrit/shoset/msg"
-	"github.com/rs/zerolog/log"
 )
 
 type EventHandler struct{}

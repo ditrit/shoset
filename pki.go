@@ -40,11 +40,11 @@ func (c *Shoset) InitPKI(address string) {
 		return
 	}
 
-	_ipAddress := strings.Replace(ipAddress, ":", "_", -1)
-	_ipAddress = strings.Replace(_ipAddress, ".", "-", -1)
-	c.SetFileName(_ipAddress)
+	formatedIpAddress := strings.Replace(ipAddress, ":", "_", -1)
+	formatedIpAddress = strings.Replace(formatedIpAddress, ".", "-", -1)
+	c.SetFileName(formatedIpAddress)
 
-	cfgDir, err := c.config.InitFolders(_ipAddress)
+	cfgDir, err := c.config.InitFolders(formatedIpAddress)
 	if err != nil { // initialization of folders did not work
 		c.logger.Error().Msg("couldn't get dirname : " + err.Error())
 		return

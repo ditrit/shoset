@@ -479,7 +479,7 @@ func testJoin4() {
 // 	<-done
 // }
 
-// func test_link() {
+// func testLink() {
 // 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 // 	defer cancel()
 
@@ -531,7 +531,7 @@ func testJoin4() {
 // 	<-done
 // }
 
-func test_link1() {
+func testLink1() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -563,7 +563,7 @@ func test_link1() {
 	})
 }
 
-func test_link2() {
+func testLink2() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -591,7 +591,7 @@ func test_link2() {
 	})
 }
 
-func test_link3() {
+func testLink3() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -623,7 +623,7 @@ func test_link3() {
 	})
 }
 
-func test_link4() {
+func testLink4() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -651,7 +651,7 @@ func test_link4() {
 	})
 }
 
-func test_link5() {
+func testLink5() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -691,7 +691,7 @@ func test_link5() {
 	})
 }
 
-func test_link6() {
+func testLink6() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -727,7 +727,7 @@ func test_link6() {
 	})
 }
 
-func test_link7() {
+func testLink7() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -763,7 +763,7 @@ func test_link7() {
 	})
 }
 
-func test_link8() {
+func testLink8() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -824,7 +824,7 @@ func test_link8() {
 	})
 }
 
-func test_pki(ctx context.Context, done context.CancelFunc) {
+func testPki(ctx context.Context, done context.CancelFunc) {
 	cl1 := shoset.NewShoset("cl", "cl") // cluster
 	cl1.InitPKI("localhost:8001")
 
@@ -884,7 +884,7 @@ func test_pki(ctx context.Context, done context.CancelFunc) {
 	z.Protocol("localhost:8512", "localhost:8412", "link")
 
 	loopUntilDone(1*time.Second, ctx, func() {
-		fmt.Println("in_callback")
+		fmt.Println("in callback")
 		// fmt.Println(cl1.GetTLSconfig())
 		fmt.Println("\ncl : ", cl1)
 		fmt.Println("\ncl : ", cl2)
@@ -906,7 +906,7 @@ func test_pki(ctx context.Context, done context.CancelFunc) {
 	})
 }
 
-func test_pki_server(ctx context.Context, done context.CancelFunc) {
+func testPkiServer(ctx context.Context, done context.CancelFunc) {
 	cl1 := shoset.NewShoset("cl", "cl") // cluster
 	cl1.InitPKI("localhost:8001")
 
@@ -917,7 +917,7 @@ func test_pki_server(ctx context.Context, done context.CancelFunc) {
 	})
 }
 
-func test_pki_client(ctx context.Context, done context.CancelFunc) {
+func testPkiClient(ctx context.Context, done context.CancelFunc) {
 	cl2 := shoset.NewShoset("cl", "cl")
 	cl2.Protocol("localhost:8002", "localhost:8001", "join")
 
@@ -942,24 +942,24 @@ func main() {
 	//terminal
 	arg := os.Args[1]
 	if arg == "1" {
-		shoset.Log("test_pki_server")
-		test_pki_server(ctx, done)
+		shoset.Log("testPkiServer")
+		testPkiServer(ctx, done)
 		// testJoin1()
 		// testJoin2()
 		// testJoin3()
 		// testJoin4()
-		// test_link1()
-		// test_link2()
-		// test_link3()
-		// test_link4()
-		// test_link5()
-		// test_link6()
-		// test_link7()
-		// test_link8()
-		// test_pki()
+		// testLink1()
+		// testLink2()
+		// testLink3()
+		// testLink4()
+		// testLink5()
+		// testLink6()
+		// testLink7()
+		// testLink8()
+		// testPki()
 	} else if arg == "2" {
-		shoset.Log("test_pki_client")
-		test_pki_client(ctx, done)
+		shoset.Log("testPkiClient")
+		testPkiClient(ctx, done)
 		// simpleCluster()
 		// simpleAgregator()
 		// simpleConnector()
@@ -967,8 +967,8 @@ func main() {
 		shoset.Log("simplesimpleConnector")
 		// simplesimpleConnector()
 	} else {
-		shoset.Log("test_pki")
-		test_pki(ctx, done)
+		shoset.Log("testPki")
+		testPki(ctx, done)
 	}
 }
 

@@ -244,22 +244,19 @@ func (c *Shoset) handleBind(wg *sync.WaitGroup) {
 			return
 		}
 
-		address_port := unencConn.RemoteAddr().String()
-		ipAddress := strings.Split(address_port, ":")[0]
-
-		if c.ConnsSingle.Get(ipAddress) {
+		if c.ConnsSingle.Get(strings.Split(unencConn.RemoteAddr().String(), ":")[0]) { // get ipAddress
 			// fmt.Println(c.GetBindAddress(), "trying singleWay")
 			tlsConn := tls.Server(unencConn, c.tlsConfigSingleWay) // create the securised connection protocol
 
-			conn, _ := NewShosetConn(c, address_port, "in") // create the securised connection
+			conn, _ := NewShosetConn(c, unencConn.RemoteAddr().String(), "in") // create the securised connection
 			conn.socket = tlsConn                           //we override socket attribut with our securised protocol
 
-			go conn.runInConnSingle(ipAddress)
+			go conn.runInConnSingle(strings.Split(unencConn.RemoteAddr().String(), ":")[0])
 		} else {
 			// fmt.Println(c.GetBindAddress(), "trying doubleWay")
 			tlsConn := tls.Server(unencConn, c.tlsConfigDoubleWay)
 
-			conn, _ := NewShosetConn(c, address_port, "in")
+			conn, _ := NewShosetConn(c, unencConn.RemoteAddr().String(), "in")
 			conn.socket = tlsConn
 
 			_, err = conn.socket.Write([]byte("hello double\n"))
@@ -271,7 +268,7 @@ func (c *Shoset) handleBind(wg *sync.WaitGroup) {
 				go conn.runInConnDouble()
 				// return nil
 			} else {
-				c.ConnsSingle.Set(ipAddress, true)
+				c.ConnsSingle.Set(strings.Split(unencConn.RemoteAddr().String(), ":")[0], true) // set ipAddress
 				conn.socket.Close()
 			}
 		}
