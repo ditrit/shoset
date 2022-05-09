@@ -825,84 +825,39 @@ func testLink8() {
 }
 
 func testPki(ctx context.Context, done context.CancelFunc) {
-	cl1 := shoset.NewShoset("cl", "cl") // cluster
-	cl1.InitPKI("localhost:8001")
+	tt := []struct {
+		lname, stype, src, dst, ptype string
+	}{
+		{lname: "cl", stype: "cl", src: "localhost:8001", dst: "", ptype: "pki"},
+		{lname: "cl", stype: "cl", src: "localhost:8002", dst: "localhost:8001", ptype: "join"},
+		{lname: "cl", stype: "cl", src: "localhost:8003", dst: "localhost:8002", ptype: "join"},
+		{lname: "cl", stype: "cl", src: "localhost:8004", dst: "localhost:8001", ptype: "join"},
+		{lname: "aga", stype: "a", src: "localhost:8111", dst: "localhost:8001", ptype: "link"},
+		{lname: "aga", stype: "a", src: "localhost:8112", dst: "localhost:8002", ptype: "link"},
+		{lname: "Ca", stype: "c", src: "localhost:8211", dst: "localhost:8111", ptype: "link"},
+		{lname: "Ca", stype: "c", src: "localhost:8212", dst: "localhost:8112", ptype: "link"},
+		{lname: "w", stype: "w", src: "localhost:8311", dst: "localhost:8211", ptype: "link"},
+		{lname: "x", stype: "x", src: "localhost:8312", dst: "localhost:8212", ptype: "link"},
+		{lname: "y", stype: "y", src: "localhost:8412", dst: "localhost:8312", ptype: "link"},
+		{lname: "z", stype: "z", src: "localhost:8512", dst: "localhost:8412", ptype: "link"},
+	}
 
-	// time.Sleep(time.Duration(5) * time.Second)
-
-	cl2 := shoset.NewShoset("cl", "cl")
-	cl2.Protocol("localhost:8002", "localhost:8001", "join")
-
-	// time.Sleep(time.Duration(5) * time.Second)
-
-	cl3 := shoset.NewShoset("cl", "cl")
-	cl3.Protocol("localhost:8003", "localhost:8002", "join")
-
-	// time.Sleep(time.Duration(5) * time.Second)
-
-	cl4 := shoset.NewShoset("cl", "cl")
-	cl4.Protocol("localhost:8004", "localhost:8001", "join")
-
-	// time.Sleep(time.Duration(5) * time.Second)
-
-	aga1 := shoset.NewShoset("aga", "a") // agregateur
-	aga1.Protocol("localhost:8111", "localhost:8001", "link")
-
-	// time.Sleep(time.Duration(5) * time.Second)
-
-	aga2 := shoset.NewShoset("aga", "a") // agregateur
-	aga2.Protocol("localhost:8112", "localhost:8002", "link")
-
-	// time.Sleep(time.Duration(5) * time.Second)
-
-	Ca1 := shoset.NewShoset("Ca", "c") //connecteur
-	Ca1.Protocol("localhost:8211", "localhost:8111", "link")
-
-	// time.Sleep(time.Duration(5) * time.Second)
-
-	Ca2 := shoset.NewShoset("Ca", "c") //connecteur
-	Ca2.Protocol("localhost:8212", "localhost:8112", "link")
-
-	// time.Sleep(time.Duration(5) * time.Second)
-
-	w := shoset.NewShoset("w", "w")
-	w.Protocol("localhost:8311", "localhost:8211", "link")
-
-	// time.Sleep(time.Duration(5) * time.Second)
-
-	x := shoset.NewShoset("x", "x")
-	x.Protocol("localhost:8312", "localhost:8212", "link")
-
-	// time.Sleep(time.Duration(5) * time.Second)
-
-	y := shoset.NewShoset("y", "y")
-	y.Protocol("localhost:8412", "localhost:8312", "link")
-
-	// time.Sleep(time.Duration(5) * time.Second)
-
-	z := shoset.NewShoset("z", "z")
-	z.Protocol("localhost:8512", "localhost:8412", "link")
+	s := make([]*shoset.Shoset, len(tt), len(tt))
+	for i, t := range tt {
+		s[i] = shoset.NewShoset(t.lname, t.stype)
+		if t.ptype == "pki" {
+			s[i].InitPKI(t.src)
+		} else {
+			s[i].Protocol(t.src, t.dst, t.ptype)
+		}
+	}
 
 	loopUntilDone(1*time.Second, ctx, func() {
-		fmt.Println("in callback")
-		// fmt.Println(cl1.GetTLSconfig())
-		fmt.Println("\ncl : ", cl1)
-		fmt.Println("\ncl : ", cl2)
-		fmt.Println("\ncl : ", cl3)
-		fmt.Println("\ncl : ", cl4)
-		fmt.Println("\nag : ", aga1)
-		fmt.Println("\nag : ", aga2)
-		fmt.Println("\nca : ", Ca1)
-		fmt.Println("\nca : ", Ca2)
-		fmt.Println("\nw : ", w)
-		fmt.Println("\nx : ", x)
-		fmt.Println("\ny : ", y)
-		fmt.Println("\nz : ", z)
+		fmt.Println("in_callback")
+		for _, conn := range s {
+			fmt.Printf("%s: %v", conn.GetLogicalName(), conn.PrettyPrint())
+		}
 		done()
-		// fmt.Println("wait 10s")
-		// time.Sleep(time.Second * time.Duration(10))
-		// fmt.Println("waited 10s")
-		// fmt.Println("ConnsByTypeArray('cl')", aga1.GetConnsByTypeArray("c"))
 	})
 }
 
