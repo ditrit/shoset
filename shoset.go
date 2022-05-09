@@ -172,15 +172,29 @@ func NewShoset(lName, ShosetType string) *Shoset { //l
 	return &shst
 }
 
-// Display properly - override the print of the object
+// String returns the formatted string of Shoset object.
 func (c *Shoset) String() string {
-	descr := fmt.Sprintf("Shoset -  lName: %s,\n\t\tbindAddr : %s,\n\t\ttype : %s, \n\t\tisPki : %t, \n\t\tisCertified : %t, \n\t\tConnsByName : ", c.GetLogicalName(), c.GetBindAddress(), c.GetShosetType(), c.GetIsPki(), c.GetIsCertified())
+	var conns []string
 	for _, lName := range c.ConnsByName.Keys() {
 		c.ConnsByName.Iterate(lName,
 			func(key string, val *ShosetConn) {
-				descr = fmt.Sprintf("%s %s\n\t\t\t     ", descr, val)
+				conns = append(conns, val.String())
 			})
 	}
+	descr := fmt.Sprintf("Shoset{ lName: %s, bindAddr: %s, type: %s, isPki: %t, isCertified: %t, ConnsByName: [%s]}\n", c.GetLogicalName(), c.GetBindAddress(), c.GetShosetType(), c.GetIsPki(), c.GetIsCertified(), strings.Join(conns, ", "))
+	return descr
+}
+
+// PrettyPrint returns the indented string of Shoset object.
+func (c *Shoset) PrettyPrint() string {
+	descr := fmt.Sprintf("Shoset{\n\t- lName: %s,\n\t- bindAddr : %s,\n\t- type : %s, \n\t- isPki : %t, \n\t- isCertified : %t, \n\t- ConnsByName:", c.GetLogicalName(), c.GetBindAddress(), c.GetShosetType(), c.GetIsPki(), c.GetIsCertified())
+	for _, lName := range c.ConnsByName.Keys() {
+		c.ConnsByName.Iterate(lName,
+			func(key string, val *ShosetConn) {
+				descr += fmt.Sprintf("\n\t\t* %s", val)
+			})
+	}
+	descr += fmt.Sprint("\n}\n")
 	return descr
 }
 
@@ -249,7 +263,7 @@ func (c *Shoset) handleBind(wg *sync.WaitGroup) {
 			tlsConn := tls.Server(unencConn, c.tlsConfigSingleWay) // create the securised connection protocol
 
 			conn, _ := NewShosetConn(c, unencConn.RemoteAddr().String(), "in") // create the securised connection
-			conn.socket = tlsConn                           //we override socket attribut with our securised protocol
+			conn.socket = tlsConn                                              //we override socket attribut with our securised protocol
 
 			go conn.runInConnSingle(strings.Split(unencConn.RemoteAddr().String(), ":")[0])
 		} else {

@@ -152,7 +152,7 @@ func NewShosetConn(c *Shoset, address string, dir string) (*ShosetConn, error) {
 }
 
 func (c *ShosetConn) String() string {
-	return fmt.Sprintf("ShosetConn{ localAddress : %s, name : %s, type : %s, way : %s, remoteAddress : %s}", c.GetLocalAddress(), c.GetRemoteLogicalName(), c.GetRemoteShosetType(), c.GetDir(), c.GetRemoteAddress())
+	return fmt.Sprintf("ShosetConn{ localAddress: %s, name: %s, type: %s, way: %s, remoteAddress: %s}", c.GetLocalAddress(), c.GetRemoteLogicalName(), c.GetRemoteShosetType(), c.GetDir(), c.GetRemoteAddress())
 }
 
 // ReadString :
