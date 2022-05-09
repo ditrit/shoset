@@ -64,28 +64,31 @@ func (m *MapSafeMapConn) Delete(lname, key, fileName string) {
 	}
 
 	var protocolTypes []string
-	if lNamesByProtocol != nil {
-		lNamesByProtocol.Iterate(
-			func(protocol string, lNames map[string]bool) {
-				// if lname in lNames
-				if lNames[lname] && protocol == "bye" {
-					remotesToJoin, remotesToLink := m.GetConfig()
-					if contains(remotesToJoin, key) {
-						protocolTypes = append(protocolTypes, "join")
-					}
-					if contains(remotesToLink, key) {
-						protocolTypes = append(protocolTypes, "link")
-					}
-
-					keys := smc.Keys("out")
-					for _, protocolType := range protocolTypes {
-						m.updateFile(lname, protocolType, fileName, keys)
-					}
-
-				}
-			},
-		)
+	if lNamesByProtocol == nil {
+		return
 	}
+
+	lNamesByProtocol.Iterate(
+		func(protocol string, lNames map[string]bool) {
+			// if lname in lNames
+			if !lNames[lname] || protocol != "bye" {
+				return
+			}
+
+			remotesToJoin, remotesToLink := m.GetConfig()
+			if contains(remotesToJoin, key) {
+				protocolTypes = append(protocolTypes, "join")
+			}
+			if contains(remotesToLink, key) {
+				protocolTypes = append(protocolTypes, "link")
+			}
+
+			keys := smc.Keys("out")
+			for _, protocolType := range protocolTypes {
+				m.updateFile(lname, protocolType, fileName, keys)
+			}
+		},
+	)
 }
 
 func (m *MapSafeMapConn) updateFile(lname, protocolType, fileName string, keys []string) {
