@@ -21,15 +21,10 @@ import (
 )
 
 func (c *Shoset) InitPKI(address string) {
-	// elle sort immédiatement si :
-	if c.GetBindAddress() != "" { // il n'y a pas encore eu de bind (bindadress est vide)
-		c.logger.Error().Msg("shoset already bound")
-		return
-	} else if c.GetIsPki() { // il y a eu déjà un init ou j'ai déjà un certificat (mon certificat existe déjà)
-		c.logger.Error().Msg("shoset already pki")
+	if c.GetIsPki() { // il y a eu déjà un init ou j'ai déjà un certificat (mon certificat existe déjà)
+		c.logger.Error().Msg("shoset is already pki")
 		return
 	}
-
 	c.SetIsPki(true) // je prends le role de CA de la PKI
 
 	// demarche d'initialisation de bind classique (shoset.go/bind)
@@ -72,6 +67,7 @@ func (c *Shoset) InitPKI(address string) {
 
 	CAprivateKey, _ := rsa.GenerateKey(rand.Reader, 2048)                                               // private key rsa format
 	CApublicKey := &CAprivateKey.PublicKey                                                              // we extract the public key (CA cert) from the private key
+	
 	signedCAcert, err := x509.CreateCertificate(rand.Reader, CAcert, CAcert, CApublicKey, CAprivateKey) // we sign the certificate
 	if err != nil {
 		c.logger.Error().Msg("couldn't create CA : " + err.Error())
@@ -111,11 +107,13 @@ func (c *Shoset) InitPKI(address string) {
 		c.logger.Error().Msg("prepare certificate didn't work")
 		return
 	}
+
 	signedHostCert := c.SignCertificate(certReq, hostPublicKey)
 	if signedHostCert == nil {
 		c.logger.Error().Msg("dign cert didn't work")
 		return
 	}
+
 	certFile, err := os.Create(cfgDir + fname + "/cert/cert.crt")
 	if err != nil {
 		c.logger.Error().Msg("couldn't create certFile : " + err.Error())
@@ -161,7 +159,13 @@ func (c *Shoset) InitPKI(address string) {
 		InsecureSkipVerify: false, // peut etre true
 	}
 
-	c.Bind(ipAddress)
+	if c.GetBindAddress() == "" {
+		err := c.Bind(address) // I have my certs, I can bind
+		if err != nil {
+			c.logger.Error().Msg("couldn't set bindAddress : " + err.Error())
+			return
+		}
+	}
 }
 
 // pour les shoset ayant le rôle 'pki' :

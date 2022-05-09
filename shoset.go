@@ -2,7 +2,6 @@ package shoset
 
 import (
 	"crypto/tls"
-	"errors"
 	"fmt"
 	"net"
 	"strings"
@@ -54,7 +53,6 @@ type Shoset struct {
 	// configuration TLS
 	tlsConfigSingleWay *tls.Config
 	tlsConfigDoubleWay *tls.Config
-	tlsServerOK        bool
 
 	// synchronisation des goroutines
 	Done chan bool
@@ -138,8 +136,6 @@ func NewShoset(lName, ShosetType string) *Shoset { //l
 		Queue:    make(map[string]*msg.Queue),
 		Handlers: make(map[string]MessageHandlers),
 
-		// tlsConfig: &tls.Config{InsecureSkipVerify: true}
-		tlsServerOK:        true,
 		tlsConfigSingleWay: &tls.Config{InsecureSkipVerify: true},
 		tlsConfigDoubleWay: nil,
 	}
@@ -186,15 +182,6 @@ func (c *Shoset) String() string {
 
 //Bind : Connect to another Shoset
 func (c *Shoset) Bind(address string) error {
-	if c.GetBindAddress() != "" && c.GetBindAddress() != address { //socket already bounded to a port (already passed this Bind function once)
-		c.logger.Error().Msg("shoset already bound")
-		return errors.New("shoset already bound")
-	}
-	if !c.tlsServerOK { // TLS configuration not ok (security problem)
-		c.logger.Error().Msg("TLS configuration not OK (certificate not found / loaded)")
-		return errors.New("TLS configuration not OK (certificate not found / loaded)")
-	}
-
 	if err := c.config.ReadConfig(c.GetFileName()); err == nil {
 		remotesToJoin, remotesToLink := c.ConnsByName.GetConfig() // get all the sockets we need to join
 		for _, remote := range remotesToJoin {
@@ -221,52 +208,40 @@ func (c *Shoset) Bind(address string) error {
 	}
 	c.listener = listener
 
-	wg := new(sync.WaitGroup)
-	wg.Add(1)
-	go c.handleBind(wg)
-	wg.Wait()
+	go c.handleBind()
 	return nil
 }
 
-func (c *Shoset) handleBind(wg *sync.WaitGroup) {
+func (c *Shoset) handleBind() {
 	defer c.listener.Close()
 
-	wg.Done()
 	for {
 		unencConn, err := c.listener.Accept()
 		if err != nil {
 			c.logger.Error().Msg("serverShoset accept error : " + err.Error())
-			break
+			return
 		}
-		// fmt.Println("accept conn")
+
 		if !c.GetIsValid() { // sockets are not from the same type or don't have the same name / conn ended
 			c.logger.Error().Msg("Invalid connection for join - not the same type/name or shosetConn ended")
 			return
 		}
 
 		if c.ConnsSingle.Get(strings.Split(unencConn.RemoteAddr().String(), ":")[0]) { // get ipAddress
-			// fmt.Println(c.GetBindAddress(), "trying singleWay")
 			tlsConn := tls.Server(unencConn, c.tlsConfigSingleWay) // create the securised connection protocol
 
 			conn, _ := NewShosetConn(c, unencConn.RemoteAddr().String(), "in") // create the securised connection
-			conn.socket = tlsConn                           //we override socket attribut with our securised protocol
+			conn.socket = tlsConn                                              //we override socket attribut with our securised protocol
 
 			go conn.runInConnSingle(strings.Split(unencConn.RemoteAddr().String(), ":")[0])
 		} else {
-			// fmt.Println(c.GetBindAddress(), "trying doubleWay")
 			tlsConn := tls.Server(unencConn, c.tlsConfigDoubleWay)
-
 			conn, _ := NewShosetConn(c, unencConn.RemoteAddr().String(), "in")
 			conn.socket = tlsConn
 
 			_, err = conn.socket.Write([]byte("hello double\n"))
 			if err == nil {
-				// if !c.GetWentThroughHandleBindOnce() {
-				// 	c.SetWentThroughHandleBindOnce(true)
-				// 	go conn.runInConnDouble()
-				// }
 				go conn.runInConnDouble()
-				// return nil
 			} else {
 				c.ConnsSingle.Set(strings.Split(unencConn.RemoteAddr().String(), ":")[0], true) // set ipAddress
 				conn.socket.Close()
@@ -286,36 +261,33 @@ func (c *Shoset) Protocol(bindAddress, remoteAddress, protocolType string) {
 			return
 		}
 
-		_ipAddress := strings.Replace(ipAddress, ":", "_", -1)
-		_ipAddress = strings.Replace(_ipAddress, ".", "-", -1)
-
-		_, err = c.config.InitFolders(_ipAddress)
+		formatedIpAddress := strings.Replace(ipAddress, ":", "_", -1)
+		formatedIpAddress = strings.Replace(formatedIpAddress, ".", "-", -1)
+		_, err = c.config.InitFolders(formatedIpAddress)
 		if err != nil { // initialization of folders did not work
 			c.logger.Error().Msg("couldn't init folder: " + err.Error())
 			return
 		}
 
 		// set filename _after_ successful conf creation
-		c.SetFileName(_ipAddress)
+		c.SetFileName(formatedIpAddress)
 		c.SetPkiRequestAddress(ipAddress)
 		initConn, err := NewShosetConn(c, remoteAddress, "out")
 		if err != nil {
 			c.logger.Error().Msg("couldn't create shoset : " + err.Error())
 			return
 		}
+
 		err = initConn.runPkiRequest() // I don't have my certs, I request them
 		if err != nil {
 			fmt.Println(c.GetPkiRequestAddress(), "runPkiRequest didn't work", err)
-			return
-		}
-		if !c.GetIsCertified() {
-			fmt.Println("couldn't certify")
 			return
 		}
 		initConn.socket.Close()
 		c.SetWentThroughPkiOnce(true) // avoid concurrency when multiple protocols are running at the same time
 		c.logger.Info().Msg("shoset certified")
 	}
+
 	if c.GetBindAddress() == "" {
 		err := c.Bind(bindAddress) // I have my certs, I can bind
 		if err != nil {
@@ -324,31 +296,25 @@ func (c *Shoset) Protocol(bindAddress, remoteAddress, protocolType string) {
 		}
 	}
 
+	if remoteAddress == c.GetBindAddress() { // connection impossible with itself
+		c.logger.Error().Msg("can't protocol on itself")
+		return
+	}
+
+	conns := c.ConnsByName.Get(c.GetLogicalName())
+	if conns != nil {
+		exists := conns.Get(remoteAddress) // check if remoteAddress is already in the map
+		if exists != nil {                 //connection already established for this socket
+			c.logger.Error().Msg("already did a protocol on this shoset")
+			return
+		}
+	}
+
 	conn, _ := NewShosetConn(c, remoteAddress, "out")
 	switch protocolType {
 	case "join":
-		conns := c.ConnsByName.Get(c.GetLogicalName())
-		if conns != nil {
-			exists := conns.Get(remoteAddress) // check if remoteAddress is already in the map
-			if exists != nil {                 //connection already established for this socket
-				return
-			}
-		}
-		if remoteAddress == c.GetBindAddress() { // connection impossible with itself
-			return
-		}
 		go conn.runJoinConn()
 	case "link":
-		conns := c.ConnsByName.Get(c.GetLogicalName())
-		if conns != nil {
-			exists := conns.Get(remoteAddress) // check if remoteAddress is already in the map
-			if exists != nil {                 //connection already established for this socket
-				return
-			}
-		}
-		if remoteAddress == c.GetBindAddress() { // connection impossible with itself
-			return
-		}
 		go conn.runLinkConn()
 	case "bye":
 		go conn.runByeConn()

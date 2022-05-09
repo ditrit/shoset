@@ -50,15 +50,15 @@ func (ceh *PkiEventHandler) Handle(c *ShosetConn, message msg.Message) error {
 						return err
 					}
 					block, _ := pem.Decode(CAprivateKeyBytes)
-					enc := x509.IsEncryptedPEMBlock(block)
+					// enc := x509.IsEncryptedPEMBlock(block)
 					b := block.Bytes
-					if enc {
-						b, err = x509.DecryptPEMBlock(block, nil)
-						if err != nil {
-							c.ch.logger.Error().Msg("err in decrypt : " + err.Error())
-							return err
-						}
-					}
+					// if enc {
+					// 	b, err = x509.DecryptPEMBlock(block, nil)
+					// 	if err != nil {
+					// 		c.ch.logger.Error().Msg("err in decrypt : " + err.Error())
+					// 		return err
+					// 	}
+					// }
 					CAprivateKey, err := x509.ParsePKCS1PrivateKey(b)
 					if err != nil {
 						c.ch.logger.Error().Msg("err in parse private key : " + err.Error())
