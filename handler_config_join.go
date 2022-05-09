@@ -16,6 +16,18 @@ func (cjh *ConfigJoinHandler) Get(c *ShosetConn) (msg.Message, error) {
 	return cfg, err
 }
 
+func SendBroNewMember(remoteAddress string, cfgNewMember *msg.ConfigProtocol, cfgName string) func(string, *ShosetConn) {
+	return func(address string, bro *ShosetConn) {
+		if address == remoteAddress {
+			return
+		}
+		//tell to the other members that there is a new member to join
+		if err := bro.SendMessage(*cfgNewMember); err != nil {
+			bro.ch.logger.Warn().Msg("couldn't send " + cfgName + ": " + err.Error())
+		}
+	}
+}
+
 // HandleConfigJoin :
 func (cjh *ConfigJoinHandler) Handle(c *ShosetConn, message msg.Message) error {
 	cfg := message.(msg.ConfigProtocol) // compute config from message
@@ -26,26 +38,15 @@ func (cjh *ConfigJoinHandler) Handle(c *ShosetConn, message msg.Message) error {
 	switch cfg.GetCommandName() {
 	case "join":
 		if dir == "in" { // a socket wants to join this one
-			if connsJoin := c.ch.ConnsByName.Get(c.ch.GetLogicalName()); connsJoin != nil { //already joined
+			if connsJoin := c.ch.ConnsByName.Get(c.ch.GetLogicalName()); connsJoin != nil {
+				// return early: already joined
 				if connsJoin.Get(remoteAddress) != nil {
 					return nil
 				}
 			}
 
-			if ch.GetLogicalName() == cfg.GetLogicalName() && ch.GetShosetType() == cfg.GetShosetType() {
-				c.SetRemoteAddress(remoteAddress)
-				c.SetRemoteLogicalName(cfg.GetLogicalName())
-				c.SetRemoteShosetType(cfg.GetShosetType())
-				ch.ConnsByName.Set(ch.GetLogicalName(), remoteAddress, "join", ch.GetShosetType(), c.ch.GetFileName(), c) // set conn in this socket
-				// ch.LnamesByProtocol.Set("join", c.GetRemoteLogicalName())
-				// ch.LnamesByType.Set(c.ch.GetShosetType(), c.GetRemoteLogicalName())
-
-				configOk := msg.NewCfg(remoteAddress, ch.GetLogicalName(), ch.GetShosetType(), "aknowledge_join")
-				err := c.SendMessage(*configOk)
-				if err != nil {
-					c.ch.logger.Warn().Msg("couldn't send configOk : " + err.Error())
-				}
-			} else {
+			if ch.GetLogicalName() != cfg.GetLogicalName() || ch.GetShosetType() != cfg.GetShosetType() {
+				// return early: invalid configuration
 				c.SetIsValid(false)
 
 				configNotOk := msg.NewCfg(remoteAddress, ch.GetLogicalName(), ch.GetShosetType(), "unaknowledge_join")
@@ -55,18 +56,24 @@ func (cjh *ConfigJoinHandler) Handle(c *ShosetConn, message msg.Message) error {
 				}
 				return errors.New("error : Invalid connection for join - not the same type/name")
 			}
+
+			c.SetRemoteAddress(remoteAddress)
+			c.SetRemoteLogicalName(cfg.GetLogicalName())
+			c.SetRemoteShosetType(cfg.GetShosetType())
+			ch.ConnsByName.Set(ch.GetLogicalName(), remoteAddress, "join", ch.GetShosetType(), c.ch.GetFileName(), c) // set conn in this socket
+			// ch.LnamesByProtocol.Set("join", c.GetRemoteLogicalName())
+			// ch.LnamesByType.Set(c.ch.GetShosetType(), c.GetRemoteLogicalName())
+
+			configOk := msg.NewCfg(remoteAddress, ch.GetLogicalName(), ch.GetShosetType(), "aknowledge_join")
+			err := c.SendMessage(*configOk)
+			if err != nil {
+				c.ch.logger.Warn().Msg("couldn't send configOk : " + err.Error())
+			}
 		}
 
 		cfgNewMember := msg.NewCfg(remoteAddress, ch.GetLogicalName(), ch.GetShosetType(), "member")
 		ch.ConnsByName.Get(ch.GetLogicalName()).Iterate(
-			func(address string, bro *ShosetConn) {
-				if address != remoteAddress {
-					//tell to the other members that there is a new member to join
-					if err := bro.SendMessage(*cfgNewMember); err != nil {
-						bro.ch.logger.Warn().Msg("couldn't send cfgnewMember : " + err.Error())
-					}
-				}
-			},
+			SendBroNewMember(remoteAddress, cfgNewMember, "cfgnewMember"),
 		)
 
 	case "aknowledge_join":
@@ -81,25 +88,21 @@ func (cjh *ConfigJoinHandler) Handle(c *ShosetConn, message msg.Message) error {
 		return errors.New("error : connection not ok")
 
 	case "member":
-		if connsJoin := c.ch.ConnsByName.Get(c.ch.GetLogicalName()); connsJoin != nil { //already joined
-			if connsJoin.Get(remoteAddress) != nil {
-				return nil
-			}
-			ch.Protocol(c.ch.GetBindAddress(), remoteAddress, "join")
-
-			cfgNewMember := msg.NewCfg(remoteAddress, ch.GetLogicalName(), ch.GetShosetType(), "member")
-			ch.ConnsByName.Get(ch.GetLogicalName()).Iterate(
-				func(address string, bro *ShosetConn) {
-					if address != remoteAddress {
-						//tell to the other members that there is a new member to join
-						if err := bro.SendMessage(*cfgNewMember); err != nil {
-							bro.ch.logger.Warn().Msg("couldn't send cfgnewMember2 : " + err.Error())
-						}
-					}
-				},
-			)
+		connsJoin := c.ch.ConnsByName.Get(c.ch.GetLogicalName())
+		if connsJoin == nil {
+			return nil
 		}
 
+		// connsJoin != nil: already joined
+		if connsJoin.Get(remoteAddress) != nil {
+			return nil
+		}
+		ch.Protocol(c.ch.GetBindAddress(), remoteAddress, "join")
+
+		cfgNewMember := msg.NewCfg(remoteAddress, ch.GetLogicalName(), ch.GetShosetType(), "member")
+		ch.ConnsByName.Get(ch.GetLogicalName()).Iterate(
+			SendBroNewMember(remoteAddress, cfgNewMember, "cfgnewMember2"),
+		)
 	}
 	return nil
 }

@@ -1,6 +1,7 @@
 package shoset
 
 import (
+	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
 	"io/ioutil"
@@ -22,7 +23,9 @@ func (ceh *PkiEventHandler) Get(c *ShosetConn) (msg.Message, error) {
 func (ceh *PkiEventHandler) Handle(c *ShosetConn, message msg.Message) error {
 	evt := message.(msg.PkiEvent)
 
-	if c.ch.GetIsPki() && evt.GetCommand() == "pkievt" {
+	conn := c.ch.ConnsSingleAddress.Get(evt.GetRequestAddress())
+	switch {
+	case evt.GetCommand() == "pkievt" && c.ch.GetIsPki():
 		// si je suis pki :
 		//   si on m'envoie un certreq
 		//   alors
@@ -34,46 +37,48 @@ func (ceh *PkiEventHandler) Handle(c *ShosetConn, message msg.Message) error {
 		//   fi
 
 		// 4. une shoset en double way me transmet une certreq et je suis pki
-		if evt.GetCertReq() != nil {
-			cfgDir := c.ch.GetConfigDir()
-			CAcert, err := ioutil.ReadFile(cfgDir + c.ch.GetFileName() + "/cert/CAcert.crt")
+		if evt.GetCertReq() == nil {
+			c.ch.logger.Warn().Msg("empty cert req received")
+			return nil
+		}
+
+		cfgDir := c.ch.GetConfigDir()
+		CAcert, err := ioutil.ReadFile(cfgDir + c.ch.GetFileName() + "/cert/CAcert.crt")
+		if err != nil {
+			return err
+		}
+		signedCert := c.ch.SignCertificate(evt.GetCertReq(), evt.GetHostPublicKey())
+		if signedCert == nil {
+			c.ch.logger.Warn().Msg("CA failed to sign cert")
+			return nil
+		}
+
+		var CAprivateKey *rsa.PrivateKey
+		if c.ch.GetLogicalName() == evt.GetLogicalName() { // les clusters deviennent à leur tour pki
+			CAprivateKeyBytes, err := ioutil.ReadFile(cfgDir + c.ch.GetFileName() + "/cert/privateCAKey.key")
 			if err != nil {
 				return err
 			}
-			signedCert := c.ch.SignCertificate(evt.GetCertReq(), evt.GetHostPublicKey())
-			if signedCert != nil {
-				var returnPkiEvent *msg.PkiEvent
-
-				if c.ch.GetLogicalName() == evt.GetLogicalName() { // les clusters deviennent à leur tour pki
-					CAprivateKeyBytes, err := ioutil.ReadFile(cfgDir + c.ch.GetFileName() + "/cert/privateCAKey.key")
-					if err != nil {
-						return err
-					}
-					block, _ := pem.Decode(CAprivateKeyBytes)
-					// enc := x509.IsEncryptedPEMBlock(block)
-					b := block.Bytes
-					// if enc {
-					// 	b, err = x509.DecryptPEMBlock(block, nil)
-					// 	if err != nil {
-					// 		c.ch.logger.Error().Msg("err in decrypt : " + err.Error())
-					// 		return err
-					// 	}
-					// }
-					CAprivateKey, err := x509.ParsePKCS1PrivateKey(b)
-					if err != nil {
-						c.ch.logger.Error().Msg("err in parse private key : " + err.Error())
-						return err
-					}
-					returnPkiEvent = msg.NewPkiEventReturn("return_pkievt", evt.GetRequestAddress(), signedCert, CAcert, CAprivateKey)
-				} else {
-					returnPkiEvent = msg.NewPkiEventReturn("return_pkievt", evt.GetRequestAddress(), signedCert, CAcert, nil)
+			block, _ := pem.Decode(CAprivateKeyBytes)
+			b := block.Bytes
+			if x509.IsEncryptedPEMBlock(block) {
+				b, err = x509.DecryptPEMBlock(block, nil)
+				if err != nil {
+					c.ch.logger.Error().Msg("err in decrypt : " + err.Error())
+					return err
 				}
-				returnPkiEvent.SetUUID(evt.GetUUID() + "*") // return event has the same uuid so that network isn't flooded with same events
-				ceh.Send(c.ch, returnPkiEvent)
-
+			}
+			CAprivateKey, err = x509.ParsePKCS1PrivateKey(b)
+			if err != nil {
+				c.ch.logger.Error().Msg("err in parse private key : " + err.Error())
+				return err
 			}
 		}
-	} else if conn := c.ch.ConnsSingleAddress.Get(evt.GetRequestAddress()); conn != nil && evt.GetCommand() == "return_pkievt" {
+		returnPkiEvent := msg.NewPkiEventReturn("return_pkievt", evt.GetRequestAddress(), signedCert, CAcert, CAprivateKey)
+		returnPkiEvent.SetUUID(evt.GetUUID() + "*") // return event has the same uuid so that network isn't flooded with same events
+		ceh.Send(c.ch, returnPkiEvent)
+
+	case evt.GetCommand() == "return_pkievt" && conn != nil:
 		// si le msg est une reponse à ma demande (champ adresse equivaut la mienne), c'est donc moi qui ai envoyé le certreq
 		// alors
 		//   je recupere le msg et lire mon cert
@@ -91,13 +96,15 @@ func (ceh *PkiEventHandler) Handle(c *ShosetConn, message msg.Message) error {
 		// c.ch.ConnsSingleAddress[evt.GetRequestAddress()].socket.Close()
 		c.socket.Close()
 		c.ch.ConnsSingleAddress.Delete(evt.GetRequestAddress())
-	} else {
+
+	default:
 		// je transmet le msg puisque je suis ni pki ni demandeur
 		// 6. une shoset en double way me transmet une reqcert et je suis passe plat
 		if state := c.GetCh().Queue["pkievt"].Push(evt, c.GetRemoteShosetType(), c.GetLocalAddress()); state {
 			ceh.Send(c.ch, evt)
 		}
 	}
+
 	return nil
 }
 
