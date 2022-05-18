@@ -3,6 +3,7 @@
 !**/*.pem
 !**/*.dot
 !**/*.svg
+!**/*.sh
 !**/
 
 !/.gitignore
@@ -10,5 +11,6 @@
 !/go.sum
 !/LICENSE
 !/README.md
+!/Dockerfile
 
 vendor
