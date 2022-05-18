@@ -22,8 +22,16 @@ func NewCfg(address, lName, shosetType, commandName string) *ConfigProtocol {
 	return c
 }
 
+// for link and join
+func NewCfgPkiFinished(commandName string) *ConfigProtocol {
+	c := new(ConfigProtocol)
+	c.InitMessageBase()
+	c.CommandName = commandName
+	return c
+}
+
 // for link
-func NewCfgBrothers(myBrothers, yourBrothers []string, lName, commandName, shosetType string) *ConfigProtocol {
+func NewCfgBrothers(myBrothers, yourBrothers []string, commandName, lName, shosetType string) *ConfigProtocol {
 	c := new(ConfigProtocol)
 	c.InitMessageBase()
 	c.CommandName = commandName
@@ -39,9 +47,9 @@ func (c ConfigProtocol) GetMsgType() string {
 	switch c.GetCommandName() {
 	case "join":
 		return "cfgjoin"
-	case "aknowledge_join":
+	case "acknowledge_join":
 		return "cfgjoin"
-	case "unaknowledge_join":
+	case "unacknowledge_join":
 		return "cfgjoin"
 	case "member":
 		return "cfgjoin"
