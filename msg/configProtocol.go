@@ -22,6 +22,14 @@ func NewCfg(address, lName, shosetType, commandName string) *ConfigProtocol {
 	return c
 }
 
+// for link and join
+func NewCfgPkiFinished(commandName string) *ConfigProtocol {
+	c := new(ConfigProtocol)
+	c.InitMessageBase()
+	c.CommandName = commandName
+	return c
+}
+
 // for link
 func NewCfgBrothers(myBrothers, yourBrothers []string, lName, commandName, shosetType string) *ConfigProtocol {
 	c := new(ConfigProtocol)

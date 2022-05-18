@@ -11,13 +11,13 @@ type Command struct {
 // NewCommand : Command constructor
 // todo : passer une map pour gerer les valeurs optionnelles ?
 func NewCommand(target string, command string, payload string) *Command {
-	c := new(Command)
+	c := &Command{
+		MessageBase: MessageBase{Payload: payload},
+		Target:      target,
+		Context:     make(map[string]interface{}),
+		Command:     command,
+	}
 	c.InitMessageBase()
-
-	c.Target = target
-	c.Context = make(map[string]interface{})
-	c.Command = command
-	c.Payload = payload
 	return c
 }
 

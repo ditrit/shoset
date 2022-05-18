@@ -2,351 +2,294 @@ package shoset
 
 import (
 	"crypto/tls"
-	"errors"
 	"fmt"
 	"net"
-	"os"
 	"strings"
+	"sync"
 
 	"github.com/ditrit/shoset/msg"
-	"github.com/spf13/viper"
+	uuid "github.com/kjk/betterguid"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 )
-
-//terminal
-var certPath = "./certs/cert.pem"
-var keyPath = "./certs/key.pem"
-
-//debugger
-// var certPath = "../certs/cert.pem"
-// var keyPath = "../certs/key.pem"
 
 // MessageHandlers interface
 type MessageHandlers interface {
-	Handle(*ShosetConn) error
-	SendConn(*ShosetConn, *msg.Message)
-	Send(*Shoset, *msg.Message)
-	Wait(*Shoset, *msg.Iterator, string, int) *msg.Message
+	Get(c *ShosetConn) (msg.Message, error)
+	HandleDoubleWay(c *ShosetConn, message msg.Message) error
+	Send(c *Shoset, m msg.Message)
+	Wait(c *Shoset, replies *msg.Iterator, args map[string]string, timeout int) *msg.Message
 }
 
 //Shoset :
 type Shoset struct {
-	Context map[string]interface{} //TOTO
+	logger  zerolog.Logger
+	Context map[string]interface{} // used for gandalf
 
-	//	id          string
-	ConnsByName      *MapSafeMapConn // map[string]map[string]*ShosetConn   connexions par nom logique
-	LnamesByType     *MapSafeStrings // for gandalf
-	LnamesByProtocol *MapSafeStrings
+	ConnsByName      *MapSyncMap // map[lName]map[remoteAddress]*ShosetConn   connexions par nom logique
+	LnamesByType     *MapSyncMap // map[shosetType]map[lName]bool used for gandalf
+	LnamesByProtocol *MapSyncMap // map[protocolType]map[lName]bool
+	ConnsSingleBool  *sync.Map    // map[ipAddress]bool ipAddresses waiting in singleWay to be handled for tls double way
+	ConnsSingleConn  *sync.Map    // map[ipAddress]*ShosetConn ShosetConns waiting in singleWay to be handled for tls double way
 
 	lName       string // Nom logique de la shoset
 	ShosetType  string // Type logique de la shoset
 	bindAddress string // Adresse sur laquelle la shoset est bindée
-
-	// Dictionnaire des queues de message (par type de message)
-	Queue  map[string]*msg.Queue
-	Get    map[string]func(*ShosetConn) (msg.Message, error)
-	Handle map[string]func(*ShosetConn, msg.Message) error
-	Send   map[string]func(*Shoset, msg.Message)
-	Wait   map[string]func(*Shoset, *msg.Iterator, map[string]string, int) *msg.Message
+	config      *Config
+	isValid     bool
+	isPki       bool
+	listener    net.Listener
 
 	// configuration TLS
-	tlsConfig   *tls.Config
-	tlsServerOK bool
+	tlsConfigSingleWay *tls.Config
+	tlsConfigDoubleWay *tls.Config
+
+	// Dictionnaire des queues de message (par type de message)
+	Queue    map[string]*msg.Queue
+	Handlers map[string]MessageHandlers
 
 	// synchronisation des goroutines
 	Done chan bool
-
-	viperConfig *viper.Viper
-	isValid     bool
 }
 
-/*           Accessors            */
-func (c Shoset) GetBindAddress() string { return c.bindAddress }
-func (c Shoset) GetLogicalName() string { return c.lName }
-func (c Shoset) GetShosetType() string  { return c.ShosetType }
-func (c *Shoset) GetIsValid() bool      { return c.isValid }
+func (c *Shoset) GetBindAddress() string { return c.bindAddress }
+func (c *Shoset) GetLogicalName() string { return c.lName }
+func (c *Shoset) GetShosetType() string  { return c.ShosetType }
+func (c *Shoset) GetIsValid() bool       { return c.isValid }
+func (c *Shoset) GetIsPki() bool         { return c.isPki }
 
-func (c *Shoset) SetBindAddress(bindAddress string) {
-	if bindAddress != "" {
-		c.bindAddress = bindAddress
+func (c *Shoset) GetConnsByTypeArray(shosetType string) []*ShosetConn {
+	lNames := c.LnamesByType.Keys(shosetType)
+	var connsByType []*ShosetConn
+	for _, lName := range lNames {
+		lNameMap, _ := c.ConnsByName.smap.Load(lName)
+		keys := Keys(lNameMap.(*sync.Map), ALL)
+		for _, key := range keys {
+			conn, _ := lNameMap.(*sync.Map).Load(key)
+			connsByType = append(connsByType, conn.(*ShosetConn))
+		}
 	}
+	return connsByType
 }
 
-func (c *Shoset) SetIsValid(state bool) {
-	c.isValid = state
+func (c *Shoset) IsCertified(path string) bool {
+	if fileExists(path + "privateCAKey.key") {
+		c.SetIsPki(true)
+	}
+	return fileExists(path)
 }
 
-/*       Constructor     */
-func NewShoset(lName, ShosetType string) *Shoset { //l
-	// Creation
-	shoset := Shoset{}
+func (c *Shoset) SetBindAddress(bindAddress string) { c.bindAddress = bindAddress }
+func (c *Shoset) SetIsValid(state bool)             { c.isValid = state }
+func (c *Shoset) SetIsPki(state bool)               { c.isPki = state }
 
-	// Initialisation
-	shoset.Context = make(map[string]interface{})
+func NewShoset(lName, ShosetType string) *Shoset {
+	shst := Shoset{
+		logger:           log.With().Str("uuid", uuid.New()).Logger(),
+		Context:          make(map[string]interface{}),
+		lName:            lName,
+		ShosetType:       ShosetType,
+		config:           NewConfig(),
+		ConnsByName:      new(MapSyncMap),
+		LnamesByType:     new(MapSyncMap),
+		LnamesByProtocol: new(MapSyncMap),
+		isValid:          true,
+		isPki:            false,
+		listener:         nil,
+		ConnsSingleBool:  new(sync.Map),
+		ConnsSingleConn:  new(sync.Map),
 
-	shoset.lName = lName
-	shoset.ShosetType = ShosetType
-	shoset.viperConfig = viper.New()
-	shoset.ConnsByName = NewMapSafeMapConn()
-	shoset.LnamesByType = NewMapSafeStrings()
-	shoset.LnamesByProtocol = NewMapSafeStrings()
-	shoset.ConnsByName.SetViper(shoset.viperConfig)
-	shoset.isValid = true
+		// Dictionnaire des queues de message (par type de message)
+		Queue:    make(map[string]*msg.Queue),
+		Handlers: make(map[string]MessageHandlers),
 
-	// Dictionnaire des queues de message (par type de message)
-	shoset.Queue = make(map[string]*msg.Queue)
-	shoset.Get = make(map[string]func(*ShosetConn) (msg.Message, error))
-	shoset.Handle = make(map[string]func(*ShosetConn, msg.Message) error)
-	shoset.Send = make(map[string]func(*Shoset, msg.Message))
-	shoset.Wait = make(map[string]func(*Shoset, *msg.Iterator, map[string]string, int) *msg.Message)
+		tlsConfigSingleWay: &tls.Config{InsecureSkipVerify: true},
+		tlsConfigDoubleWay: nil,
+	}
 
-	shoset.Queue["cfglink"] = msg.NewQueue()
-	shoset.Get["cfglink"] = GetConfigLink
-	shoset.Handle["cfglink"] = HandleConfigLink
+	shst.ConnsByName.SetConfig(shst.config)
 
-	shoset.Queue["cfgjoin"] = msg.NewQueue()
-	shoset.Get["cfgjoin"] = GetConfigJoin
-	shoset.Handle["cfgjoin"] = HandleConfigJoin
+	shst.Queue["cfglink"] = msg.NewQueue()
+	shst.Handlers["cfglink"] = new(ConfigLinkHandler)
 
-	shoset.Queue["cfgbye"] = msg.NewQueue()
-	shoset.Get["cfgbye"] = GetConfigBye
-	shoset.Handle["cfgbye"] = HandleConfigBye
+	shst.Queue["cfgjoin"] = msg.NewQueue()
+	shst.Handlers["cfgjoin"] = new(ConfigJoinHandler)
 
-	shoset.Queue["evt"] = msg.NewQueue()
-	shoset.Get["evt"] = GetEvent
-	shoset.Handle["evt"] = HandleEvent
-	shoset.Send["evt"] = SendEvent
-	shoset.Wait["evt"] = WaitEvent
+	shst.Queue["cfgbye"] = msg.NewQueue()
+	shst.Handlers["cfgbye"] = new(ConfigByeHandler)
 
-	shoset.Queue["cmd"] = msg.NewQueue()
-	shoset.Get["cmd"] = GetCommand
-	shoset.Handle["cmd"] = HandleCommand
-	shoset.Send["cmd"] = SendCommand
-	shoset.Wait["cmd"] = WaitCommand
+	shst.Queue["evt"] = msg.NewQueue()
+	shst.Handlers["evt"] = new(EventHandler)
+
+	shst.Queue["pkievt_TLSdoubleWay"] = msg.NewQueue()
+	shst.Handlers["pkievt_TLSdoubleWay"] = new(PkiEventHandler)
+
+	shst.Queue["pkievt_TLSsingleWay"] = msg.NewQueue()
+	shst.Handlers["pkievt_TLSsingleWay"] = new(PkiEventHandler)
+
+	shst.Queue["cmd"] = msg.NewQueue()
+	shst.Handlers["cmd"] = new(CommandHandler)
 
 	//TODO MOVE TO GANDALF
-	shoset.Queue["config"] = msg.NewQueue()
-	shoset.Get["config"] = GetConfig
-	shoset.Handle["config"] = HandleConfig
-	shoset.Send["config"] = SendConfig
-	shoset.Wait["config"] = WaitConfig
+	shst.Queue["config"] = msg.NewQueue()
+	shst.Handlers["config"] = new(ConfigHandler)
 
-	// Configuration TLS //////////////////////////////////// à améliorer
-	if pathCheck(certPath) && pathCheck(keyPath) {
-		cert, err := tls.LoadX509KeyPair(certPath, keyPath)
-		if err != nil { // only client in insecure mode
-			fmt.Println("! Unable to Load certificate !")
-			shoset.tlsConfig = &tls.Config{InsecureSkipVerify: true}
-			shoset.tlsServerOK = false
-		} else {
-			shoset.tlsConfig = &tls.Config{
-				Certificates:       []tls.Certificate{cert},
-				InsecureSkipVerify: true,
-			}
-			shoset.tlsServerOK = true
-		}
-	} else {
-		fmt.Println("! Unable to Load certificate !")
-		shoset.tlsServerOK = false
-	}
-	return &shoset
+	shst.logger.Debug().Str("lname", lName).Msg("shoset created")
+	return &shst
 }
 
-// Display with fmt - override the print of the object
-func (c Shoset) String() string {
-	descr := fmt.Sprintf("Shoset -  lName: %s,\n\t\tbindAddr : %s,\n\t\ttype : %s, \n\t\tConnsByName : ", c.GetLogicalName(), c.GetBindAddress(), c.GetShosetType())
-	for _, lName := range c.ConnsByName.Keys() {
-		c.ConnsByName.Iterate(lName,
-			func(key string, val *ShosetConn) {
-				descr = fmt.Sprintf("%s %s\n\t\t\t     ", descr, val)
-			})
-	}
-	descr = fmt.Sprintf("%s \n\t\tLnamesByProtocol : MapSafeStrings{%s\n\t       ", descr, c.LnamesByProtocol)
-	descr = fmt.Sprintf("%s LnamesByType : MapSafeStrings{%s\n\t      ", descr, c.LnamesByType)
-	// c.LnamesByType.Iterate(
-	// 	func(key string, val map[string]bool) {
-	// 		descr = fmt.Sprintf("%s %s\n\t\t\t     ", descr, val)
-	// 	})
-	// c.LnamesByProtocol.Iterate(
-	// 	func(key string, val map[string]bool) {
-	// 		descr = fmt.Sprintf("%s %s\n\t\t\t     ", descr, val)
-	// 	})
+// String returns the formatted string of Shoset object.
+func (c *Shoset) String() string {
+	return c.PrettyPrint()
+}
+
+// PrettyPrint returns the indented string of Shoset object.
+func (c *Shoset) PrettyPrint() string {
+	descr := fmt.Sprintf("Shoset{\n\t- lName: %s,\n\t- bindAddr : %s,\n\t- type : %s, \n\t- isPki : %t, \n\t- ConnsByName:", c.GetLogicalName(), c.GetBindAddress(), c.GetShosetType(), c.GetIsPki())
+
+	c.ConnsByName.Iterate(
+		func(key string, val interface{}) {
+			descr += fmt.Sprintf("\n\t\t* %s", val)
+		})
+
+	descr += "\n}\n"
 	return descr
 }
 
 //Bind : Connect to another Shoset
 func (c *Shoset) Bind(address string) error {
-	if c.GetBindAddress() != "" { //socket already bounded to a port (already passed this Bind function once)
-		fmt.Println("Shoset already bound")
-		return errors.New("Shoset already bound")
+	if err := c.config.ReadConfig(c.config.GetFileName()); err == nil {
+		for _, remote := range c.ConnsByName.cfg.GetSlice(PROTOCOL_JOIN) {
+			c.Protocol(address, remote, PROTOCOL_JOIN)
+		}
+		for _, remote := range c.ConnsByName.cfg.GetSlice(PROTOCOL_LINK) {
+			c.Protocol(address, remote, PROTOCOL_LINK)
+		}
 	}
-	if !c.tlsServerOK { // TLS configuration not ok (security problem)
-		fmt.Println("TLS configuration not OK (certificate not found / loaded)")
-		return errors.New("TLS configuration not OK (certificate not found / loaded)")
-	}
-	ipAddress, err := GetIP(address) // parse the address from function parameter to get the IP
-	if err != nil {                  // check if IP is ok
+
+	ipAddress, err := GetIP(address)
+	if err != nil {
+		c.logger.Error().Msg("couldn't set bindAddress : " + err.Error())
 		return err
 	}
-
-	viperAddress := computeAddress(ipAddress)
-	c.ConnsByName.SetConfigName(viperAddress)
-
-	// viper config
-	dirname, err := os.UserHomeDir()
-	if err != nil {
-		fmt.Println(err)
-	}
-	if !pathCheck(dirname + "/.shoset_config/") {
-		os.Mkdir(dirname+"/.shoset_config/", 0700)
-	}
-
-	c.viperConfig.AddConfigPath(dirname + "/.shoset_config/")
-	c.viperConfig.SetConfigName(viperAddress)
-	c.viperConfig.SetConfigType("yaml")
-
-	if err := c.viperConfig.ReadInConfig(); err != nil {
-	} else {
-		remotesToJoin, remotesToLink := c.ConnsByName.GetConfig() // get all the sockets we need to join
-		for _, remote := range remotesToJoin {
-			c.Protocol(remote, "join")
-		}
-		for _, remote := range remotesToLink {
-			c.Protocol(remote, "link")
-		}
-	}
-
 	c.SetBindAddress(ipAddress) // bound to the port
-	go c.handleBind()           // process runInconn()
+
+	listener, err := net.Listen(CONNECTION_TYPE, DEFAULT_IP+strings.Split(ipAddress, ":")[1]) // listen on each ipaddresses
+	if err != nil {
+		c.logger.Error().Msg("listen error : " + err.Error())
+		return err
+	}
+	c.listener = listener
+
+	go c.handleBind()
 	return nil
 }
 
-// runBindTo : handler for the socket
-func (c *Shoset) handleBind() error {
-	listener, err := net.Listen("tcp", c.GetBindAddress()) //open a net listener
-	if err != nil {                                        // check if listener is ok
-		fmt.Println("Failed to bind:", err.Error())
-		return err
-	}
-	// defer WriteViper()
-	defer listener.Close()
+func (c *Shoset) handleBind() {
+	defer c.listener.Close()
 
 	for {
-		if !c.GetIsValid() { // sockets are not from the same type or don't have the same name / conn ended
-			return errors.New("error : Invalid connection for join - not the same type/name or shosetConn ended")
-		}
-		unencConn, err := listener.Accept()
+		unencConn, err := c.listener.Accept()
 		if err != nil {
-			fmt.Printf("serverShoset accept error: %s", err)
-			break
+			c.logger.Error().Msg("serverShoset accept error : " + err.Error())
+			return
 		}
-		tlsConn := tls.Server(unencConn, c.tlsConfig) // create the securised connection protocol
-		address := tlsConn.RemoteAddr().String()
-		conn, _ := NewShosetConn(c, address, "in") // create the securised connection
-		conn.socket = tlsConn                      //we override socket attribut with our securised protocol
-		go conn.runInConn()
+
+		if !c.GetIsValid() { // sockets are not from the same type or don't have the same name / conn ended
+			c.logger.Error().Msg("Invalid connection for join - not the same type/name or shosetConn ended")
+			return
+		}
+
+		if exists, _ :=c.ConnsSingleBool.Load(strings.Split(unencConn.RemoteAddr().String(), ":")[0]); exists != nil { // get ipAddress
+			tlsConn := tls.Server(unencConn, c.tlsConfigSingleWay) // create the securised connection protocol
+
+			conn, _ := NewShosetConn(c, unencConn.RemoteAddr().String(), IN) // create the securised connection
+			conn.UpdateConn(tlsConn)                                         //we override socket attribut with our securised protocol
+
+			go conn.runInConnSingle(strings.Split(unencConn.RemoteAddr().String(), ":")[0])
+		} else {
+			tlsConn := tls.Server(unencConn, c.tlsConfigDoubleWay)
+			conn, _ := NewShosetConn(c, unencConn.RemoteAddr().String(), IN)
+			conn.UpdateConn(tlsConn)
+
+			_, err = conn.socket.Write([]byte(TLS_DOUBLE_WAY_TEST_WRITE + "\n"))
+			if err == nil {
+				go conn.runInConnDouble()
+			} else {
+				c.ConnsSingleBool.Store(strings.Split(unencConn.RemoteAddr().String(), ":")[0], true) // set ipAddress
+			}
+		}
 	}
-	return nil
 }
 
-func (c *Shoset) Protocol(address, protocolType string) (*ShosetConn, error) {
-	var conn *ShosetConn
-	switch protocolType {
-	case "join":
-		conns := c.ConnsByName.Get(c.GetLogicalName())
-		if conns != nil {
-			exists := conns.Get(address) // check if address is already in the map
-			if exists != nil {           //connection already established for this socket
-				return exists, nil
-			}
-		}
-		if address == c.GetBindAddress() { // connection impossible with itself
-			return nil, nil
-		}
-		conn, _ := NewShosetConn(c, address, "out")
-		go conn.runJoinConn()
-	case "link":
-		conns := c.ConnsByName.Get(c.GetLogicalName())
-		if conns != nil {
-			exists := conns.Get(address) // check if address is already in the map
-			if exists != nil {           //connection already established for this socket
-				return exists, nil
-			}
-		}
-		if address == c.GetBindAddress() { // connection impossible with itself
-			return nil, nil
-		}
-		conn, _ := NewShosetConn(c, address, "out")
-		go conn.runOutConn()
-	case "bye":
-		conn, _ := NewShosetConn(c, address, "out")
-		go conn.runEndConn()
-	default:
-		fmt.Println("Wrong input protocolType")
-		return nil, errors.New("wrong input protocolType")
+func (c *Shoset) Protocol(bindAddress, remoteAddress, protocolType string) {
+	c.logger.Debug().Strs("params", []string{bindAddress, remoteAddress, protocolType}).Msg("protocol init")
+	ipAddress, err := GetIP(bindAddress) // parse the address from function parameter to get the IP
+	if err != nil {
+		// IP nok -> return early
+		c.logger.Error().Msg("wrong IP format : " + err.Error())
+		return
 	}
-	return conn, nil
+	formatedIpAddress := strings.Replace(ipAddress, ":", "_", -1)
+	formatedIpAddress = strings.Replace(formatedIpAddress, ".", "-", -1)
+
+	// init cert if needed
+	if !c.IsCertified(c.config.baseDir + formatedIpAddress + PATH_CERT_DIR) {
+		c.logger.Debug().Msg("ask certification")
+
+		_, err = c.config.InitFolders(formatedIpAddress)
+		if err != nil { // initialization of folders did not work
+			c.logger.Error().Msg("couldn't init folder: " + err.Error())
+			return
+		}
+
+		// set filename _after_ successful conf creation
+		c.config.SetFileName(formatedIpAddress)
+
+		err = c.Certify(bindAddress, remoteAddress)
+		if err != nil {
+			return
+		}
+	}
+
+	if c.GetBindAddress() == VOID {
+		err := c.Bind(bindAddress) // I have my certs, I can bind
+		if err != nil {
+			c.logger.Error().Msg("couldn't set bindAddress : " + err.Error())
+			return
+		}
+	}
+
+	if remoteAddress == c.GetBindAddress() { // connection impossible with itself
+		c.logger.Error().Msg("can't protocol on itself")
+		return
+	}
+
+	if conns, _ := c.ConnsByName.smap.Load(c.GetLogicalName()); conns != nil {
+		if exists, _ := conns.(*sync.Map).Load(remoteAddress); exists != nil { // check if remoteAddress is already in the map
+			c.logger.Warn().Msg("already did a protocol on this shoset")
+			return
+		}
+	}
+
+	conn, _ := NewShosetConn(c, remoteAddress, OUT)
+	switch protocolType {
+	case PROTOCOL_JOIN:
+		go conn.runJoinConn()
+	case PROTOCOL_LINK:
+		go conn.runLinkConn()
+	case PROTOCOL_EXIT:
+		conn.SetRemoteAddress(conn.GetLocalAddress()) // needed otherwise remoteAddress will not be considered for the bye
+		go conn.runByeConn()
+	default:
+		return
+	}
 }
 
 func (c *Shoset) deleteConn(connAddr, connLname string) {
-	// fmt.Println(c.GetBindAddress(), " enter deleteConn")
-	if conns := c.ConnsByName.Get(connLname); conns != nil {
-		if conns.Get(connAddr) != nil {
-			// fmt.Println(c.GetBindAddress(), " is ok in deleteConn")
-			c.ConnsByName.Delete(connLname, connAddr)
+	if conns, _ := c.ConnsByName.smap.Load(connLname); conns != nil {
+		if conn, _ := conns.(*sync.Map).Load(connAddr); conn != nil {
+			c.ConnsByName.Delete(connLname, connAddr, c.config.GetFileName())
 		}
 	}
-}
-
-// compute the name for the .yaml file corresponding to each socket
-func computeAddress(ipAddress string) string {
-	_ipAddress := strings.Replace(ipAddress, ":", "_", 1)
-	_ipAddress = strings.Replace(_ipAddress, ".", "~", 3)
-	name := "shoset_" + _ipAddress
-	return name
-}
-
-// returns bool whether the given file or directory exists
-func pathCheck(path string) bool {
-	_, err := os.Stat(path)
-	if os.IsNotExist(err) {
-		fmt.Println("File does not exist.")
-		return false
-	}
-	return true
-}
-
-func (c *Shoset) GetConnsByType(shosetType string) map[string]*ShosetConn {
-	lNames := c.LnamesByType.Keys(shosetType)
-	connsByType := make(map[string]*ShosetConn)
-	for _, lName := range lNames {
-		lNameMap := c.ConnsByName.Get(lName)
-		keys := lNameMap.Keys("all")
-		for _, key := range keys {
-			connsByType[key] = lNameMap.Get(key)
-		}
-	}
-	return connsByType
-}
-
-func (c *Shoset) GetConnsByTypeArray(shosetType string) []*ShosetConn {
-	lNames := c.LnamesByType.Keys(shosetType)
-	// fmt.Println("lNames : ", lNames)
-	var connsByType []*ShosetConn
-	for _, lName := range lNames {
-		lNameMap := c.ConnsByName.Get(lName)
-		keys := lNameMap.Keys("all")
-		for _, key := range keys {
-			connsByType = append(connsByType, lNameMap.Get(key))
-		}
-	}
-	return connsByType
-}
-
-func contains(s []string, str string) bool {
-	for _, v := range s {
-		if v == str {
-			return true
-		}
-	}
-	return false
 }
