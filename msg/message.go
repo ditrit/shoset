@@ -36,7 +36,7 @@ type MessageBase struct {
 func (m *MessageBase) InitMessageBase() {
 	m.UUID = uuid.New()
 	m.Timestamp = time.Now().Unix()
-	m.Timeout = 1000
+	m.Timeout = 10 // time set to keep event in memory
 	m.Major = 1
 	m.Minor = 0
 }
@@ -44,6 +44,10 @@ func (m *MessageBase) InitMessageBase() {
 // GetUUID accessor
 func (m MessageBase) GetUUID() string {
 	return m.UUID
+}
+
+func (m *MessageBase) SetUUID(newUUID string) {
+	m.UUID = newUUID
 }
 
 // GetTenant accessor
