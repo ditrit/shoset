@@ -920,6 +920,23 @@ func testPresentationENIB(ctx context.Context, done context.CancelFunc) {
 	})
 }
 
+func testFiles1() {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	cl2 := shoset.NewShoset("cl", "cl")                      // always "cl" "cl" for gandalf
+	cl2.Protocol("localhost:8002", "localhost:8001", "join") // we join it to our first socket
+
+	cl3 := shoset.NewShoset("cl", "cl")
+	cl3.Protocol("localhost:8003", "localhost:8001", "join")
+	// cl3.Protocol("localhost:8002", "join")
+
+	loopUntilDone(1*time.Second, ctx, func() {
+		fmt.Println("\ncl : ", cl2)
+		fmt.Println("\ncl : ", cl3)
+	})
+}
+
 func main() {
 	shoset.InitPrettyLogger(false)
 	shoset.SetLogLevel("debug")
@@ -953,6 +970,9 @@ func main() {
 	} else if arg == "3" {
 		shoset.Log("simplesimpleConnector")
 		// simplesimpleConnector()
+	} else if arg == "4" {
+		shoset.Log("testFiles")
+		testFiles1()
 	} else {
 		shoset.Log("testPki")
 		// testPki(ctx, done)
