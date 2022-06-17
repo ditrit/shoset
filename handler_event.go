@@ -1,10 +1,7 @@
 package shoset
 
 import (
-	"fmt"
 	"time"
-
-	//"fmt"
 
 	"github.com/ditrit/shoset/msg"
 	"github.com/rs/zerolog/log"
@@ -64,19 +61,15 @@ func (eh *EventHandler) Wait(c *Shoset, replies *msg.Iterator, args map[string]s
 	term := make(chan *msg.Message, 1)
 	cont := true //??
 
-	//fmt.Println("replies (WaitEvent)  : ", replies)
 	go func() {
 		for cont {
-			fmt.Print("replies Queue (Wait)")
-			replies.PrintQueue()
+			//Check message presence in two steps to avoid accessing attributs of <nil>
 			cell := replies.Get()
 			if cell == nil {
 				time.Sleep(time.Duration(10) * time.Millisecond)
 				continue
 			}
-			//fmt.Println("replies.Get()  : ", replies.Get())
 			message := cell.GetMessage()
-			//fmt.Println("message (Wait)  : ", message)
 			if message == nil {
 				time.Sleep(time.Duration(10) * time.Millisecond)
 				continue

@@ -332,7 +332,6 @@ func (c *ShosetConn) receiveMessage() error {
 
 	// read message type
 	msgType, err := c.rb.ReadString()
-	//fmt.Println("msgType (receiveMessage) : ", msgType) //
 	switch {
 	case err == io.EOF:
 		if c.GetDir() == IN {
@@ -373,16 +372,14 @@ func (c *ShosetConn) handleMsg(msgType string) error {
 		return errors.New("receiveMessage : non implemented type of message " + msgType)
 	}
 	msgVal, err := handler.Get(c)
-	//fmt.Println("msgVal (handleMsg) : ", msgVal) //
 	if err != nil {
 		if c.GetDir() == IN {
 			c.ch.deleteConn(c.GetRemoteAddress(), c.GetRemoteLogicalName())
 		}
 		return errors.New("receiveMessage : can not read value of " + msgType + " : " + err.Error())
 	}
-	//fmt.Println("msgType (handleMsg) : ", msgType) //
 
-	DoubleWayMsgTypes := []string{"cfgjoin", "cfglink", "cfgbye", "pkievt_TLSdoubleWay","evt"}
+	DoubleWayMsgTypes := []string{"cfgjoin", "cfglink", "cfgbye", "pkievt_TLSdoubleWay","evt"} //Added evt
 	switch {
 	case msgType == TLS_SINGLE_WAY_PKI_EVT:
 		err := c.handleSingleWay(msgVal)
