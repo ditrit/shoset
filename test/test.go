@@ -11,6 +11,7 @@ import (
 
 	"github.com/ditrit/shoset"
 	"github.com/ditrit/shoset/msg"
+	"github.com/ditrit/shoset/files"
 )
 
 func loopUntilDone(tick time.Duration, ctx context.Context, callback func()) {
@@ -934,7 +935,7 @@ func testFiles1(ctx context.Context, done context.CancelFunc) {
 
 	event_rc := cl1.Wait("evt", map[string]string{"topic": "test_topic", "event": "test_event"}, 5)	
 
-	shoset.Log("event_rc (Payload) : "+ event_rc.GetPayload())
+	shoset.Log("\nevent_rc (Payload) : "+ event_rc.GetPayload())
 }
 
 func main() {
