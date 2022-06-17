@@ -920,49 +920,21 @@ func testPresentationENIB(ctx context.Context, done context.CancelFunc) {
 }
 
 func testFiles1(ctx context.Context, done context.CancelFunc) {
-
 	cl1 := shoset.NewShoset("cl", "cl") //Maitresse du système
 	cl1.InitPKI("localhost:8001")
 
 	cl2 := shoset.NewShoset("cl", "cl")                      // always "cl" "cl" for gandalf
 	cl2.Protocol("localhost:8002", "localhost:8001", "join") // we join it to our first socket
 
-	//fmt.Println("cl1 : ",cl1)
-	//fmt.Println("cl1 : ",cl2)
+	time.Sleep(1 * time.Second) //Wait for connexion
 
-	time.Sleep(2 * time.Second)
-
-	fmt.Println("cl1 : ", cl1)
-	fmt.Println("cl2 : ", cl2)
-
-	event := msg.NewEventClassic("test_topic", "test_event", "test_payload")
-
-	//cl1.Queue["evt"].Print()
-	//cl2.Queue["evt"].Print()
+	event := msg.NewEventClassic("test_topic", "test_event", "test_payload")	
 
 	cl2.Send(event)
 
-	//cl1.Queue["evt"].Print()
-	//cl2.Queue["evt"].Print()
+	event_rc := cl1.Wait("evt", map[string]string{"topic": "test_topic", "event": "test_event"}, 5)	
 
-	//time.Sleep(1 * time.Second)
-
-	//iterator := msg.NewIterator(cl2.Queue["evt"])
-
-	//fmt.Println("Iterator : ", iterator)
-
-	event_rc := cl1.Wait("evt", map[string]string{"topic": "test_topic","event" : "test_event"}, 10)
-
-	//event_rc.
-
-	fmt.Println("event_rc : ", event_rc)
-
-	loopUntilDone(1*time.Second, ctx, func() {
-		fmt.Printf("%s: %v", cl1.GetLogicalName(), cl1.PrettyPrint())
-		fmt.Printf("%s: %v", cl2.GetLogicalName(), cl2.PrettyPrint())
-		done()
-	})
-
+	shoset.Log("event_rc (Payload) : "+ event_rc.GetPayload())
 }
 
 func main() {

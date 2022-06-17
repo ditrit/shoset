@@ -295,14 +295,15 @@ func (c *Shoset) deleteConn(connAddr, connLname string) {
 }
 
 func (c *Shoset) Send(msg msg.Message) { //Use pointer for msg ?
-	fmt.Println("msg (Send)",msg)
 	c.Handlers[msg.GetMsgType()].Send(c, msg)
 }
 
-func (c *Shoset) Wait(msgType string, args map[string]string, timeout int) *msg.Message {
+func (c *Shoset) Wait(msgType string, args map[string]string, timeout int) msg.Message {
 	iter := msg.NewIterator(c.Queue[msgType])
-	fmt.Println("Iterator : ", iter)
-	return c.Handlers[msgType].Wait(c, iter, args, timeout)
+	fmt.Println("Iterator (Wait) : ", iter)
+	event := c.Handlers[msgType].Wait(c, iter, args, timeout)
+	fmt.Println("Event (Wait) : ", event)
+	return *(event)
 }
 
 // func (c *Shoset) newIter(msgType string) {

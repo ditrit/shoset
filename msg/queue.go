@@ -26,9 +26,9 @@ type Cell struct {
 
 // GetMessage :
 func (c *Cell) GetMessage() Message { 
-	fmt.Println("Cell (GetMessage)  : ", c)
+	//fmt.Println("Cell (GetMessage)  : ", c)
 	message := c.m	
-	fmt.Println("message (GetMessage)  : ", message)
+	//fmt.Println("message (GetMessage)  : ", message)
 	return message 
 }
 
