@@ -29,8 +29,8 @@ type Shoset struct {
 	ConnsByName      *MapSyncMap // map[lName]map[remoteAddress]*ShosetConn   connexions par nom logique
 	LnamesByType     *MapSyncMap // map[shosetType]map[lName]bool used for gandalf
 	LnamesByProtocol *MapSyncMap // map[protocolType]map[lName]bool
-	ConnsSingleBool  *sync.Map    // map[ipAddress]bool ipAddresses waiting in singleWay to be handled for tls double way
-	ConnsSingleConn  *sync.Map    // map[ipAddress]*ShosetConn ShosetConns waiting in singleWay to be handled for tls double way
+	ConnsSingleBool  *sync.Map   // map[ipAddress]bool ipAddresses waiting in singleWay to be handled for tls double way
+	ConnsSingleConn  *sync.Map   // map[ipAddress]*ShosetConn ShosetConns waiting in singleWay to be handled for tls double way
 
 	lName       string // Nom logique de la shoset
 	ShosetType  string // Type logique de la shoset
@@ -200,7 +200,7 @@ func (c *Shoset) handleBind() {
 			return
 		}
 
-		if exists, _ :=c.ConnsSingleBool.Load(strings.Split(unencConn.RemoteAddr().String(), ":")[0]); exists != nil { // get ipAddress
+		if exists, _ := c.ConnsSingleBool.Load(strings.Split(unencConn.RemoteAddr().String(), ":")[0]); exists != nil { // get ipAddress
 			tlsConn := tls.Server(unencConn, c.tlsConfigSingleWay) // create the securised connection protocol
 
 			conn, _ := NewShosetConn(c, unencConn.RemoteAddr().String(), IN) // create the securised connection
@@ -293,3 +293,18 @@ func (c *Shoset) deleteConn(connAddr, connLname string) {
 		}
 	}
 }
+
+func (c *Shoset) Send(msg msg.Message) { //Use pointer for msg ?
+	fmt.Println("msg (Send)",msg)
+	c.Handlers[msg.GetMsgType()].Send(c, msg)
+}
+
+func (c *Shoset) Wait(msgType string, args map[string]string, timeout int) *msg.Message {
+	iter := msg.NewIterator(c.Queue[msgType])
+	fmt.Println("Iterator : ", iter)
+	return c.Handlers[msgType].Wait(c, iter, args, timeout)
+}
+
+// func (c *Shoset) newIter(msgType string) {
+//     msg.NewIterator(*msg.Queue[msgType])
+// }
