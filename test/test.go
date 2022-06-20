@@ -10,8 +10,8 @@ import (
 	// "log"
 
 	"github.com/ditrit/shoset"
+	files "github.com/ditrit/shoset/distributed_files"
 	"github.com/ditrit/shoset/msg"
-	"github.com/ditrit/shoset/files"
 )
 
 func loopUntilDone(tick time.Duration, ctx context.Context, callback func()) {
@@ -920,7 +920,7 @@ func testPresentationENIB(ctx context.Context, done context.CancelFunc) {
 	})
 }
 
-func testFiles1(ctx context.Context, done context.CancelFunc) {
+func testPayloadEvent(ctx context.Context, done context.CancelFunc) {
 	cl1 := shoset.NewShoset("cl", "cl") //Maitresse du système
 	cl1.InitPKI("localhost:8001")
 
@@ -929,13 +929,55 @@ func testFiles1(ctx context.Context, done context.CancelFunc) {
 
 	time.Sleep(1 * time.Second) //Wait for connexion
 
-	event := msg.NewEventClassic("test_topic", "test_event", "test_payload")	
+	event := msg.NewEventClassic("test_topic", "test_event", "test_payload")
 
 	cl2.Send(event)
 
-	event_rc := cl1.Wait("evt", map[string]string{"topic": "test_topic", "event": "test_event"}, 5)	
+	event_rc := cl1.Wait("evt", map[string]string{"topic": "test_topic", "event": "test_event"}, 5)
 
-	shoset.Log("\nevent_rc (Payload) : "+ event_rc.GetPayload())
+	shoset.Log("\nevent_rc (Payload) : " + event_rc.GetPayload())
+}
+
+func testFile1(ctx context.Context, done context.CancelFunc) {
+	cl1 := shoset.NewShoset("cl", "cl") //Maitresse du système
+	cl1.InitPKI("localhost:8001")
+
+	cl2 := shoset.NewShoset("cl", "cl")                      // always "cl" "cl" for gandalf
+	cl2.Protocol("localhost:8002", "localhost:8001", "join") // we join it to our first socket
+
+	time.Sleep(1 * time.Second) //Wait for connexion
+
+	files_list_1 := files.NewFiles()
+
+	files_list_1.AddNewFile("./test_files/source/test1.txt")
+
+	files_list_1.AddNewFile("./test_files/source/test2.txt")
+
+	files_list_1.GetAllFiles() //Print names of all files
+
+	fmt.Println("files_list_1.FilesMap[test1.txt].Data : ", string(files_list_1.FilesMap["test1.txt"].Data))
+
+	files_list_1.FilesMap["test1.txt"].Data = []byte("More content for test1")
+
+	fmt.Println("files_list_1.FilesMap[test1.txt].Data : ", string(files_list_1.FilesMap["test1.txt"].Data))
+
+	err_write := files_list_1.WriteAllToDisk("./test_files/destination")
+
+	if err_write != nil {
+		fmt.Println(err_write)
+	}
+
+	transfer1 := files_list_1.FilesMap["test1.txt"].NewFileTransfer(cl1, "127.0.0.1:8002")
+
+	fmt.Println("transfer1 : ", transfer1.String())
+
+	// event := msg.NewEventClassic("test_topic", "test_event", "test_payload")
+
+	// cl2.Send(event)
+
+	// event_rc := cl1.Wait("evt", map[string]string{"topic": "test_topic", "event": "test_event"}, 5)
+
+	// shoset.Log("\nevent_rc (Payload) : "+ event_rc.GetPayload())
 }
 
 func main() {
@@ -973,7 +1015,8 @@ func main() {
 		// simplesimpleConnector()
 	} else if arg == "4" {
 		shoset.Log("testFiles")
-		testFiles1(ctx, done)
+		//testPayloadEvent(ctx, done)
+		testFile1(ctx, done)
 	} else {
 		shoset.Log("testPki")
 		// testPki(ctx, done)
