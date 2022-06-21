@@ -9,7 +9,7 @@ import (
 
 var chunkSize int = 10
 
-type FileTranfer struct {
+type FileTransfer struct {
 	sender         *shoset.Shoset
 	transferType   string               // "tx" or "rx" (Lock the data of the file for the duration of transfer)
 	file           *File                //File to be transfered
@@ -23,8 +23,8 @@ type FileTranfer struct {
 }
 
 //destination : adrress (IP:port) of the destination
-func (file *File) NewFileTransfer(sender *shoset.Shoset, transferType string, destinationAdress string) FileTranfer {
-	var transfer FileTranfer
+func (file *File) NewFileTransfer(sender *shoset.Shoset, transferType string, destinationAdress string) FileTransfer {
+	var transfer FileTransfer
 	transfer.sender = sender
 	transfer.transferType = transferType //"tx" or "rx"
 	transfer.file = file
@@ -65,7 +65,7 @@ func (file *File) NewFileTransfer(sender *shoset.Shoset, transferType string, de
 	return transfer
 }
 
-func (transfer *FileTranfer) String() string {
+func (transfer *FileTransfer) String() string {
 	result := "\nFileTranfer of " + transfer.file.Name + " :\n"
 	result += "sender : " + transfer.sender.String() + "\n"
 	result += "transferType : " + transfer.transferType + "\n"

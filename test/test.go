@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strconv"
+	"strings"
 	"time"
 
 	// "os"
@@ -966,11 +968,11 @@ func testFile1(ctx context.Context, done context.CancelFunc) {
 
 	files_list_1.AddNewFile("./test_files/source/test2.txt")
 
-	files_list_1.GetAllFiles() //Print names of all files
+	files_list_1.PrintAllFiles() //Print names of all files
 
 	fmt.Println("files_list_1.FilesMap[test1.txt].Data : ", string(files_list_1.FilesMap["test1.txt"].Data))
 
-	files_list_1.FilesMap["test1.txt"].Data = []byte("More content for test1")
+	files_list_1.FilesMap["test1.txt"].Data = []byte("More content for test 1000") //Last digit of content is truncated ?
 
 	fmt.Println("files_list_1.FilesMap[test1.txt].Data : ", string(files_list_1.FilesMap["test1.txt"].Data))
 
@@ -986,12 +988,32 @@ func testFile1(ctx context.Context, done context.CancelFunc) {
 
 	go transfer1.HandleTransfer()
 
-	iterator := msg.NewIterator(cl1.Queue["evt"])
-	for i := 0; i < 4; i++ {
-		time.Sleep(100 * time.Millisecond)
-		event_rc := cl1.Wait("evt", map[string]string{"topic": "fileTransfer", "event": "fileTransferStart"}, 5, iterator) //Ne consomme pas les messages
-		shoset.Log("\nevent_rc (Payload) : " + event_rc.GetPayload())
+	//received := files.NewEmptyFile()
+
+	received := transfer1.WaitFile(cl1)
+
+	fmt.Println("Received File :", received)
+
+	received.WriteToDisk("./test_files/destination")
+}
+
+func testStringToByte(ctx context.Context, done context.CancelFunc) {
+	inputString := "More content for test1"
+
+	inputData := []byte(inputString)
+
+	intputDataString := fmt.Sprint(inputData)
+
+	outputData := []byte{}
+
+	for _, ps := range strings.Split(strings.Trim(intputDataString, "[]"), " ") {
+		pi, _ := strconv.Atoi(ps)
+		outputData = append(outputData, byte(pi))
 	}
+
+	outputString := string(outputData)
+
+	fmt.Println("outputString : ", outputString)
 }
 
 func main() {
@@ -1030,7 +1052,8 @@ func main() {
 	} else if arg == "4" {
 		shoset.Log("testFiles")
 		//testPayloadEvent(ctx, done)
-		testFile1(ctx, done)
+		//testFile1(ctx, done)
+		testStringToByte(ctx, done)
 	} else {
 		shoset.Log("testPki")
 		// testPki(ctx, done)

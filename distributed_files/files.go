@@ -29,11 +29,23 @@ func NewFile(path string) (*File, error) {
 	return &file, err
 }
 
+func NewEmptyFile() *File {
+	file := File{}
+	file.m.Lock()
+	file.Status = "Empty"
+	file.Name=""
+	file.Path=""
+	file.Data=[]byte{}	
+	
+	file.m.Unlock()
+	return &file
+}
+
 func (file *File) WriteToDisk(path string) error {
 	file.m.Lock()
 	file.Status = "Busy"
 	var err error = nil
-	fmt.Println(path + file.Name)
+	fmt.Println(path+"/"+file.Name)
 	fmt.Println(string(file.Data))
 	file.Path = path
 	err = os.WriteFile(path+"/"+file.Name, file.Data, 0222)
@@ -71,10 +83,15 @@ func (files *Files) AddNewFile(path string) {
 	files.FilesMap[file.Name] = file
 }
 
-func (files *Files) GetAllFiles() {
-	for _, i := range files.FilesMap {
-		fmt.Println(i.Name)
+func (files *Files) PrintAllFiles() {
+	result := "\nList of imported files :"
+	for name, file := range files.FilesMap {
+		result+="\nName : "+name+"\n"
+		result+="Path : "+file.Path+"\n"
+		result+="Data (len) : "+fmt.Sprint(len(file.Data))+"\n"
+		result+="Status : "+file.Status+"\n"
 	}
+	fmt.Println(result)
 }
 
 func (files *Files) WriteAllToDisk(path string) error {

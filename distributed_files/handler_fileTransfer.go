@@ -2,6 +2,8 @@ package files
 
 import (
 	"fmt"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/ditrit/shoset"
@@ -16,7 +18,7 @@ import (
 
 //func (c *ShosetConn) SendMessage(msg msg.Message)
 
-func (fileTransfer *FileTranfer) HandleTransfer() {
+func (fileTransfer *FileTransfer) HandleTransfer() {
 	//File infos :
 	fileInfo := fileTransfer.file.Name + "," + fmt.Sprint(len(fileTransfer.file.Data))
 	event := msg.NewEventClassic("fileTransfer", "fileTransferStart", fileInfo)
@@ -64,19 +66,72 @@ func (file *File) sendChunk(destination *shoset.ShosetConn, chunkNumber int) {
 	fmt.Println("event (sendChunk)", event)
 
 	//Send event :
-	time.Sleep(100 * time.Millisecond)
-	error := destination.SendMessage(event)
+	time.Sleep(10 * time.Millisecond)
+	err := destination.SendMessage(event)
 
-	if error != nil {
-		fmt.Println("sendChunk : ",error)
+	if err != nil {
+		fmt.Println("sendChunk : ", err)
 	}
 }
 
-//
+// WaitFile :
+func (transfer *FileTransfer) WaitFile(c *shoset.Shoset) *File {
+	file := NewEmptyFile()
+
+	file.m.Lock()
+
+	iterator := msg.NewIterator(c.Queue["evt"])
+
+	//Get File info in first message :
+	event_rc := c.Wait("evt", map[string]string{"topic": "fileTransfer", "event": "fileTransferStart"}, 5, iterator)
+	payload := event_rc.GetPayload()
+
+	dataString := strings.Split(payload, ",")
+
+	fmt.Println("dataString (WaitFile)", dataString)
+
+	file.Name = dataString[0]
+	fileLen,err := strconv.Atoi(dataString[1]) //int(dataString[1])
+
+	fmt.Println("file.Name (WaitFile)", file.Name)
+	fmt.Println("fileLen (WaitFile)", fileLen)
+
+	if err != nil {
+		fmt.Println("WaitFile : ", err)
+	}
+
+	for i := 0; i < ((fileLen/chunkSize)+1); i++ {
+		event_rc = c.Wait("evt", map[string]string{"topic": "fileTransfer", "event": "fileTransferStart"}, 5, iterator)
+		payload = event_rc.GetPayload()
+
+		fmt.Println("payload (WaitFile)", payload)
+
+		dataString = strings.Split(payload, ",")
+
+		//Convert payload back to string and Add data to file
+
+		fmt.Println("strings.Split()",strings.Split(strings.Trim(dataString[1], "[]"), " "))
+
+		for _, ps := range strings.Split(strings.Trim(dataString[1], "[]"), " ") {
+			pi,_ := strconv.Atoi(ps)
+			file.Data = append(file.Data,byte(pi))
+		}
+	}	
+	file.m.Unlock()
+	file.Status="ready"
+	return file
+}
 
 // WaitChunk :
-func (file *File) WaitChunk() {
-	//Find chunk number :
+// func (file *File) WaitChunk(c shoset.Shoset, iterator *msg.Iterator) []byte {
+// 	//Find chunk number :
 
-	//Add to file data :
-}
+// 	event_rc := c.Wait("evt", map[string]string{"topic": "fileTransfer", "event": "fileTransferStart"}, 5, iterator) //Ne consomme pas les messages
+// 	payload := event_rc.GetPayload()
+// 	shoset.Log("\nevent_rc (Payload) (WaitChunk) : " + payload)
+
+// 	//Add to file data :
+// 	data := []byte{}
+
+// 	return data
+// }
