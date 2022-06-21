@@ -937,7 +937,6 @@ func testPayloadEvent(ctx context.Context, done context.CancelFunc) {
 		for {
 			time.Sleep(1 * time.Second)
 			event := msg.NewEventClassic("test_topic", "test_event", "test_payload"+fmt.Sprint(i))
-
 			cl2.Send(event)
 			i++
 		}
@@ -948,7 +947,6 @@ func testPayloadEvent(ctx context.Context, done context.CancelFunc) {
 	for {
 		//essayer en gardant le même itérateur
 		event_rc := cl1.Wait("evt", map[string]string{"topic": "test_topic", "event": "test_event"}, 5, iterator)
-
 		shoset.Log("event_rc (Payload) : " + event_rc.GetPayload())
 	}
 }
@@ -972,7 +970,7 @@ func testFile1(ctx context.Context, done context.CancelFunc) {
 
 	fmt.Println("files_list_1.FilesMap[test1.txt].Data : ", string(files_list_1.FilesMap["test1.txt"].Data))
 
-	files_list_1.FilesMap["test1.txt"].Data = []byte("More content for test 1000") //Last digit of content is truncated ?
+	files_list_1.FilesMap["test1.txt"].Data = []byte("Another content for test1") //Last digit of content is truncated ?
 
 	fmt.Println("files_list_1.FilesMap[test1.txt].Data : ", string(files_list_1.FilesMap["test1.txt"].Data))
 
@@ -998,7 +996,7 @@ func testFile1(ctx context.Context, done context.CancelFunc) {
 }
 
 func testStringToByte(ctx context.Context, done context.CancelFunc) {
-	inputString := "More content for test1"
+	inputString := "More content for test10"
 
 	inputData := []byte(inputString)
 
@@ -1052,8 +1050,8 @@ func main() {
 	} else if arg == "4" {
 		shoset.Log("testFiles")
 		//testPayloadEvent(ctx, done)
-		//testFile1(ctx, done)
-		testStringToByte(ctx, done)
+		testFile1(ctx, done)
+		//testStringToByte(ctx, done)
 	} else {
 		shoset.Log("testPki")
 		// testPki(ctx, done)

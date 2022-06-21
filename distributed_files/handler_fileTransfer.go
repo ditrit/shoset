@@ -15,9 +15,6 @@ import (
 // Get ?? :
 
 // HandleFileTranfer :
-
-//func (c *ShosetConn) SendMessage(msg msg.Message)
-
 func (fileTransfer *FileTransfer) HandleTransfer() {
 	//File infos :
 	fileInfo := fileTransfer.file.Name + "," + fmt.Sprint(len(fileTransfer.file.Data))
@@ -58,7 +55,7 @@ func (file *File) sendChunk(destination *shoset.ShosetConn, chunkNumber int) {
 	if (chunkNumber+1)*chunkSize < len(file.Data) {
 		fileChunk = fmt.Sprint(chunkNumber) + "," + fmt.Sprint(file.Data[chunkNumber*chunkSize:(chunkNumber+1)*chunkSize])
 	} else {
-		fileChunk = fmt.Sprint(chunkNumber) + "," + fmt.Sprint(file.Data[chunkNumber*chunkSize:len(file.Data)-1])
+		fileChunk = fmt.Sprint(chunkNumber) + "," + fmt.Sprint(file.Data[chunkNumber*chunkSize:len(file.Data)])
 	}
 
 	event := msg.NewEventClassic("fileTransfer", "fileTransferStart", fileChunk)
@@ -109,7 +106,6 @@ func (transfer *FileTransfer) WaitFile(c *shoset.Shoset) *File {
 		dataString = strings.Split(payload, ",")
 
 		//Convert payload back to string and Add data to file
-
 		fmt.Println("strings.Split()",strings.Split(strings.Trim(dataString[1], "[]"), " "))
 
 		for _, ps := range strings.Split(strings.Trim(dataString[1], "[]"), " ") {
