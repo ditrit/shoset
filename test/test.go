@@ -929,13 +929,26 @@ func testPayloadEvent(ctx context.Context, done context.CancelFunc) {
 
 	time.Sleep(1 * time.Second) //Wait for connexion
 
-	event := msg.NewEventClassic("test_topic", "test_event", "test_payload")
+	//Sender :
+	go func() {
+		i := 0
+		for {
+			time.Sleep(1 * time.Second)
+			event := msg.NewEventClassic("test_topic", "test_event", "test_payload"+fmt.Sprint(i))
 
-	cl2.Send(event)
+			cl2.Send(event)
+			i++
+		}
+	}()
 
-	event_rc := cl1.Wait("evt", map[string]string{"topic": "test_topic", "event": "test_event"}, 5)
+	//Receiver :
+	iterator := msg.NewIterator(cl1.Queue["evt"])
+	for {
+		//essayer en gardant le même itérateur
+		event_rc := cl1.Wait("evt", map[string]string{"topic": "test_topic", "event": "test_event"}, 5, iterator)
 
-	shoset.Log("\nevent_rc (Payload) : " + event_rc.GetPayload())
+		shoset.Log("event_rc (Payload) : " + event_rc.GetPayload())
+	}
 }
 
 func testFile1(ctx context.Context, done context.CancelFunc) {
@@ -967,17 +980,18 @@ func testFile1(ctx context.Context, done context.CancelFunc) {
 		fmt.Println(err_write)
 	}
 
-	transfer1 := files_list_1.FilesMap["test1.txt"].NewFileTransfer(cl1, "127.0.0.1:8002")
+	transfer1 := files_list_1.FilesMap["test1.txt"].NewFileTransfer(cl2, "tx", "127.0.0.1:8001")
 
 	fmt.Println("transfer1 : ", transfer1.String())
 
-	// event := msg.NewEventClassic("test_topic", "test_event", "test_payload")
+	go transfer1.HandleTransfer()
 
-	// cl2.Send(event)
-
-	// event_rc := cl1.Wait("evt", map[string]string{"topic": "test_topic", "event": "test_event"}, 5)
-
-	// shoset.Log("\nevent_rc (Payload) : "+ event_rc.GetPayload())
+	iterator := msg.NewIterator(cl1.Queue["evt"])
+	for i := 0; i < 4; i++ {
+		time.Sleep(100 * time.Millisecond)
+		event_rc := cl1.Wait("evt", map[string]string{"topic": "fileTransfer", "event": "fileTransferStart"}, 5, iterator) //Ne consomme pas les messages
+		shoset.Log("\nevent_rc (Payload) : " + event_rc.GetPayload())
+	}
 }
 
 func main() {

@@ -302,8 +302,14 @@ func (c *Shoset) Send(msg msg.Message) { //Use pointer for msg ?
 
 //Wait for message
 //args for event("evt") type : map[string]string{"topic": "topic_name", "event": "event_name"}
-func (c *Shoset) Wait(msgType string, args map[string]string, timeout int) msg.Message {
-	iter := msg.NewIterator(c.Queue[msgType])
-	event := c.Handlers[msgType].Wait(c, iter, args, timeout)
+//Leave iterator at nil if you don't want to generate it yourself
+func (c *Shoset) Wait(msgType string, args map[string]string, timeout int, iterator *msg.Iterator) msg.Message {
+	if iterator==nil {
+		iterator = msg.NewIterator(c.Queue[msgType])
+	}
+
+	event := c.Handlers[msgType].Wait(c, iterator, args, timeout)
 	return *(event)
 }
+
+//Create equivalent with conns ???
