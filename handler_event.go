@@ -59,7 +59,7 @@ func (eh *EventHandler) Wait(c *Shoset, replies *msg.Iterator, args map[string]s
 	}
 	eventName := args["event"]
 	term := make(chan *msg.Message, 1)
-	cont := true //??
+	cont := true
 
 	go func() {
 		for cont {

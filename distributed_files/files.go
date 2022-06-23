@@ -11,7 +11,7 @@ type File struct {
 	Name   string
 	Path   string
 	Data   []byte
-	Status string
+	Status string //empty, ready, imcomplete, busy
 	m      sync.Mutex
 }
 

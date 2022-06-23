@@ -130,6 +130,9 @@ func NewShoset(lName, ShosetType string) *Shoset {
 	shst.Queue["cmd"] = msg.NewQueue()
 	shst.Handlers["cmd"] = new(CommandHandler)
 
+	shst.Queue["fileChunk"] = msg.NewQueue() //
+	shst.Handlers["fileChunk"] = new(FileChunkHandler)//
+
 	//TODO MOVE TO GANDALF
 	shst.Queue["config"] = msg.NewQueue()
 	shst.Handlers["config"] = new(ConfigHandler)
