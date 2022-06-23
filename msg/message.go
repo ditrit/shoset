@@ -141,3 +141,8 @@ func (m MessageBaseByte) GetMajor() int8 {
 func (m MessageBaseByte) GetMinor() int8 {
 	return m.Minor
 }
+
+// GetPayloadByte accessor
+func (m MessageBaseByte) GetPayloadByte() []byte {
+	return m.PayloadByte
+}

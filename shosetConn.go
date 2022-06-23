@@ -379,7 +379,7 @@ func (c *ShosetConn) handleMsg(msgType string) error {
 		return errors.New("receiveMessage : can not read value of " + msgType + " : " + err.Error())
 	}
 
-	DoubleWayMsgTypes := []string{"cfgjoin", "cfglink", "cfgbye", "pkievt_TLSdoubleWay","evt"} //Added evt
+	DoubleWayMsgTypes := []string{"cfgjoin", "cfglink", "cfgbye", "pkievt_TLSdoubleWay","evt", "fileChunk"} //Added evt,fileChunk
 	switch {
 	case msgType == TLS_SINGLE_WAY_PKI_EVT:
 		err := c.handleSingleWay(msgVal)

@@ -130,8 +130,8 @@ func NewShoset(lName, ShosetType string) *Shoset {
 	shst.Queue["cmd"] = msg.NewQueue()
 	shst.Handlers["cmd"] = new(CommandHandler)
 
-	shst.Queue["fileChunk"] = msg.NewQueue() //
-	shst.Handlers["fileChunk"] = new(FileChunkHandler)//
+	shst.Queue["fileChunk"] = msg.NewQueue()           //
+	shst.Handlers["fileChunk"] = new(FileChunkHandler) //
 
 	//TODO MOVE TO GANDALF
 	shst.Queue["config"] = msg.NewQueue()
@@ -307,12 +307,18 @@ func (c *Shoset) Send(msg msg.Message) { //Use pointer for msg ?
 //args for event("evt") type : map[string]string{"topic": "topic_name", "event": "event_name"}
 //Leave iterator at nil if you don't want to generate it yourself
 func (c *Shoset) Wait(msgType string, args map[string]string, timeout int, iterator *msg.Iterator) msg.Message {
-	if iterator==nil {
+	if iterator == nil {
 		iterator = msg.NewIterator(c.Queue[msgType])
 	}
 
 	event := c.Handlers[msgType].Wait(c, iterator, args, timeout)
-	return *(event)
+
+	if event == nil {
+		return nil
+	} else {
+		return *(event)
+	}
+
 }
 
 //Create equivalent with conns ???

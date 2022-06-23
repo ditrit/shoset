@@ -45,8 +45,7 @@ func (file *File) WriteToDisk(path string) error {
 	file.m.Lock()
 	file.Status = "Busy"
 	var err error = nil
-	fmt.Println(path+"/"+file.Name)
-	fmt.Println(string(file.Data))
+	fmt.Println("File writen to disk (WriteToDisk) : ",path+"/"+file.Name)
 	file.Path = path
 	err = os.WriteFile(path+"/"+file.Name, file.Data, 0222)
 
