@@ -21,15 +21,16 @@ type Message interface {
 
 // MessageBase base struct for messages
 type MessageBase struct {
-	UUID      string
-	Tenant    string
-	Token     string
-	Timeout   int64
-	Timestamp int64
-	Payload   string
-	Next      string
-	Major     int8
-	Minor     int8
+	UUID        string
+	Tenant      string
+	Token       string
+	Timeout     int64
+	Timestamp   int64
+	Payload     string
+	PayloadByte []byte //For raw data (FileTransfer)
+	Next        string
+	Major       int8
+	Minor       int8
 }
 
 // InitMessageBase constructor
@@ -73,6 +74,11 @@ func (m MessageBase) GetTimeout() int64 {
 // GetPayload accessor
 func (m MessageBase) GetPayload() string {
 	return m.Payload
+}
+
+// GetPayloadByte accessor
+func (m MessageBase) GetPayloadByte() []byte {
+	return m.PayloadByte
 }
 
 // GetMajor accessor

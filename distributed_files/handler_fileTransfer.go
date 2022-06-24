@@ -1,4 +1,4 @@
-package files
+package file
 
 import (
 	"fmt"
@@ -22,7 +22,7 @@ func (fileTransfer *FileTransfer) HandleTransfer() {
 	for conn, chRqByConn := range fileTransfer.requestedChunks {
 		for _, chunk := range chRqByConn {
 			fmt.Println("chunk (HandleTransfer) : ", chunk)
-			//Get data :
+			//Create data chunk :
 			lenFile := len(fileTransfer.file.Data)
 			if (chunk+1)*chunkSize < lenFile {
 				fileChunk = fileTransfer.file.Data[chunk*chunkSize : (chunk+1)*chunkSize]
@@ -31,23 +31,21 @@ func (fileTransfer *FileTransfer) HandleTransfer() {
 			}
 
 			//Generate message :
-			message := msg.NewfileChunkMessage(fileTransfer.file.Name, lenFile, chunk, fileChunk)
-
-			fmt.Println("message (HandleTransfer) : ", message)
-
+			message := msg.NewFileChunkMessage(fileTransfer.file.Name, lenFile, chunk, fileChunk)
+			fmt.Println("message (HandleTransfer) : ", message) //
 			err := conn.SendMessage(message)
 
-			time.Sleep(10 * time.Millisecond)
+			time.Sleep(10 * time.Millisecond) //Necessary to make it work
 
 			if err != nil {
 				fmt.Println("sendChunk : ", err)
 			}
 		}
 	}
-
 	//Check if no other chunks are requested :
 }
 
+//Request to be sent a file
 func requestFile(name string) {
 	//Request File infos :
 
@@ -59,17 +57,16 @@ func requestFile(name string) {
 }
 
 // WaitFile :
+// Receive chunks and reassemble File from chunks
 func (transfer *FileTransfer) WaitFile(c *shoset.Shoset) *File {
-	//Créer un nouveua fichier seulement si il n'éxiste pas
+	//Créer un nouveau fichier seulement si il n'éxiste pas
 	file := NewEmptyFile()
 
 	file.m.Lock()
 
-	data := make(map[int]([]byte)) // Put it directly in FileTransfer
+	data := make(map[int]([]byte)) // Put it directly in FileTransfer ?
 
-	fileLen := 0
-
-	//Get File info in first message :
+	var fileLen int
 	iterator := msg.NewIterator(c.Queue["fileChunk"])
 	//c.Wait("fileChunk", map[string]string{}, 5, iterator).(msg.FileChunkMessage)
 	for { //
@@ -81,6 +78,7 @@ func (transfer *FileTransfer) WaitFile(c *shoset.Shoset) *File {
 			//Définir le fichier sur lequel on travail à la reception du premier chunk
 			file.Name = chunk_rc.GetFileName()
 			fileLen = chunk_rc.GetFileLen()
+
 			//Vérifier que le chunk appartient au bon fichier (tester la réjection)
 			if !(file.Name == chunk_rc.GetFileName() && fileLen == chunk_rc.GetFileLen()) {
 				continue
@@ -88,23 +86,23 @@ func (transfer *FileTransfer) WaitFile(c *shoset.Shoset) *File {
 
 			chunkNumber := chunk_rc.GetChunkNumber()
 
-			//Modifier la liste des reçus :
 			//vérifier qu'il n'est pas déjà dans la liste :
-
 			if !transfer.chunkAlreadyReceived(chunkNumber) { // (tester la réjection)
+				//Modifier la liste des reçus :
 				transfer.receivedChunks = append(transfer.receivedChunks, chunkNumber)
 				//Mettre la liste par ordre croissant  :
 				sort.Ints(transfer.receivedChunks)
 
+				//Store received data
 				data[chunkNumber] = chunk_rc.GetPayloadByte()
 			} else {
 				fmt.Println("(WaitFile) Chunk already received : ", chunkNumber)
 			}
 
 			//Vérifier que le fichier est complet :
-			fmt.Println("(WaitFile) len(transfer.receivedChunks)*chunkSize : ",len(transfer.receivedChunks)*chunkSize,"fileLen : ", fileLen)
+			fmt.Println("(WaitFile) len(transfer.receivedChunks)*chunkSize : ", len(transfer.receivedChunks)*chunkSize, "fileLen : ", fileLen)
 			if len(transfer.receivedChunks)*chunkSize >= fileLen {
-				fmt.Println("(WaitFile) Fichier complet ! ",file.Name)
+				fmt.Println("(WaitFile) Fichier complet ! ", file.Name)
 				break
 			}
 
@@ -113,7 +111,7 @@ func (transfer *FileTransfer) WaitFile(c *shoset.Shoset) *File {
 		}
 	}
 
-	// Mettre les chunks dans l'ordre dans le File
+	// Reconstruct File.Data from received chunks
 	for i := 0; i < int(math.Ceil((float64(fileLen) / float64(chunkSize)))); i++ {
 		file.Data = append(file.Data, data[i]...)
 	}
@@ -123,6 +121,7 @@ func (transfer *FileTransfer) WaitFile(c *shoset.Shoset) *File {
 	return file
 }
 
+// Check if a chunk number was already received
 func (transfer *FileTransfer) chunkAlreadyReceived(chunkNumber int) bool {
 	for _, a := range transfer.receivedChunks {
 		if a == chunkNumber {
@@ -131,17 +130,3 @@ func (transfer *FileTransfer) chunkAlreadyReceived(chunkNumber int) bool {
 	}
 	return false
 }
-
-// WaitChunk :
-// func (file *File) WaitChunk(c shoset.Shoset, iterator *msg.Iterator) []byte {
-// 	//Find chunk number :
-
-// 	event_rc := c.Wait("evt", map[string]string{"topic": "fileTransfer", "event": "fileTransferStart"}, 5, iterator) //Ne consomme pas les messages
-// 	payload := event_rc.GetPayload()
-// 	shoset.Log("\nevent_rc (Payload) (WaitChunk) : " + payload)
-
-// 	//Add to file data :
-// 	data := []byte{}
-
-// 	return data
-// }

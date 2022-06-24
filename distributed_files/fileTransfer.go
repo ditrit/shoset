@@ -1,4 +1,4 @@
-package files
+package file
 
 import (
 	"fmt"
@@ -7,7 +7,7 @@ import (
 	"github.com/ditrit/shoset"
 )
 
-var chunkSize int = 10
+var chunkSize int = 10 //Size in byte of chunks
 
 type FileTransfer struct {
 	sender         *shoset.Shoset
@@ -22,12 +22,15 @@ type FileTransfer struct {
 	requestedChunks map[*shoset.ShosetConn][]int
 }
 
-//destination : adrress (IP:port) of the destination
+//Create a new FileTransfer object (Transfer is not started.)
+//destinationAdress : adrress (IP:port) of the destination
+//transferType : tx (transmit) : send file, rx (receive)
 func (file *File) NewFileTransfer(sender *shoset.Shoset, transferType string, destinationAdress string) FileTransfer {
 	var transfer FileTransfer
 	transfer.sender = sender
 	transfer.transferType = transferType //"tx" or "rx"
 	transfer.file = file
+	// Nécessité de l'initialisation ??
 	transfer.receivedChunks = []int{}
 	transfer.sources = []*shoset.ShosetConn{}
 	transfer.requestedChunks = make(map[*shoset.ShosetConn][]int)

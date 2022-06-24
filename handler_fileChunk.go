@@ -26,12 +26,13 @@ func (eh *FileChunkHandler) HandleDoubleWay(c *ShosetConn, message msg.Message) 
 }
 
 // SendFileChunk :
+// FileChunkMessage are sent using ShosetConn not Shoset
 func (eh *FileChunkHandler) Send(c *Shoset, m msg.Message) {
 	// no-op
-	log.Warn().Msg("ConfigJoinHandler.Send not implemented")
+	log.Warn().Msg("FileChunkHandler.Send not implemented")
 }
 
-// SendFileChunk :
+// SendFileChunk : //A dégager
 func (eh *FileChunkHandler) SendEventConn(c *ShosetConn, fileChunkMessage interface{}) {
 	_, err := c.WriteString("fileChunk")
 	if err != nil {
@@ -47,13 +48,8 @@ func (eh *FileChunkHandler) SendEventConn(c *ShosetConn, fileChunkMessage interf
 
 // WaitFileChunk :
 func (eh *FileChunkHandler) Wait(c *Shoset, replies *msg.Iterator, args map[string]string, timeout int) *msg.Message {
-	// topicName, ok := args["topic"]
-	// if !ok {
-	// 	return nil
-	// }
-	// eventName := args["event"]
 	term := make(chan *msg.Message, 1)
-	cont := true
+	cont := true // ??
 
 	go func() {
 		for cont {
@@ -68,9 +64,7 @@ func (eh *FileChunkHandler) Wait(c *Shoset, replies *msg.Iterator, args map[stri
 				time.Sleep(time.Duration(10) * time.Millisecond)
 				continue
 			}
-			// if event.GetTopic() == topicName && (eventName == VOID || event.GetEvent() == eventName) {
 			term <- &message
-			// }
 		}
 	}()
 	select {

@@ -320,5 +320,3 @@ func (c *Shoset) Wait(msgType string, args map[string]string, timeout int, itera
 	}
 
 }
-
-//Create equivalent with conns ???
