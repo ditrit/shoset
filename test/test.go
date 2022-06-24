@@ -962,41 +962,32 @@ func testFile1(ctx context.Context, done context.CancelFunc) {
 
 	time.Sleep(1 * time.Second) //Wait for connexion
 
+	
+	
 	files_list_1 := files.NewFiles()
-
 	files_list_1.AddNewFile("./test_files/source/test1.txt")
-
 	files_list_1.AddNewFile("./test_files/source/test2.txt")
-
 	files_list_1.PrintAllFiles() //Print names of all files
 
 	fmt.Println("files_list_1.FilesMap[test1.txt].Data : ", string(files_list_1.FilesMap["test1.txt"].Data))
+	//files_list_1.FilesMap["test1.txt"].Data = []byte("Another content for test1") //Replace content of file in memory.
+	//fmt.Println("files_list_1.FilesMap[test1.txt].Data : ", string(files_list_1.FilesMap["test1.txt"].Data))
 
-	files_list_1.FilesMap["test1.txt"].Data = []byte("Another content for test1") //Last digit of content is truncated ?
-
-	fmt.Println("files_list_1.FilesMap[test1.txt].Data : ", string(files_list_1.FilesMap["test1.txt"].Data))
-
-	// err_write := files_list_1.WriteAllToDisk("./test_files/destination")
-
-	// if err_write != nil {
-	// 	fmt.Println(err_write)
-	// }
-
+	
+	
 	transfer1 := files_list_1.FilesMap["test1.txt"].NewFileTransfer(cl2, "tx", "127.0.0.1:8001")
-
-	fmt.Println("Data transfered :", files_list_1.FilesMap["test1.txt"])
-
+	fmt.Println("Data to be transfered :", files_list_1.FilesMap["test1.txt"])
 	fmt.Println("transfer1 : ", transfer1.String())
-
 	go transfer1.HandleTransfer()
 
-	//received := files.NewEmptyFile()
 
 	received := transfer1.WaitFile(cl1)
-
 	fmt.Println("Received File :", received)
+	err_write := received.WriteToDisk("./test_files/destination")
 
-	received.WriteToDisk("./test_files/destination")
+	if err_write != nil {
+		fmt.Println(err_write)
+	}
 }
 
 func testStringToByte(ctx context.Context, done context.CancelFunc) {

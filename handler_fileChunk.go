@@ -68,7 +68,6 @@ func (eh *FileChunkHandler) Wait(c *Shoset, replies *msg.Iterator, args map[stri
 				time.Sleep(time.Duration(10) * time.Millisecond)
 				continue
 			}
-			// event := message.(msg.Event)
 			// if event.GetTopic() == topicName && (eventName == VOID || event.GetEvent() == eventName) {
 			term <- &message
 			// }

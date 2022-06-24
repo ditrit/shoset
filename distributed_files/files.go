@@ -1,4 +1,4 @@
-package files
+package files //file rename fichier
 
 import (
 	"fmt"
@@ -47,14 +47,14 @@ func (file *File) WriteToDisk(path string) error {
 	var err error = nil
 	fmt.Println("File writen to disk (WriteToDisk) : ",path+"/"+file.Name)
 	file.Path = path
-	err = os.WriteFile(path+"/"+file.Name, file.Data, 0222)
+	err = os.WriteFile(path+"/"+file.Name, file.Data, 0222) // Revoir niveau droit
 
 	file.Status = "ready"
 	defer file.m.Unlock()
 	return err
 }
 
-type Files struct {
+type Files struct { //séparer dans un fichier FileLibrary
 	FilesMap map[string]*File //Links a name to a pointer to a File
 }
 
