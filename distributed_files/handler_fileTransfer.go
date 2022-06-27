@@ -21,7 +21,7 @@ func (fileTransfer *FileTransfer) HandleTransfer() {
 	//Send requested chunks :
 	for conn, chRqByConn := range fileTransfer.requestedChunks {
 		for _, chunk := range chRqByConn {
-			fmt.Println("chunk (HandleTransfer) : ", chunk)
+			//fmt.Println("chunk (HandleTransfer) : ", chunk)
 			//Create data chunk :
 			lenFile := len(fileTransfer.file.Data)
 			if (chunk+1)*chunkSize < lenFile {
@@ -76,6 +76,74 @@ func (transfer *FileTransfer) WaitFile(iterator *msg.Iterator) *File {
 	for { //
 		//fmt.Println("(WaitFile) fmt.Sprint(firstChunk) : ",fmt.Sprint(firstChunk))
 		chunk_rc := transfer.shosetCom.Handlers["fileChunk"].Wait(transfer.shosetCom, iterator, map[string]string{"fileName": transfer.file.Name, "firstChunk": fmt.Sprint(firstChunk)}, 2)
+		if chunk_rc != nil { //
+			chunk_rc := (*chunk_rc).(msg.FileChunkMessage)
+			fmt.Println("chunk_rc (WaitFile) : ", chunk_rc)
+
+			firstChunk = false
+
+			//Définir le fichier sur lequel on travail uniquement à la reception du premier chunk
+			//Ne pas consomer le message si les FileName n'est pas le bon
+			transfer.file.Name = chunk_rc.GetFileName()
+			fileLen = chunk_rc.GetFileLen()
+
+			chunkNumber := chunk_rc.GetChunkNumber()
+
+			//vérifier qu'il n'est pas déjà dans la liste :
+			if !transfer.chunkAlreadyReceived(chunkNumber) { // (tester la réjection)
+				//Modifier la liste des reçus :
+				transfer.receivedChunks = append(transfer.receivedChunks, chunkNumber)
+				//Mettre la liste par ordre croissant  :
+				sort.Ints(transfer.receivedChunks)
+
+				//Store received data
+				data[chunkNumber] = chunk_rc.GetPayloadByte()
+			} else {
+				fmt.Println("(WaitFile) Chunk already received : ", chunkNumber)
+			}
+
+			//Vérifier que le fichier est complet :
+			//fmt.Println("(WaitFile) len(transfer.receivedChunks)*chunkSize : ", len(transfer.receivedChunks)*chunkSize, "fileLen : ", fileLen)
+			if len(transfer.receivedChunks)*chunkSize >= fileLen {
+				fmt.Println("(WaitFile) Fichier complet ! ", transfer.file.Name)
+				break
+			}
+
+		} else {
+			break
+		}
+	}
+
+	// Reconstruct File.Data from received chunks
+	for i := 0; i < int(math.Ceil((float64(fileLen) / float64(chunkSize)))); i++ {
+		transfer.file.Data = append(transfer.file.Data, data[i]...)
+	}
+
+	transfer.file.m.Unlock()
+	transfer.file.Status = "ready"
+	return transfer.file
+}
+
+// WaitFile :
+// Receive chunks and reassemble File from chunks
+func (transfer *FileTransfer) WaitFileName(iterator *msg.Iterator, fileName string) *File {
+	transfer.file.m.Lock()
+
+	if iterator == nil {
+		iterator = msg.NewIterator(transfer.shosetCom.Queue["fileChunk"])
+	}
+
+	firstChunk := true
+
+	data := make(map[int]([]byte)) // Put it directly in FileTransfer ?
+
+	var fileLen int
+	
+	//transfer.shosetCom.Wait("fileChunk", map[string]string{}, 5, iterator).(msg.FileChunkMessage)
+	//fmt.Println("(WaitFile) transfer.file.Name",transfer.file.Name)
+	for { //
+		//fmt.Println("(WaitFile) fmt.Sprint(firstChunk) : ",fmt.Sprint(firstChunk))
+		chunk_rc := transfer.shosetCom.Handlers["fileChunk"].Wait(transfer.shosetCom, iterator, map[string]string{"fileName": fileName, "firstChunk": fmt.Sprint(firstChunk)}, 2)
 		if chunk_rc != nil { //
 			chunk_rc := (*chunk_rc).(msg.FileChunkMessage)
 			fmt.Println("chunk_rc (WaitFile) : ", chunk_rc)

@@ -13,7 +13,6 @@ import (
 	//"github.com/rs/zerolog/log"
 
 	"github.com/ditrit/shoset"
-	"github.com/ditrit/shoset/msg"
 )
 
 var newFileContent string = "Another content for test "
@@ -100,7 +99,7 @@ func TestWaitFile(t *testing.T) {
 	testfiles_tx := []*File{}
 	testfiles_rx := []*File{}
 
-	for i := 0; i < 2; i++ {
+	for i := 0; i < 3; i++ {
 		testfiles_tx = append(testfiles_tx, createFile("file"+fmt.Sprint(i)))
 	}
 
@@ -110,38 +109,50 @@ func TestWaitFile(t *testing.T) {
 	// 	fmt.Println("FileName : ",file.Name,"Data : ",file.Data)
 	// }
 
-	iterator := msg.NewIterator(cl1.Queue["fileChunk"])
+	//iterator := msg.NewIterator(cl1.Queue["fileChunk"])
 
-	for _, file := range testfiles_tx {
+	for i, file := range testfiles_tx {
 		//Sender :
 		wg.Add(1)
 		go func() {
-			defer wg.Done()
 			transfer_tx := file.NewFileTransferTx(cl2, "127.0.0.1:8001")
 			//fmt.Println("Data to be transfered :", file)
-			fmt.Println("transfer : ", "(", transfer_tx.file.Name, ")", transfer_tx.String())
+			//fmt.Println("transfer : ", "(", transfer_tx.file.Name, ")", transfer_tx.String())
 			transfer_tx.HandleTransfer() //Start the transfer
+			defer wg.Done()
+			//time.Sleep(10 * time.Millisecond)
 		}()
 
-		time.Sleep(50 * time.Millisecond)
+		time.Sleep(10 * time.Millisecond)
 
 		//Receiver :
 		wg.Add(1)
 		//Avoir un itérateur commun
+		//Imposer le nom du fichier à récupérer ??
+		//Consommation des messages
 		go func() {
-			defer wg.Done()
 			transfer_rx := NewFileTransferRx(cl1, "127.0.0.1:8002")
-			received := transfer_rx.WaitFile(iterator)
+			//time.Sleep(10 * time.Millisecond)
+			received := transfer_rx.WaitFileName(nil, "file"+fmt.Sprint(i)) //iterator
+			//fmt.Println("received :",received)
 			testfiles_rx = append(testfiles_rx, received)
+			defer wg.Done()
+			//time.Sleep(10 * time.Millisecond)
 		}()
 
-		time.Sleep(50 * time.Millisecond)
+		time.Sleep(10 * time.Millisecond)
 	}
+
+	//time.Sleep(50 * time.Millisecond)
 
 	wg.Wait()
 
+	time.Sleep(5 * time.Second)
+
 	for i, file := range testfiles_rx {
 		t.Log(file.String())
+
+		fmt.Println("FileName : ", file.Name, "Data : ", file.Data)
 
 		if !(string(testfiles_tx[i].Data) == string(testfiles_rx[i].Data)) {
 			t.Errorf("Wrong content for file" + fmt.Sprint(i))
