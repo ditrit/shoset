@@ -5,6 +5,7 @@ import (
 	"math"
 	"sort"
 	"time"
+	
 
 	"github.com/ditrit/shoset/msg"
 )
@@ -34,7 +35,7 @@ func (fileTransfer *FileTransfer) HandleTransfer() {
 			fmt.Println("message (HandleTransfer) : ", message) //
 			err := conn.SendMessage(message)
 
-			time.Sleep(10 * time.Millisecond) //Necessary to make it work
+			time.Sleep(50 * time.Millisecond) //Necessary to make it work
 
 			if err != nil {
 				fmt.Println("sendChunk : ", err)
@@ -70,7 +71,7 @@ func (transfer *FileTransfer) WaitFile() *File {
 	//fmt.Println("(WaitFile) transfer.file.Name",transfer.file.Name)
 	for { //
 		//fmt.Println("(WaitFile) fmt.Sprint(firstChunk) : ",fmt.Sprint(firstChunk))
-		chunk_rc := transfer.shosetCom.Handlers["fileChunk"].Wait(transfer.shosetCom, iterator, map[string]string{"FileName": transfer.file.Name, "firstChunk": fmt.Sprint(firstChunk)}, 2)
+		chunk_rc := transfer.shosetCom.Handlers["fileChunk"].Wait(transfer.shosetCom, iterator, map[string]string{"fileName": transfer.file.Name, "firstChunk": fmt.Sprint(firstChunk)}, 2)
 		if chunk_rc != nil { //
 			chunk_rc := (*chunk_rc).(msg.FileChunkMessage)
 			fmt.Println("chunk_rc (WaitFile) : ", chunk_rc)

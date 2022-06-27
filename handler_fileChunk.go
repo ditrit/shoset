@@ -1,7 +1,6 @@
 package shoset
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/rs/zerolog/log"
@@ -66,16 +65,15 @@ func (eh *FileChunkHandler) Wait(c *Shoset, replies *msg.Iterator, args map[stri
 				time.Sleep(time.Duration(10) * time.Millisecond)
 				continue
 			}
-			//fmt.Println("(WaitChunk) args[fileName] : ", args["fileName"], "args[firstChunk] : ", args["firstChunk"] )
+			//fmt.Println("(WaitChunk) args[fileName] : ", args["fileName"], "args[firstChunk] : ", args["firstChunk"])
 			//fmt.Println("(WaitChunk) message.(msg.FileChunkMessage).GetFileName() : ", message.(msg.FileChunkMessage).GetFileName())
 
-			/* Send back chunk ony in a few cases :
-			- Provided FileName is blank (it is the first chunk of the File)
+			/* Send back chunk only if :
+			- Provided FileName is blank ( and it is the first chunk of the File)
 			- FileName match the provided FileName
 			*/
-
 			// Vérifier ques les chunk avec le mauvais FileName ne sont pas consommés (lancer 2 transferts en même temps)
-			if (args["fileName"] == "" && args["firstChunk"]=="true") || args["fileName"] == message.(msg.FileChunkMessage).GetFileName() {
+			if (args["fileName"] == "" && args["firstChunk"] == "true") || args["fileName"] == message.(msg.FileChunkMessage).GetFileName() {
 				//fmt.Println("Sending chunk")
 				term <- &message
 			}
