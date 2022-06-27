@@ -981,7 +981,7 @@ func testFile1(ctx context.Context, done context.CancelFunc) {
 	go transfer_tx.HandleTransfer() //Start the transfer
 
 	transfer_rx := file.NewFileTransferRx(cl1 , "127.0.0.1:8002")
-	received := transfer_rx.WaitFile()
+	received := transfer_rx.WaitFile(nil)
 	fmt.Println("Received File :\n", received)
 	err_write := received.WriteToDisk("./test_files/destination")
 
