@@ -13,7 +13,6 @@ import (
 
 	"github.com/ditrit/shoset"
 	file "github.com/ditrit/shoset/distributed_files"
-	files "github.com/ditrit/shoset/distributed_files"
 	"github.com/ditrit/shoset/msg"
 )
 
@@ -965,7 +964,7 @@ func testFile1(ctx context.Context, done context.CancelFunc) {
 
 	
 	
-	files_list_1 := files.NewFiles()
+	files_list_1 := file.NewFiles()
 	files_list_1.AddNewFile("./test_files/source/test1.txt")
 	files_list_1.AddNewFile("./test_files/source/test2.txt")
 	files_list_1.PrintAllFiles() //Print names of all files

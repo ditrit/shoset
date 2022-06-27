@@ -60,25 +60,27 @@ func requestFile(name string) {
 func (transfer *FileTransfer) WaitFile() *File {
 	transfer.file.m.Lock()
 
+	firstChunk := true
+
 	data := make(map[int]([]byte)) // Put it directly in FileTransfer ?
 
 	var fileLen int
 	iterator := msg.NewIterator(transfer.shosetCom.Queue["fileChunk"])
 	//transfer.shosetCom.Wait("fileChunk", map[string]string{}, 5, iterator).(msg.FileChunkMessage)
+	//fmt.Println("(WaitFile) transfer.file.Name",transfer.file.Name)
 	for { //
-		chunk_rc := transfer.shosetCom.Handlers["fileChunk"].Wait(transfer.shosetCom, iterator, map[string]string{}, 2)
+		//fmt.Println("(WaitFile) fmt.Sprint(firstChunk) : ",fmt.Sprint(firstChunk))
+		chunk_rc := transfer.shosetCom.Handlers["fileChunk"].Wait(transfer.shosetCom, iterator, map[string]string{"FileName": transfer.file.Name, "firstChunk": fmt.Sprint(firstChunk)}, 2)
 		if chunk_rc != nil { //
 			chunk_rc := (*chunk_rc).(msg.FileChunkMessage)
 			fmt.Println("chunk_rc (WaitFile) : ", chunk_rc)
 
-			//Définir le fichier sur lequel on travail à la reception du premier chunk
+			firstChunk = false
+
+			//Définir le fichier sur lequel on travail uniquement à la reception du premier chunk
+			//Ne pas consomer le message si les FileName n'est pas le bon
 			transfer.file.Name = chunk_rc.GetFileName()
 			fileLen = chunk_rc.GetFileLen()
-
-			//Vérifier que le chunk appartient au bon fichier (tester la réjection)
-			if !(transfer.file.Name == chunk_rc.GetFileName() && fileLen == chunk_rc.GetFileLen()) {
-				continue
-			}
 
 			chunkNumber := chunk_rc.GetChunkNumber()
 
