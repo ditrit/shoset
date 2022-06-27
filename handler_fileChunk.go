@@ -1,6 +1,7 @@
 package shoset
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/rs/zerolog/log"
@@ -71,9 +72,13 @@ func (eh *FileChunkHandler) Wait(c *Shoset, replies *msg.Iterator, args map[stri
 			/* Send back chunk only if :
 			- Provided FileName is blank ( and it is the first chunk of the File)
 			- FileName match the provided FileName
+			- This Filename is not already handled by another WaitFile thread
 			*/
 			// Vérifier ques les chunk avec le mauvais FileName ne sont pas consommés (lancer 2 transferts en même temps)
-			if (args["fileName"] == "" && args["firstChunk"] == "true") || args["fileName"] == message.(msg.FileChunkMessage).GetFileName() {
+			fileName := message.(msg.FileChunkMessage).GetFileName()
+			fmt.Println("(WaitChunk) CheckIfFileIsHandled(fileName) : ",msg.CheckIfFileIsHandled(fileName))
+			fmt.Println("(WaitChunk) msg.HandledFiles : ",msg.HandledFiles1.HandledFilesList)
+			if (args["fileName"] == "" && args["firstChunk"] == "true" && !msg.CheckIfFileIsHandled(fileName)) || (args["fileName"] == fileName) {
 				//fmt.Println("Sending chunk")
 				term <- &message
 			}

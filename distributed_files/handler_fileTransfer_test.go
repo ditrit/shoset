@@ -13,6 +13,7 @@ import (
 	//"github.com/rs/zerolog/log"
 
 	"github.com/ditrit/shoset"
+	"github.com/ditrit/shoset/msg"
 )
 
 var newFileContent string = "Another content for test "
@@ -99,28 +100,21 @@ func TestWaitFile(t *testing.T) {
 	testfiles_tx := []*File{}
 	testfiles_rx := []*File{}
 
-	for i := 0; i < 3; i++ {
+	for i := 0; i < 2; i++ {
 		testfiles_tx = append(testfiles_tx, createFile("file"+fmt.Sprint(i)))
 	}
 
 	t.Log("testfiles_tx", testfiles_tx)
 
-	// for _,file := range testfiles_tx {
-	// 	fmt.Println("FileName : ",file.Name,"Data : ",file.Data)
-	// }
+	iterator := msg.NewIterator(cl1.Queue["fileChunk"])
 
-	//iterator := msg.NewIterator(cl1.Queue["fileChunk"])
-
-	for i, file := range testfiles_tx {
+	for _, file := range testfiles_tx {
 		//Sender :
 		wg.Add(1)
 		go func() {
 			transfer_tx := file.NewFileTransferTx(cl2, "127.0.0.1:8001")
-			//fmt.Println("Data to be transfered :", file)
-			//fmt.Println("transfer : ", "(", transfer_tx.file.Name, ")", transfer_tx.String())
 			transfer_tx.HandleTransfer() //Start the transfer
 			defer wg.Done()
-			//time.Sleep(10 * time.Millisecond)
 		}()
 
 		time.Sleep(10 * time.Millisecond)
@@ -128,26 +122,20 @@ func TestWaitFile(t *testing.T) {
 		//Receiver :
 		wg.Add(1)
 		//Avoir un itérateur commun
-		//Imposer le nom du fichier à récupérer ??
+		//Imposer le nom du fichier à récupérer : fonctionne
 		//Consommation des messages
+
 		go func() {
 			transfer_rx := NewFileTransferRx(cl1, "127.0.0.1:8002")
-			//time.Sleep(10 * time.Millisecond)
-			received := transfer_rx.WaitFileName(nil, "file"+fmt.Sprint(i)) //iterator
-			//fmt.Println("received :",received)
+			received := transfer_rx.WaitFile(iterator) //iterator
 			testfiles_rx = append(testfiles_rx, received)
 			defer wg.Done()
-			//time.Sleep(10 * time.Millisecond)
 		}()
 
-		time.Sleep(10 * time.Millisecond)
+		time.Sleep(150 * time.Millisecond)
 	}
 
-	//time.Sleep(50 * time.Millisecond)
-
 	wg.Wait()
-
-	time.Sleep(5 * time.Second)
 
 	for i, file := range testfiles_rx {
 		t.Log(file.String())
@@ -158,35 +146,4 @@ func TestWaitFile(t *testing.T) {
 			t.Errorf("Wrong content for file" + fmt.Sprint(i))
 		}
 	}
-
-	//file1 := createFile("test1.txt")
-	//file2 := createFile("test2.txt")
-
-	//fmt.Println("File 1 : ",file1)
-	//fmt.Println("File 1 : ",file2)
-
-	//Boucle for qui lance de go
-
-	//Fonction spécifique qui envoi des paquet fait à la main ??
-
-	// transfer_tx1 := file1.NewFileTransferTx(cl2, "127.0.0.1:8001")
-	// fmt.Println("Data to be transfered :", file1)
-	// fmt.Println("transfer1 : ", transfer_tx1.String())
-	// go transfer_tx1.HandleTransfer() //Start the transfer
-
-	// // receive data :
-	// transfer_rx1 := NewFileTransferRx(cl1, "127.0.0.1:8002")
-	// received1 := transfer_rx1.WaitFile()
-
-	// fmt.Println("file1.Data",file1.Data)
-	// fmt.Println("received1.Data",received1.Data)
-
-	// fmt.Println("string(received1.Data)",string(received1.Data))
-
-	// if !(string(received1.Data) == string(file1.Data)) {
-	// 	t.Errorf("Wrong content for file 1")
-	// }
-
-	//t.Errorf("Test not implemented yet.")
-
 }

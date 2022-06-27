@@ -5,7 +5,6 @@ import (
 	"math"
 	"sort"
 	"time"
-	
 
 	"github.com/ditrit/shoset/msg"
 )
@@ -70,7 +69,7 @@ func (transfer *FileTransfer) WaitFile(iterator *msg.Iterator) *File {
 	data := make(map[int]([]byte)) // Put it directly in FileTransfer ?
 
 	var fileLen int
-	
+
 	//transfer.shosetCom.Wait("fileChunk", map[string]string{}, 5, iterator).(msg.FileChunkMessage)
 	//fmt.Println("(WaitFile) transfer.file.Name",transfer.file.Name)
 	for { //
@@ -86,6 +85,10 @@ func (transfer *FileTransfer) WaitFile(iterator *msg.Iterator) *File {
 			//Ne pas consomer le message si les FileName n'est pas le bon
 			transfer.file.Name = chunk_rc.GetFileName()
 			fileLen = chunk_rc.GetFileLen()
+
+			if !msg.CheckIfFileIsHandled(transfer.file.Name) {
+				msg.HandledFiles1.HandledFilesList = append(msg.HandledFiles1.HandledFilesList, transfer.file.Name) //
+			}
 
 			chunkNumber := chunk_rc.GetChunkNumber()
 
@@ -106,6 +109,7 @@ func (transfer *FileTransfer) WaitFile(iterator *msg.Iterator) *File {
 			//fmt.Println("(WaitFile) len(transfer.receivedChunks)*chunkSize : ", len(transfer.receivedChunks)*chunkSize, "fileLen : ", fileLen)
 			if len(transfer.receivedChunks)*chunkSize >= fileLen {
 				fmt.Println("(WaitFile) Fichier complet ! ", transfer.file.Name)
+				msg.DeleteFromFileIsHandled(transfer.file.Name)
 				break
 			}
 
@@ -138,7 +142,7 @@ func (transfer *FileTransfer) WaitFileName(iterator *msg.Iterator, fileName stri
 	data := make(map[int]([]byte)) // Put it directly in FileTransfer ?
 
 	var fileLen int
-	
+
 	//transfer.shosetCom.Wait("fileChunk", map[string]string{}, 5, iterator).(msg.FileChunkMessage)
 	//fmt.Println("(WaitFile) transfer.file.Name",transfer.file.Name)
 	for { //
