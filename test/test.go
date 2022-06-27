@@ -12,6 +12,7 @@ import (
 	// "log"
 
 	"github.com/ditrit/shoset"
+	file "github.com/ditrit/shoset/distributed_files"
 	files "github.com/ditrit/shoset/distributed_files"
 	"github.com/ditrit/shoset/msg"
 )
@@ -975,14 +976,14 @@ func testFile1(ctx context.Context, done context.CancelFunc) {
 
 	
 	
-	transfer1 := files_list_1.FilesMap["test1.txt"].NewFileTransfer(cl2, "tx", "127.0.0.1:8001")
+	transfer_tx := files_list_1.FilesMap["test1.txt"].NewFileTransferTx(cl2, "127.0.0.1:8001")
 	fmt.Println("Data to be transfered :", files_list_1.FilesMap["test1.txt"])
-	fmt.Println("transfer1 : ", transfer1.String())
-	go transfer1.HandleTransfer()
+	fmt.Println("transfer1 : ", transfer_tx.String())
+	go transfer_tx.HandleTransfer() //Start the transfer
 
-
-	received := transfer1.WaitFile(cl1)
-	fmt.Println("Received File :", received)
+	transfer_rx := file.NewFileTransferRx(cl1 , "127.0.0.1:8002")
+	received := transfer_rx.WaitFile()
+	fmt.Println("Received File :\n", received)
 	err_write := received.WriteToDisk("./test_files/destination")
 
 	if err_write != nil {

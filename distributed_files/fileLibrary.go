@@ -5,7 +5,7 @@ import (
 )
 
 type FileLibrary struct {
-	FilesMap map[string]*File //Links a name to a pointer to a File object
+	FilesMap map[string]*File //Links a name to a pointer to a File object -> []*File
 }
 
 // Create new empty FileLibrary
