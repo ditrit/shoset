@@ -32,19 +32,27 @@ func createFile(fileName string) *File{
 }
 
 func prepareContext(t *testing.T){
-	os.Chdir("..")
+	os.Chdir("..") //Change the current durectory
 
 	home,err := os.UserHomeDir()
-
-	//fmt.Println(home)
-
 	if err != nil {
 		t.Errorf(err.Error())
 		fmt.Println(err)
-	}	
+	}
 
-	err = os.RemoveAll(home+"/.shoset")
+	err = os.RemoveAll(home+"/.shoset") // Remove .shoset folder before running
+	if err != nil {
+		t.Errorf(err.Error())
+		fmt.Println(err)
+	}
 
+	err = os.RemoveAll("./test_files/destination/") // Delete and recreate the folder destination for transfer tests
+	if err != nil {
+		t.Errorf(err.Error())
+		fmt.Println(err)
+	}
+	
+	err = os.Mkdir("./test_files/destination",0777)
 	if err != nil {
 		t.Errorf(err.Error())
 		fmt.Println(err)
@@ -69,12 +77,6 @@ func TestWaitFile(t *testing.T) {
 	time.Sleep(1 * time.Second) //Wait for connexion
 
 	file1 := createFile("test1.txt")
-
-	// file1,err1 := NewFile("./test_files/source/test1.txt")
-	// if err1 != nil {
-	// 	t.Errorf(err1.Error())
-	// 	//fmt.Println(err1)
-	// }
 
 	fmt.Println("File 1 : ",file1)
 	//file2 := createFile("test2.txt")
