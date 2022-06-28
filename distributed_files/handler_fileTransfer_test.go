@@ -96,7 +96,7 @@ func TestWaitFile(t *testing.T) {
 	testfiles_tx := []*File{}
 	testfiles_rx := []*File{}
 
-	for i := 0; i < 2; i++ {
+	for i := 0; i < 3; i++ {
 		testfiles_tx = append(testfiles_tx, createFile("file"+fmt.Sprint(i)))
 	}
 
