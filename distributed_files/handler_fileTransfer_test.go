@@ -81,11 +81,7 @@ func TestPrepareContext(t *testing.T) {
 }
 
 func TestWaitFile(t *testing.T) {
-	//fmt.Println(os.Getwd())
 	prepareContext(t)
-	//fmt.Println(os.Getwd())
-
-	//zerolog.
 
 	var wg sync.WaitGroup
 
@@ -121,12 +117,8 @@ func TestWaitFile(t *testing.T) {
 
 		//Receiver :
 		//wg.Add(1)
-		//Avoir un itérateur commun
-		//Imposer le nom du fichier à récupérer : fonctionne
-		//Consommation des messages
 
 		// Pas de reception simultanée
-
 		//go func() {
 		transfer_rx := NewFileTransferRx(cl1, "127.0.0.1:8002")
 		received := transfer_rx.WaitFile(iterator) //iterator
@@ -134,17 +126,13 @@ func TestWaitFile(t *testing.T) {
 		testfiles_rx = append(testfiles_rx, received)
 		//defer wg.Done()
 		//}()
-
-		//time.Sleep(50 * time.Millisecond)
 	}
 
 	wg.Wait()
 
 	for i, file := range testfiles_rx {
 		t.Log(file.String())
-
 		fmt.Println("FileName : ", file.Name, "Data : ", file.Data)
-
 		if !(string(testfiles_tx[i].Data) == string(testfiles_rx[i].Data)) {
 			t.Errorf("Wrong content for file" + fmt.Sprint(i))
 		}

@@ -51,7 +51,7 @@ func (eh *FileChunkHandler) SendEventConn(c *ShosetConn, fileChunkMessage interf
 // WaitFileChunk :
 func (eh *FileChunkHandler) Wait(c *Shoset, replies *msg.Iterator, args map[string]string, timeout int) *msg.Message {
 	term := make(chan *msg.Message, 1)
-	cont := true // ??
+	cont := true
 
 	go func() {
 		for cont {
@@ -65,9 +65,7 @@ func (eh *FileChunkHandler) Wait(c *Shoset, replies *msg.Iterator, args map[stri
 			if message == nil {
 				time.Sleep(time.Duration(10) * time.Millisecond)
 				continue
-			}
-			//fmt.Println("(WaitChunk) args[fileName] : ", args["fileName"], "args[firstChunk] : ", args["firstChunk"])
-			//fmt.Println("(WaitChunk) message.(msg.FileChunkMessage).GetFileName() : ", message.(msg.FileChunkMessage).GetFileName())
+			}		
 
 			/* Send back chunk only if :
 			- Provided FileName is blank ( and it is the first chunk of the File)
@@ -77,11 +75,7 @@ func (eh *FileChunkHandler) Wait(c *Shoset, replies *msg.Iterator, args map[stri
 			// Vérifier ques les chunk avec le mauvais FileName ne sont pas consommés (lancer 2 transferts en même temps)
 			fileName := message.(msg.FileChunkMessage).GetFileName()
 			chunkNumber := message.(msg.FileChunkMessage).GetChunkNumber()
-			fmt.Println("(Wait) chunkNumber : ",chunkNumber)
-			fmt.Println("(WaitChunk) fileName : ", fileName)
-			// fmt.Println("(WaitChunk) msg.HandledFiles : ",msg.HandledFiles1.HandledFilesList)
 			if (args["fileName"] == "" && chunkNumber == -1) || (args["fileName"] == fileName) {
-				//fmt.Println("Sending chunk")
 				term <- &message
 			}
 		}
