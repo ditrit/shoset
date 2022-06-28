@@ -1,7 +1,6 @@
 package shoset
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/rs/zerolog/log"
@@ -65,7 +64,7 @@ func (eh *FileChunkHandler) Wait(c *Shoset, replies *msg.Iterator, args map[stri
 			if message == nil {
 				time.Sleep(time.Duration(10) * time.Millisecond)
 				continue
-			}		
+			}
 
 			/* Send back chunk only if :
 			- Provided FileName is blank ( and it is the first chunk of the File)
