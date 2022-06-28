@@ -19,10 +19,19 @@ func (fileTransfer *FileTransfer) HandleTransfer() {
 
 	//Send requested chunks :
 	for conn, chRqByConn := range fileTransfer.requestedChunks {
+		lenFile := len(fileTransfer.file.Data)
+		message := msg.NewFileChunkMessage(fileTransfer.file.Name, lenFile, -1, nil)		
+		fmt.Println("message (HandleTransfer) : ", message) //
+		err := conn.SendMessage(message)
+		if err != nil {
+			fmt.Println("sendChunk : ", err)
+		}
+
+		time.Sleep(50 * time.Millisecond)
 		for _, chunk := range chRqByConn {
 			//fmt.Println("chunk (HandleTransfer) : ", chunk)
 			//Create data chunk :
-			lenFile := len(fileTransfer.file.Data)
+			
 			if (chunk+1)*chunkSize < lenFile {
 				fileChunk = fileTransfer.file.Data[chunk*chunkSize : (chunk+1)*chunkSize]
 			} else {
@@ -64,7 +73,7 @@ func (transfer *FileTransfer) WaitFile(iterator *msg.Iterator) *File {
 		iterator = msg.NewIterator(transfer.shosetCom.Queue["fileChunk"])
 	}
 
-	firstChunk := true
+	//firstChunk := true
 
 	data := make(map[int]([]byte)) // Put it directly in FileTransfer ?
 
@@ -72,23 +81,31 @@ func (transfer *FileTransfer) WaitFile(iterator *msg.Iterator) *File {
 
 	//transfer.shosetCom.Wait("fileChunk", map[string]string{}, 5, iterator).(msg.FileChunkMessage)
 	//fmt.Println("(WaitFile) transfer.file.Name",transfer.file.Name)
+
+	chunk_rc := transfer.shosetCom.Handlers["fileChunk"].Wait(transfer.shosetCom, iterator, map[string]string{"fileName": ""}, 2)
+	if chunk_rc != nil { //
+		chunk_rc := (*chunk_rc).(msg.FileChunkMessage)
+		fmt.Println("chunk_rc (WaitFile) : ", chunk_rc)
+		transfer.file.Name = chunk_rc.GetFileName()
+		fileLen = chunk_rc.GetFileLen()
+	}
+
+
 	for { //
 		//fmt.Println("(WaitFile) fmt.Sprint(firstChunk) : ",fmt.Sprint(firstChunk))
-		chunk_rc := transfer.shosetCom.Handlers["fileChunk"].Wait(transfer.shosetCom, iterator, map[string]string{"fileName": transfer.file.Name, "firstChunk": fmt.Sprint(firstChunk)}, 2)
+		chunk_rc := transfer.shosetCom.Handlers["fileChunk"].Wait(transfer.shosetCom, iterator, map[string]string{"fileName": transfer.file.Name}, 2)
 		if chunk_rc != nil { //
 			chunk_rc := (*chunk_rc).(msg.FileChunkMessage)
 			fmt.Println("chunk_rc (WaitFile) : ", chunk_rc)
 
-			firstChunk = false
+			//firstChunk = false
 
 			//Définir le fichier sur lequel on travail uniquement à la reception du premier chunk
 			//Ne pas consomer le message si les FileName n'est pas le bon
-			transfer.file.Name = chunk_rc.GetFileName()
-			fileLen = chunk_rc.GetFileLen()
 
-			if !msg.CheckIfFileIsHandled(transfer.file.Name) {
-				msg.HandledFiles1.HandledFilesList = append(msg.HandledFiles1.HandledFilesList, transfer.file.Name) //
-			}
+			// if !msg.CheckIfFileIsHandled(transfer.file.Name) {
+			// 	msg.HandledFiles1.HandledFilesList = append(msg.HandledFiles1.HandledFilesList, transfer.file.Name) //
+			// }
 
 			chunkNumber := chunk_rc.GetChunkNumber()
 
@@ -109,7 +126,7 @@ func (transfer *FileTransfer) WaitFile(iterator *msg.Iterator) *File {
 			//fmt.Println("(WaitFile) len(transfer.receivedChunks)*chunkSize : ", len(transfer.receivedChunks)*chunkSize, "fileLen : ", fileLen)
 			if len(transfer.receivedChunks)*chunkSize >= fileLen {
 				fmt.Println("(WaitFile) Fichier complet ! ", transfer.file.Name)
-				msg.DeleteFromFileIsHandled(transfer.file.Name)
+				//msg.DeleteFromFileIsHandled(transfer.file.Name)
 				break
 			}
 
@@ -142,6 +159,14 @@ func (transfer *FileTransfer) WaitFileName(iterator *msg.Iterator, fileName stri
 	data := make(map[int]([]byte)) // Put it directly in FileTransfer ?
 
 	var fileLen int
+
+	chunk_rc := transfer.shosetCom.Handlers["fileChunk"].Wait(transfer.shosetCom, iterator, map[string]string{"fileName": fileName}, 2)
+	if chunk_rc != nil { //
+		chunk_rc := (*chunk_rc).(msg.FileChunkMessage)
+		fmt.Println("chunk_rc (WaitFile) : ", chunk_rc)
+		//transfer.file.Name = chunk_rc.GetFileName()
+		fileLen = chunk_rc.GetFileLen()
+	}
 
 	//transfer.shosetCom.Wait("fileChunk", map[string]string{}, 5, iterator).(msg.FileChunkMessage)
 	//fmt.Println("(WaitFile) transfer.file.Name",transfer.file.Name)

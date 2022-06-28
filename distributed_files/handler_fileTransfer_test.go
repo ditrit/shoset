@@ -120,19 +120,22 @@ func TestWaitFile(t *testing.T) {
 		time.Sleep(10 * time.Millisecond)
 
 		//Receiver :
-		wg.Add(1)
+		//wg.Add(1)
 		//Avoir un itérateur commun
 		//Imposer le nom du fichier à récupérer : fonctionne
 		//Consommation des messages
 
-		go func() {
-			transfer_rx := NewFileTransferRx(cl1, "127.0.0.1:8002")
-			received := transfer_rx.WaitFile(iterator) //iterator
-			testfiles_rx = append(testfiles_rx, received)
-			defer wg.Done()
-		}()
+		// Pas de reception simultanée
 
-		time.Sleep(150 * time.Millisecond)
+		//go func() {
+		transfer_rx := NewFileTransferRx(cl1, "127.0.0.1:8002")
+		received := transfer_rx.WaitFile(iterator) //iterator
+		//received := transfer_rx.WaitFileName(iterator,"file"+fmt.Sprint(i))
+		testfiles_rx = append(testfiles_rx, received)
+		//defer wg.Done()
+		//}()
+
+		//time.Sleep(50 * time.Millisecond)
 	}
 
 	wg.Wait()

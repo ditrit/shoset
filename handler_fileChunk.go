@@ -76,9 +76,11 @@ func (eh *FileChunkHandler) Wait(c *Shoset, replies *msg.Iterator, args map[stri
 			*/
 			// Vérifier ques les chunk avec le mauvais FileName ne sont pas consommés (lancer 2 transferts en même temps)
 			fileName := message.(msg.FileChunkMessage).GetFileName()
-			fmt.Println("(WaitChunk) CheckIfFileIsHandled(fileName) : ",msg.CheckIfFileIsHandled(fileName))
-			fmt.Println("(WaitChunk) msg.HandledFiles : ",msg.HandledFiles1.HandledFilesList)
-			if (args["fileName"] == "" && args["firstChunk"] == "true" && !msg.CheckIfFileIsHandled(fileName)) || (args["fileName"] == fileName) {
+			chunkNumber := message.(msg.FileChunkMessage).GetChunkNumber()
+			fmt.Println("(Wait) chunkNumber : ",chunkNumber)
+			fmt.Println("(WaitChunk) fileName : ", fileName)
+			// fmt.Println("(WaitChunk) msg.HandledFiles : ",msg.HandledFiles1.HandledFilesList)
+			if (args["fileName"] == "" && chunkNumber == -1) || (args["fileName"] == fileName) {
 				//fmt.Println("Sending chunk")
 				term <- &message
 			}

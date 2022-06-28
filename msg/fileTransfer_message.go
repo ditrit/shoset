@@ -1,7 +1,5 @@
 package msg
 
-import "sync"
-
 type FileChunkMessage struct {
 	MessageBase
 	FileName      string
@@ -10,33 +8,33 @@ type FileChunkMessage struct {
 	ReferenceUUID string
 }
 
-type handledFiles struct {
-	HandledFilesList []string
-	m                sync.Mutex
-}
+// type handledFiles struct {
+// 	HandledFilesList []string
+// 	m                sync.Mutex
+// }
 
-var HandledFiles1 handledFiles
+// var HandledFiles1 handledFiles
 
-func CheckIfFileIsHandled(fileName string) bool {
-	HandledFiles1.m.Lock()
-	defer HandledFiles1.m.Unlock()
-	for _, a := range HandledFiles1.HandledFilesList {
-		if a == fileName {			
-			return true
-		}
-	}
-	return false
-}
+// func CheckIfFileIsHandled(fileName string) bool {
+// 	HandledFiles1.m.Lock()
+// 	defer HandledFiles1.m.Unlock()
+// 	for _, a := range HandledFiles1.HandledFilesList {
+// 		if a == fileName {
+// 			return true
+// 		}
+// 	}
+// 	return false
+// }
 
-func DeleteFromFileIsHandled(fileName string) {
-	HandledFiles1.m.Lock()
-	defer HandledFiles1.m.Unlock()
-	for i, a := range HandledFiles1.HandledFilesList {
-		if a == fileName {
-			HandledFiles1.HandledFilesList = append(HandledFiles1.HandledFilesList[:i], HandledFiles1.HandledFilesList[i+1:]...)
-		}
-	}
-}
+// func DeleteFromFileIsHandled(fileName string) {
+// 	HandledFiles1.m.Lock()
+// 	defer HandledFiles1.m.Unlock()
+// 	for i, a := range HandledFiles1.HandledFilesList {
+// 		if a == fileName {
+// 			HandledFiles1.HandledFilesList = append(HandledFiles1.HandledFilesList[:i], HandledFiles1.HandledFilesList[i+1:]...)
+// 		}
+// 	}
+// }
 
 // NewFileChunkMessage : FileChunkMessage constructor
 func NewFileChunkMessage(filename string, fileLen int, chunkNumber int, data []byte) *FileChunkMessage {
