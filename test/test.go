@@ -414,7 +414,7 @@ func testJoin3(ctx context.Context, done context.CancelFunc) {
 
 	cl5 := shoset.NewShoset("cl", "cl")
 	cl5.Protocol("localhost:8005", "localhost:8003", "join")
-	
+
 	cl6 := shoset.NewShoset("c", "c")
 	cl6.Protocol("localhost:8006", "localhost:8002", "link")
 
@@ -874,7 +874,7 @@ func testPkiServer(ctx context.Context, done context.CancelFunc) {
 	cl1.InitPKI("localhost:8001")
 
 	loopUntilDone(2*time.Second, ctx, func() {
-		// fmt.Println("\ncl : ", cl1)
+		fmt.Println("\ncl : ", cl1)
 		done()
 		return
 	})
@@ -918,6 +918,31 @@ func testPresentationENIB(ctx context.Context, done context.CancelFunc) {
 	})
 }
 
+func testRouteTable(ctx context.Context, done context.CancelFunc) {
+	cl1 := shoset.NewShoset("cl", "cl")
+	cl1.InitPKI("localhost:8001")
+
+	cl2 := shoset.NewShoset("cl", "cl")
+	cl2.Protocol("localhost:8002", "localhost:8001", "join")
+
+	time.Sleep(1 * time.Second)
+
+	fmt.Println("\ncl : ", cl1)
+
+	cl1.RouteTable.SetConfig(shoset.NewConfig())
+	fmt.Println("", cl1.RouteTable.GetConfig())
+
+	//cl1.RouteTable.Store(cl1.GetLogicalName(), "A", cl1.GetShosetType(), shoset.NewRouter("B", 1))
+
+	fmt.Println("\ncl : ", cl1)
+
+	// loopUntilDone(2*time.Second, ctx, func() {
+	// 	fmt.Println("\ncl : ", cl1)
+	// 	done()
+	// 	return
+	// })
+}
+
 func main() {
 	shoset.InitPrettyLogger(false)
 	shoset.SetLogLevel("debug")
@@ -953,9 +978,10 @@ func main() {
 		// simplesimpleConnector()
 	} else {
 		shoset.Log("testPki")
-		testPki(ctx, done)
+		//testPki(ctx, done)
 		// testPresentationENIB(ctx, done)
 		// testJoin3(ctx, done)
+		testRouteTable(ctx, done)
 	}
 }
 
