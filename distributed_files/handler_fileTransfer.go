@@ -5,6 +5,7 @@ import (
 	"math"
 	"time"
 
+	"github.com/ditrit/shoset"
 	"github.com/ditrit/shoset/msg"
 )
 
@@ -16,9 +17,9 @@ import (
 func (fileTransfer *FileTransfer) HandleTransfer() {
 	fileChunk := []byte{}
 
+	lenFile := len(fileTransfer.file.Data)
 	//Send requested chunks :
-	for conn, chRqByConn := range fileTransfer.requestedChunks {
-		lenFile := len(fileTransfer.file.Data)
+	for conn, chRqByConn := range fileTransfer.requestedChunks {		
 		message := msg.NewFileChunkMessage(fileTransfer.file.Name, lenFile, -1, nil)
 		fmt.Println("message (HandleTransfer) : ", message) //
 		err := conn.SendMessage(message)
@@ -50,17 +51,6 @@ func (fileTransfer *FileTransfer) HandleTransfer() {
 		}
 	}
 	//Check if no other chunks are requested :
-}
-
-//Request to be sent a file
-func requestFile(name string) {
-	//Request File infos :
-
-	//Create File :
-
-	//Request chunks ?? :
-
-	//Start reception :
 }
 
 // WaitFile :
@@ -156,4 +146,31 @@ func (transfer *FileTransfer) chunkAlreadyReceived(chunkNumber int) bool {
 		}
 	}
 	return false
+}
+
+
+//Request to be sent a file
+// Revoyer un transfer ou le fichier
+func RequestFile(c *shoset.Shoset, name string, originAdress string) *File {
+	//Create Transfer :
+	transfer := NewFileTransferRx(c, originAdress)
+	
+	//Request File infos :
+	message := msg.NewFileChunkMessage(name, -1, -2, nil)
+	fmt.Println("message (HandleTransfer) : ", message) //
+	
+	// Request file to every conn in expectedChunks
+	for conn,_ :=range transfer.expectedChunks {
+		err := conn.SendMessage(message)
+		if err != nil {
+			fmt.Println("sendChunk : ", err)
+		}
+	}
+
+	//Receive File :
+	 return transfer.WaitFileName(nil,name)
+}
+
+func HandleRequestedFile(){
+	
 }

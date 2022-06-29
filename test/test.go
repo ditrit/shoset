@@ -962,9 +962,7 @@ func testFile1(ctx context.Context, done context.CancelFunc) {
 
 	time.Sleep(1 * time.Second) //Wait for connexion
 
-	
-	
-	files_list_1 := file.NewFiles()
+	files_list_1 := file.NewFileLibrary()
 	files_list_1.AddNewFile("./test_files/source/test1.txt")
 	files_list_1.AddNewFile("./test_files/source/test2.txt")
 	files_list_1.PrintAllFiles() //Print names of all files
@@ -973,14 +971,12 @@ func testFile1(ctx context.Context, done context.CancelFunc) {
 	//files_list_1.FilesMap["test1.txt"].Data = []byte("Another content for test1") //Replace content of file in memory.
 	//fmt.Println("files_list_1.FilesMap[test1.txt].Data : ", string(files_list_1.FilesMap["test1.txt"].Data))
 
-	
-	
 	transfer_tx := files_list_1.FilesMap["test1.txt"].NewFileTransferTx(cl2, "127.0.0.1:8001")
 	fmt.Println("Data to be transfered :", files_list_1.FilesMap["test1.txt"])
 	fmt.Println("transfer1 : ", transfer_tx.String())
 	go transfer_tx.HandleTransfer() //Start the transfer
 
-	transfer_rx := file.NewFileTransferRx(cl1 , "127.0.0.1:8002")
+	transfer_rx := file.NewFileTransferRx(cl1, "127.0.0.1:8002")
 	received := transfer_rx.WaitFile(nil)
 	fmt.Println("Received File :\n", received)
 	err_write := received.WriteToDisk("./test_files/destination")

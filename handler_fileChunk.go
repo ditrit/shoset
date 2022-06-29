@@ -1,10 +1,12 @@
 package shoset
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/rs/zerolog/log"
 
+	//file "github.com/ditrit/shoset/distributed_files" // Import bizarre
 	"github.com/ditrit/shoset/msg"
 )
 
@@ -18,8 +20,20 @@ func (eh *FileChunkHandler) Get(c *ShosetConn) (msg.Message, error) {
 }
 
 // HandleFileChunk :
+// Handle messages received un put them in Queue
 func (eh *FileChunkHandler) HandleDoubleWay(c *ShosetConn, message msg.Message) error {
+
+	// intercepter les requettes de fichier
+
+	//fmt.Println("(HandleDoubleWay (FileChunkHandler)) message.(msg.FileChunkMessage)) : ", message.(msg.FileChunkMessage))
+
 	fileChunkMessage := message.(msg.FileChunkMessage)
+
+	if fileChunkMessage.ChunkNumber == -2 {
+		fmt.Println("(HandleDoubleWay (FileChunkHandler)) : Handle file request : ", fileChunkMessage.FileName)
+		//file.HandleRequestedFile(fileChunkMessage.FileName)
+	}
+
 	if state := c.GetCh().Queue["fileChunk"].Push(fileChunkMessage, c.GetRemoteShosetType(), c.GetLocalAddress()); state {
 		eh.SendEventConn(c, fileChunkMessage)
 	}

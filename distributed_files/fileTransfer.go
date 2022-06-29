@@ -22,7 +22,7 @@ type FileTransfer struct {
 	*/
 	requestedChunks map[*shoset.ShosetConn][]int
 
-	expectedChunks map[*shoset.ShosetConn][]int
+	expectedChunks map[*shoset.ShosetConn][]int // Used only for source conn
 }
 
 //Create a new FileTransfer object (Transfer is not started.)
@@ -88,16 +88,17 @@ func NewFileTransferRx(receiver *shoset.Shoset, originAdress string) FileTransfe
 		}
 	}
 
-	//Compute the number of chunks required create the sequence containing every chunls and adds them to the list of requested.
-	var chunkRange []int
-	for i := 0; i < int(math.Ceil((float64(len(transfer.file.Data)) / float64(chunkSize)))); i++ {
-		chunkRange = append(chunkRange, i)
-	}
+	//A remetre dans waitFile()
+	// //Compute the number of chunks required create the sequence containing every chunls and adds them to the list of requested.
+	// var chunkRange []int
+	// for i := 0; i < int(math.Ceil((float64(len(transfer.file.Data)) / float64(chunkSize)))); i++ {
+	// 	chunkRange = append(chunkRange, i)
+	// }
 
 	//fmt.Println("len(transfer.file.Data) (NewFileTransfer) : ",len(transfer.file.Data))
 	//fmt.Println("chunkRange (NewFileTransfer) : ",chunkRange)
 
-	transfer.expectedChunks[conn] = chunkRange
+	transfer.expectedChunks[conn] =[]int{}  //Not yet known
 	return transfer
 }
 

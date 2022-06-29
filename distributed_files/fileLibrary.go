@@ -9,7 +9,7 @@ type FileLibrary struct {
 }
 
 // Create new empty FileLibrary
-func NewFiles() FileLibrary {
+func NewFileLibrary() FileLibrary {
 	var fileLibrary FileLibrary
 	fileLibrary.FilesMap = make(map[string]*File)
 

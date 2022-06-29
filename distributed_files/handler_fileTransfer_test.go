@@ -100,7 +100,7 @@ func TestWaitFile(t *testing.T) {
 		testfiles_tx = append(testfiles_tx, createFile("file"+fmt.Sprint(i)))
 	}
 
-	t.Log("testfiles_tx", testfiles_tx)
+	//t.Log("testfiles_tx", testfiles_tx)
 
 	iterator := msg.NewIterator(cl1.Queue["fileChunk"])
 
@@ -137,4 +137,27 @@ func TestWaitFile(t *testing.T) {
 			t.Errorf("Wrong content for file" + fmt.Sprint(i))
 		}
 	}
+}
+
+func TestRequestFile(t *testing.T) {
+	prepareContext(t)
+
+	cl1 := shoset.NewShoset("cl", "cl") //Maitresse du système
+	cl1.InitPKI("localhost:8001")
+
+	cl2 := shoset.NewShoset("cl", "cl")                      // always "cl" "cl" for gandalf
+	cl2.Protocol("localhost:8002", "localhost:8001", "join") // we join it to our first socket
+
+	time.Sleep(1 * time.Second) //Wait for connexion
+
+	//Create file librarry
+
+	fileLibrary := NewFileLibrary()
+
+	fileLibrary.AddNewFile("./test_files/source/test1.txt")
+
+	requestedFile := RequestFile(cl1, "test1.txt", "localhost:8001")
+
+	t.Log(requestedFile)
+
 }
