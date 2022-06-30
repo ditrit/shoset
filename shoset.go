@@ -227,7 +227,7 @@ func (s *Shoset) String() string {
 	description += "\n\t"
 	s.RouteTable.Iterate(
 		func(key string, val interface{}) {
-			description += fmt.Sprintf("\t%t", val.(bool))
+			description += fmt.Sprintf("\t%t", val)
 		})
 
 	description += "\n}\n"

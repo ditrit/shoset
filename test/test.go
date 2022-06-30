@@ -930,9 +930,10 @@ func testRouteTable(ctx context.Context, done context.CancelFunc) {
 	fmt.Println("\ncl : ", cl1)
 
 	cl1.RouteTable.SetConfig(shoset.NewConfig())
+
 	fmt.Println("", cl1.RouteTable.GetConfig())
 
-	//cl1.RouteTable.Store(cl1.GetLogicalName(), "A", cl1.GetShosetType(), shoset.NewRouter("B", 1))
+	cl1.RouteTable.Store(cl1.GetLogicalName(), "A", cl1.GetShosetType(), shoset.NewRouter("B", 1))
 
 	fmt.Println("\ncl : ", cl1)
 
