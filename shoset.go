@@ -35,7 +35,7 @@ type Shoset struct {
 	ConnsSingleBool  *sync.Map   // map[ipAddress]bool ipAddresses waiting in singleWay to be handled for TLS double way
 	ConnsSingleConn  *sync.Map   // map[ipAddress]*ShosetConn ShosetConns waiting in singleWay to be handled for TLS double way
 
-	RouteTable *MapSyncMap //map[string] *Router
+	RouteTable *sync.Map //map[string] *Router
 
 	bindAddress string       // address on which is bound the Shoset
 	logicalName string       // logical name of the Shoset
@@ -135,7 +135,7 @@ func NewShoset(logicalName, shosetType string) *Shoset {
 		ConnsSingleBool:  new(sync.Map),
 		ConnsSingleConn:  new(sync.Map),
 
-		RouteTable: new(MapSyncMap),
+		RouteTable: new(sync.Map),
 
 		logicalName: logicalName,
 		shosetType:  shosetType,
@@ -219,15 +219,11 @@ func (s *Shoset) String() string {
 			description += fmt.Sprintf("\t%t", val.(bool))
 		})
 	//
-	description += "\n\t- RouteTable:\n\t\t"
-	keys = s.RouteTable.Keys(ALL)
-	for _, key := range keys {
-		description += key + "\t\t"
-	}
-	description += "\n\t"
-	s.RouteTable.Iterate(
-		func(key string, val interface{}) {
-			description += fmt.Sprintf("\t%t", val)
+	description += "\n\t- RouteTable (destination : {neighbour, distance, uuid}):\n\t\t"
+	s.RouteTable.Range(
+		func(key, val interface{}) bool {
+			description += fmt.Sprintf("%v : %v", key, val)
+			return true
 		})
 
 	description += "\n}\n"
