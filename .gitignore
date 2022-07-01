@@ -6,6 +6,7 @@
 !**/*.sh
 !**/
 !./test_files/source/*
+!./test/*
 
 !/.gitignore
 !/go.mod
