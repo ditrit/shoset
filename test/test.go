@@ -941,19 +941,19 @@ func testRouteTable(ctx context.Context, done context.CancelFunc) {
 
 	//cl1.RouteTable.Store("A",shoset.NewRouter("B",2,"UUID"))
 
-	routing := msg.NewRoutingEvent("A")
+	routing := msg.NewRoutingEvent("A","IN")
 	cl1.Send(routing)
 
-	routing = msg.NewRoutingEvent("B")
+	routing = msg.NewRoutingEvent("B","IN")
 	cl2.Send(routing)
 
-	routing = msg.NewRoutingEvent("C")
+	routing = msg.NewRoutingEvent("C","IN")
 	cl3.Send(routing)
 
-	routing = msg.NewRoutingEvent("D")
+	routing = msg.NewRoutingEvent("D","IN")
 	cl4.Send(routing)
 
-	routing = msg.NewRoutingEvent("E")
+	routing = msg.NewRoutingEvent("E","IN")
 	cl5.Send(routing)
 
 	//received := cl2.Wait("routingEvent", map[string]string{}, 5, nil)
@@ -1004,7 +1004,7 @@ func testRouteTable(ctx context.Context, done context.CancelFunc) {
 	// routing = msg.NewRoutingEvent("E")
 	// cl5.Send(routing)
 
-	routing = msg.NewRoutingEvent("F")
+	routing = msg.NewRoutingEvent("F","IN")
 	cl6.Send(routing)
 
 	time.Sleep(1 * time.Second)

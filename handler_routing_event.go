@@ -20,7 +20,7 @@ func (reh *RoutingEventHandler) Get(c *ShosetConn) (msg.Message, error) {
 
 // HandleDoubleWay handles message for a ShosetConn accordingly.
 func (reh *RoutingEventHandler) HandleDoubleWay(c *ShosetConn, message msg.Message) error {
-	fmt.Println("((reh *RoutingEventHandler) HandleDoubleWay)",message)
+	fmt.Println("((reh *RoutingEventHandler) HandleDoubleWay)", message)
 
 	routingEvt := message.(msg.RoutingEvent)
 
@@ -34,6 +34,11 @@ func (reh *RoutingEventHandler) HandleDoubleWay(c *ShosetConn, message msg.Messa
 		if (value.(Route).GetUUID() != routingEvt.GetUUID()) || (routingEvt.GetNbSteps() < value.(Route).nb_steps) { //UUID is different if Route is invalid and need to be replaced
 			// Save route
 			c.GetShoset().RouteTable.Delete(originLogicalName)
+
+			// Rebroadcast Routing event
+			routingEvt.SetNbSteps(routingEvt.GetNbSteps() + 1)
+			reh.Send(c.GetShoset(), routingEvt)
+			return nil
 		} else {
 			return nil
 		}
@@ -42,9 +47,12 @@ func (reh *RoutingEventHandler) HandleDoubleWay(c *ShosetConn, message msg.Messa
 	// Unknown Route (Origin not found in RouteTable)
 	c.GetShoset().RouteTable.Store(originLogicalName, NewRouter(c.GetRemoteLogicalName(), routingEvt.GetNbSteps(), routingEvt.GetUUID()))
 
-	// // Reroute when savin new Route
-	// reRouting := msg.NewRoutingEvent(c.GetLocalLogicalName())
-	// reh.Send(c.GetShoset(), reRouting)
+	if lNameMap, _ := c.GetShoset().ConnsByLname.smap.Load(originLogicalName); lNameMap != nil && routingEvt.GetDir() == "IN" {
+		// Reroute when savin new Route
+		fmt.Println("Reroute ", c.GetLocalLogicalName())
+		reRouting := msg.NewRoutingEvent(c.GetLocalLogicalName(), "OUT")
+		reh.Send(c.GetShoset(), reRouting)
+	}
 
 	// Rebroadcast Routing event
 	routingEvt.SetNbSteps(routingEvt.GetNbSteps() + 1)
