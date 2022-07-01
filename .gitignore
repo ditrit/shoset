@@ -5,6 +5,7 @@
 !**/*.svg
 !**/*.sh
 !**/
+!./test/*
 
 !/.gitignore
 !/go.mod
