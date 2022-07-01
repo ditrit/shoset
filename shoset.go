@@ -81,7 +81,7 @@ func (s *Shoset) GetConnsByTypeArray(shosetType string) []*ShosetConn {
 	lNamesByType := s.LnamesByType.Keys(shosetType)
 	var connsByType []*ShosetConn
 	for _, lName := range lNamesByType {
-		lNameMap, _ := s.ConnsByLname.smap.Load(lName)
+		lNameMap, _ := s.ConnsByLname.Load(lName)
 		keys := Keys(lNameMap.(*sync.Map), ALL)
 		for _, key := range keys {
 			conn, _ := lNameMap.(*sync.Map).Load(key)
@@ -113,9 +113,9 @@ func (s *Shoset) SetListener(listener net.Listener) { s.listener = listener }
 
 // deleteConn deletes a ShosetConn from ConnsByLname map from a Shoset
 func (s *Shoset) deleteConn(connAddr, connLname string) {
-	if connsByLname, _ := s.ConnsByLname.smap.Load(connLname); connsByLname != nil {
+	if connsByLname, _ := s.ConnsByLname.Load(connLname); connsByLname != nil {
 		if conn, _ := connsByLname.(*sync.Map).Load(connAddr); conn != nil {
-			s.ConnsByLname.Delete(connLname, connAddr)
+			s.ConnsByLname.DeleteConfig(connLname, connAddr)
 		}
 	}
 }
@@ -133,7 +133,6 @@ func NewShoset(logicalName, shosetType string) *Shoset {
 		LnamesByProtocol: new(MapSyncMap),
 		ConnsSingleBool:  new(sync.Map),
 		ConnsSingleConn:  new(sync.Map),
-
 		RouteTable: new(sync.Map),
 
 		logicalName: logicalName,
@@ -169,12 +168,11 @@ func NewShoset(logicalName, shosetType string) *Shoset {
 	s.Queue["pkievt_TLSsingleWay"] = msg.NewQueue()
 	s.Handlers["pkievt_TLSsingleWay"] = new(PkiEventHandler)
 
+	// s.Queue["pkievt_TLSsingleWay"] = msg.NewQueue()
+	s.Handlers["routingEvent"] = new(RoutingEventHandler)
+
 	s.Queue["cmd"] = msg.NewQueue()
 	s.Handlers["cmd"] = new(CommandHandler)
-
-	//
-	//s.Queue["routingEvent"] = msg.NewQueue()
-	s.Handlers["routingEvent"] = new(RoutingEventHandler)
 
 	//TODO MOVE TO GANDALF
 	s.Queue["config"] = msg.NewQueue()
@@ -222,7 +220,7 @@ func (s *Shoset) String() string {
 			description += fmt.Sprintf("\t%t", val.(bool))
 		})
 	//
-	description += "\n\t- RouteTable (destination : {neighbour, distance, uuid}):\n\t\t"
+	description += "\n\t- RouteTable (destination : {neighbor, distance, uuid}):\n\t\t"
 	s.RouteTable.Range(
 		func(key, val interface{}) bool {
 			description += fmt.Sprintf("%v : %v \n\t\t", key, val)
@@ -235,7 +233,7 @@ func (s *Shoset) String() string {
 
 // Bind assigns a local protocol address to the Shoset.
 // Runs protocol on other Shosets if needed.
-func (s *Shoset) Bind(address string) error {	
+func (s *Shoset) Bind(address string) error {
 	if err := s.ConnsByLname.GetConfig().ReadConfig(s.ConnsByLname.GetConfig().GetFileName()); err == nil {
 		for _, remote := range s.ConnsByLname.cfg.GetSlice(PROTOCOL_JOIN) {
 			s.Protocol(address, remote, PROTOCOL_JOIN)
@@ -339,14 +337,15 @@ func (s *Shoset) Protocol(bindAddress, remoteAddress, protocolType string) {
 	}
 
 	protocolConn, _ := NewShosetConn(s, remoteAddress, OUT)
-	cfg := msg.NewCfg(s.GetBindAddress(), s.GetLogicalName(), s.GetShosetType(), protocolType)
+	cfg := msg.NewConfigProtocol(s.GetBindAddress(), s.GetLogicalName(), s.GetShosetType(), protocolType)
 	go protocolConn.HandleConfig(cfg)
 }
+
 
 //Send and Receice Messages :
 
 func (c *Shoset) Send(msg msg.Message) { //Use pointer for msg ?
-	c.Handlers[msg.GetMsgType()].Send(c, msg)
+	c.Handlers[msg.GetMessageType()].Send(c, msg)
 }
 
 //Wait for message

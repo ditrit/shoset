@@ -30,7 +30,7 @@ func (ch *CommandHandler) HandleDoubleWay(c *ShosetConn, message msg.Message) er
 func (ch *CommandHandler) Send(s *Shoset, m msg.Message) {
 	s.ConnsByLname.Iterate(
 		func(key string, conn interface{}) {
-			if err := conn.(*ShosetConn).SendMessage(m); err != nil {
+			if err := conn.(*ShosetConn).GetWriter().SendMessage(m); err != nil {
 				conn.(*ShosetConn).Logger.Warn().Msg("couldn't send command msg : " + err.Error())
 			}
 		},

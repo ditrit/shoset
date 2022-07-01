@@ -2,7 +2,7 @@ package msg
 
 // RoutingEvent : to broadcast routes between logical names in the network
 type RoutingEvent struct {
-	Event
+	MessageBase
 	Origin  string
 	NbSteps int
 	Dir     string
@@ -11,17 +11,16 @@ type RoutingEvent struct {
 // NewRoutingEvent : RoutingEvent constructor
 func NewRoutingEvent(origin, dir string) *RoutingEvent {
 	r := new(RoutingEvent)
-	r.Event = *NewEvent(map[string]string{"event": "routing"})
+	r.InitMessageBase()
 
 	r.Origin = origin
 	r.NbSteps = 1
-
 	r.Dir= dir
 	return r
 }
 
 // GetMsgType accessor
-func (r RoutingEvent) GetMsgType() string { return "routingEvent" }
+func (r RoutingEvent) GetMessageType() string { return "routingEvent" }
 
 // GetOrigin accessor
 func (r RoutingEvent) GetOrigin() string { return r.Origin }

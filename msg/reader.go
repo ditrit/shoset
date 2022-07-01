@@ -8,13 +8,14 @@ import (
 	"sync"
 )
 
-// Reader : simple bufio.Reader safe for goroutines...
+// Reader : simple bufio.Reader safe for goroutines.
 type Reader struct {
-	b *bufio.Reader
-	dec *gob.Decoder
-	m sync.Mutex
+	b *bufio.Reader // implements buffering for an io.Reader object
+	dec *gob.Decoder // manages the receipt of type and data information read from the remote side of a connection. It is safe for concurrent use by multiple goroutines
+	m sync.Mutex // mutex for goroutines synchronization
 }
 
+// UpdateReader updates reader object with new connection information.
 func (r *Reader) UpdateReader(rd io.Reader) {
 	r.m.Lock()
 	defer r.m.Unlock()
@@ -29,7 +30,7 @@ func (r *Reader) ReadString() (string, error) {
 	return r.b.ReadString('\n')
 }
 
-// ReadMessage decodes a message in a safe way for goroutines
+// ReadMessage decodes a message in a safe way for goroutines.
 func (r *Reader) ReadMessage(data interface{}) error {
 	r.m.Lock()
 	defer r.m.Unlock()

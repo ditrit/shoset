@@ -31,7 +31,7 @@ func (reh *RoutingEventHandler) HandleDoubleWay(c *ShosetConn, message msg.Messa
 		return nil
 	} else if value, ok := c.GetShoset().RouteTable.Load(originLogicalName); ok {
 		fmt.Println("((reh *RoutingEventHandler) HandleDoubleWay) value : ", value)
-		if (value.(Route).GetUUID() != routingEvt.GetUUID()) || (routingEvt.GetNbSteps() < value.(Route).nb_steps) { //UUID is different if Route is invalid and need to be replaced
+		if ((value.(Route).GetUUID() != routingEvt.GetUUID()) || (routingEvt.GetNbSteps() < value.(Route).nb_steps)) && routingEvt.GetDir() == "IN" { //UUID is different if Route is invalid and need to be replaced
 			// Save route
 			c.GetShoset().RouteTable.Delete(originLogicalName)
 
@@ -47,7 +47,7 @@ func (reh *RoutingEventHandler) HandleDoubleWay(c *ShosetConn, message msg.Messa
 	// Unknown Route (Origin not found in RouteTable)
 	c.GetShoset().RouteTable.Store(originLogicalName, NewRouter(c.GetRemoteLogicalName(), routingEvt.GetNbSteps(), routingEvt.GetUUID()))
 
-	if lNameMap, _ := c.GetShoset().ConnsByLname.smap.Load(originLogicalName); lNameMap != nil && routingEvt.GetDir() == "IN" {
+	if lNameMap, _ := c.GetShoset().ConnsByLname.Load(originLogicalName); lNameMap != nil && routingEvt.GetDir() == "IN" {
 		// Reroute when savin new Route
 		fmt.Println("Reroute ", c.GetLocalLogicalName())
 		reRouting := msg.NewRoutingEvent(c.GetLocalLogicalName(), "OUT")
@@ -66,20 +66,13 @@ func (reh *RoutingEventHandler) HandleDoubleWay(c *ShosetConn, message msg.Messa
 func (reh *RoutingEventHandler) Send(s *Shoset, evt msg.Message) { // Add send to logical name
 	s.ConnsByLname.Iterate(
 		func(key string, conn interface{}) {
-			err := conn.(*ShosetConn).SendMessage(evt)
+			err := conn.(*ShosetConn).GetWriter().SendMessage(evt)
 			if err != nil {
 				log.Warn().Msg("couldn't send evt : " + err.Error())
 			}
 		},
 	)
 }
-
-// // Rebroadcast : Sends out RoutingEvent that was imporoving route
-// func (reh *RoutingEventHandler) Rebroadcast(s *Shoset, r msg.RoutingEvent) {
-// 	r.Nb_steps++
-
-// 	reh.Send(s,r)
-// }
 
 // Wait returns the message received for a given Shoset.
 func (reh *RoutingEventHandler) Wait(s *Shoset, replies *msg.Iterator, args map[string]string, timeout int) *msg.Message {

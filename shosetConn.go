@@ -103,9 +103,9 @@ func (c *ShosetConn) Store(protocol, lName, address, shosetType string) {
 
 	mapSync := new(sync.Map)
 	mapSync.Store(lName, true)
-	c.GetShoset().LnamesByProtocol.smap.Store(protocol, mapSync)
-	c.GetShoset().LnamesByType.smap.Store(shosetType, mapSync)
-	c.GetShoset().ConnsByLname.Store(lName, address, protocol, c)
+	c.GetShoset().LnamesByProtocol.Store(protocol, mapSync)
+	c.GetShoset().LnamesByType.Store(shosetType, mapSync)
+	c.GetShoset().ConnsByLname.StoreConfig(lName, address, protocol, c)
 }
 
 // NewShosetConn creates a new ShosetConn object for a specific address.
@@ -152,7 +152,7 @@ func (c *ShosetConn) HandleConfig(cfg *msg.ConfigProtocol) {
 		}()
 		c.UpdateConn(protocolConn)
 
-		err = c.SendMessage(*cfg)
+		err = c.GetWriter().SendMessage(*cfg)
 		if err != nil {
 			c.Logger.Error().Msg("couldn't send cfg: " + err.Error())
 			continue
@@ -160,7 +160,6 @@ func (c *ShosetConn) HandleConfig(cfg *msg.ConfigProtocol) {
 
 		for {
 			err := c.ReceiveMessage()
-			// time.Sleep(time.Millisecond * time.Duration(100))
 			if err != nil {
 				c.Logger.Error().Msg("socket closed: err in ReceiveMessage HandleConfig: " + err.Error())
 				break
@@ -175,7 +174,6 @@ func (c *ShosetConn) RunInConnSingle(address string) {
 	c.GetShoset().ConnsSingleBool.Delete(address)
 
 	err := c.ReceiveMessage()
-	// time.Sleep(time.Millisecond * time.Duration(100))
 	if err != nil {
 		c.Logger.Error().Msg("socket closed: err in ReceiveMessage RunInConnSingle: " + err.Error())
 		return
@@ -191,38 +189,21 @@ func (c *ShosetConn) RunInConnDouble() {
 
 	for {
 		err := c.ReceiveMessage()
-		// runtime.Gosched()
 		if err != nil {
 			c.Logger.Error().Msg("err in ReceiveMessage RunInConnDouble: " + err.Error())
 			return
 		}
-	}
-}
 
-// SendMessage writes the message type and the message through a connection.
-func (c *ShosetConn) SendMessage(msg msg.Message) error {
-	_, err := c.GetWriter().WriteString(msg.GetMsgType())
-	if err != nil {
-		if errors.Is(err, syscall.EPIPE) {
-			// https://gosamples.dev/broken-pipe/
-			return nil
-		} else if errors.Is(err, syscall.ECONNRESET) {
-			// https://gosamples.dev/connection-reset-by-peer/
-			return nil
+		for {
+			err := c.ReceiveMessage()
+			// time.Sleep(time.Millisecond * time.Duration(100))
+			if err != nil {
+				c.Logger.Error().Msg("socket closed: err in ReceiveMessage HandleConfig: " + err.Error())
+				break
+			}
 		}
-		return err
-	}
 
-	err = c.GetWriter().WriteMessage(msg)
-	if err != nil {
-		if errors.Is(err, syscall.EPIPE) {
-			return nil
-		} else if errors.Is(err, syscall.ECONNRESET) {
-			return nil
-		}
-		return err
 	}
-	return nil
 }
 
 // ReceiveMessage read incoming message type and runs handleMessageType to handle it.
@@ -245,7 +226,6 @@ func (c *ShosetConn) ReceiveMessage() error {
 		return errors.New(err.Error())
 	}
 	messageType = strings.Trim(messageType, "\n")
-	// runtime.Gosched()
 
 	if messageType == TLS_DOUBLE_WAY_TEST_WRITE { // do not handle this message, test for shoset.handleBind()
 		return nil
@@ -259,7 +239,7 @@ func (c *ShosetConn) ReceiveMessage() error {
 }
 
 // handleMessageType deduce handler from messageType and use it adequately.
-func (c *ShosetConn) handleMessageType(messageType string) error {	
+func (c *ShosetConn) handleMessageType(messageType string) error {
 	handler, ok := c.GetShoset().Handlers[messageType]
 	if !ok {
 		if c.GetDir() == IN {

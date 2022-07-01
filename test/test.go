@@ -415,7 +415,7 @@ func testJoin3(ctx context.Context, done context.CancelFunc) {
 
 	cl5 := shoset.NewShoset("cl", "cl")
 	cl5.Protocol("localhost:8005", "localhost:8003", "join")
-
+	
 	cl6 := shoset.NewShoset("c", "c")
 	cl6.Protocol("localhost:8006", "localhost:8002", "link")
 
@@ -875,7 +875,7 @@ func testPkiServer(ctx context.Context, done context.CancelFunc) {
 	cl1.InitPKI("localhost:8001")
 
 	loopUntilDone(2*time.Second, ctx, func() {
-		fmt.Println("\ncl : ", cl1)
+		// fmt.Println("\ncl : ", cl1)
 		done()
 		return
 	})
@@ -920,107 +920,95 @@ func testPresentationENIB(ctx context.Context, done context.CancelFunc) {
 }
 
 func testRouteTable(ctx context.Context, done context.CancelFunc) {
-	cl1 := shoset.NewShoset("A", "A")
-	cl1.InitPKI("localhost:8001")
+    cl1 := shoset.NewShoset("A", "A")
+    cl1.InitPKI("localhost:8001")
 
-	cl2 := shoset.NewShoset("B", "B")
-	cl2.Protocol("localhost:8002", "localhost:8001", "link")
+    cl2 := shoset.NewShoset("B", "B")
+    cl2.Protocol("localhost:8002", "localhost:8001", "link")
 
-	cl3 := shoset.NewShoset("C", "C")
-	cl3.Protocol("localhost:8003", "localhost:8002", "link")
+    cl3 := shoset.NewShoset("C", "C")
+    cl3.Protocol("localhost:8003", "localhost:8002", "link")
 
-	cl4 := shoset.NewShoset("D", "D")
-	cl4.Protocol("localhost:8004", "localhost:8001", "link")
+    cl4 := shoset.NewShoset("D", "D")
+    cl4.Protocol("localhost:8004", "localhost:8001", "link")
 
-	cl5 := shoset.NewShoset("E", "E")
-	cl5.Protocol("localhost:8005", "localhost:8003", "link")
+    cl5 := shoset.NewShoset("E", "E")
+    cl5.Protocol("localhost:8005", "localhost:8003", "link")
 
-	time.Sleep(1 * time.Second)
+    time.Sleep(1 * time.Second)
 
-	//fmt.Println("\ncl2 : ", cl2)
+    //fmt.Println("\ncl2 : ", cl2)
 
-	//cl1.RouteTable.Store("A",shoset.NewRouter("B",2,"UUID"))
+    //cl1.RouteTable.Store("A",shoset.NewRouter("B",2,"UUID"))
 
-	routing := msg.NewRoutingEvent("A","IN")
-	cl1.Send(routing)
+    routing := msg.NewRoutingEvent("A","IN")
+    cl1.Send(routing)
 
-	routing = msg.NewRoutingEvent("B","IN")
-	cl2.Send(routing)
+    routing = msg.NewRoutingEvent("B","IN")
+    cl2.Send(routing)
 
-	routing = msg.NewRoutingEvent("C","IN")
-	cl3.Send(routing)
+    routing = msg.NewRoutingEvent("C","IN")
+    cl3.Send(routing)
 
-	routing = msg.NewRoutingEvent("D","IN")
-	cl4.Send(routing)
+    routing = msg.NewRoutingEvent("D","IN")
+    cl4.Send(routing)
 
-	routing = msg.NewRoutingEvent("E","IN")
-	cl5.Send(routing)
+    routing = msg.NewRoutingEvent("E","IN")
+    cl5.Send(routing)
 
-	//received := cl2.Wait("routingEvent", map[string]string{}, 5, nil)
+    // //received := cl2.Wait("routingEvent", map[string]string{}, 5, nil)
 
-	//fmt.Println(received)
+    // //fmt.Println(received)
 
-	//time.Sleep(1 * time.Second)
+    // //time.Sleep(1 * time.Second)
 
-	// loopUntilDone(2*time.Second, ctx, func() {
-	// 	//fmt.Println("\ncl : ", cl1)
-	// 	done()
-	// 	return
-	// })
+    // // loopUntilDone(2*time.Second, ctx, func() {
+    // //  //fmt.Println("\ncl : ", cl1)
+    // //  done()
+    // //  return
+    // // })
 
-	time.Sleep(1 * time.Second)
+    time.Sleep(1 * time.Second)
+    fmt.Println("\ncl1 : ", cl1)
+    fmt.Println("\ncl2 : ", cl2)
+    fmt.Println("\ncl3 : ", cl3)
+    fmt.Println("\ncl4 : ", cl4)
+    fmt.Println("\ncl4 : ", cl5)
+    time.Sleep(1 * time.Second)
 
-	fmt.Println("\ncl1 : ", cl1)
+    cl6 := shoset.NewShoset("F", "F")
+    cl6.Protocol("localhost:8006", "localhost:8001", "link")
 
-	fmt.Println("\ncl2 : ", cl2)
+    cl6.Protocol("localhost:8006", "localhost:8005", "link")
+    time.Sleep(1 * time.Second)
 
-	fmt.Println("\ncl3 : ", cl3)
+    // // routing = msg.NewRoutingEvent("A")
+    // // cl1.Send(routing)
 
-	fmt.Println("\ncl4 : ", cl4)
+    // // routing = msg.NewRoutingEvent("B")
+    // // cl2.Send(routing)
 
-	fmt.Println("\ncl4 : ", cl5)
+    // // routing = msg.NewRoutingEvent("C")
+    // // cl3.Send(routing)
 
-	time.Sleep(1 * time.Second)
+    // // routing = msg.NewRoutingEvent("D")
+    // // cl4.Send(routing)
 
-	cl6 := shoset.NewShoset("F", "F")
-	cl6.Protocol("localhost:8006", "localhost:8001", "link")
+    // // routing = msg.NewRoutingEvent("E")
+    // // cl5.Send(routing)
 
-	cl6.Protocol("localhost:8006", "localhost:8005", "link")
+    routing = msg.NewRoutingEvent("F","IN")
+    cl6.Send(routing)
 
-	time.Sleep(1 * time.Second)
-
-	// routing = msg.NewRoutingEvent("A")
-	// cl1.Send(routing)
-
-	// routing = msg.NewRoutingEvent("B")
-	// cl2.Send(routing)
-
-	// routing = msg.NewRoutingEvent("C")
-	// cl3.Send(routing)
-
-	// routing = msg.NewRoutingEvent("D")
-	// cl4.Send(routing)
-
-	// routing = msg.NewRoutingEvent("E")
-	// cl5.Send(routing)
-
-	routing = msg.NewRoutingEvent("F","IN")
-	cl6.Send(routing)
-
-	time.Sleep(1 * time.Second)
-
-	fmt.Println("\ncl1 : ", cl1)
-
-	fmt.Println("\ncl2 : ", cl2)
-
-	fmt.Println("\ncl3 : ", cl3)
-
-	fmt.Println("\ncl4 : ", cl4)
-
-	fmt.Println("\ncl5 : ", cl5)
-
-	fmt.Println("\ncl6 : ", cl6)
+    time.Sleep(1 * time.Second)
+    fmt.Println("\ncl1 : ", cl1)
+    fmt.Println("\ncl2 : ", cl2)
+    fmt.Println("\ncl3 : ", cl3)
+    fmt.Println("\ncl4 : ", cl4)
+    fmt.Println("\ncl5 : ", cl5)
+    fmt.Println("\ncl6 : ", cl6)
 }
+
 
 func main() {
 	shoset.InitPrettyLogger(false)
@@ -1056,11 +1044,10 @@ func main() {
 		shoset.Log("simplesimpleConnector")
 		// simplesimpleConnector()
 	} else {
-		shoset.Log("testPki")
-		//testPki(ctx, done)
+		// testPki(ctx, done)
+		testRouteTable(ctx, done)
 		// testPresentationENIB(ctx, done)
 		// testJoin3(ctx, done)
-		testRouteTable(ctx, done)
 	}
 }
 
