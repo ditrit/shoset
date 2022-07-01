@@ -1,37 +1,30 @@
 package msg
 
-// ConfigProtocol : Gandalf Socket config
+// ConfigProtocol : config handler for each protocol of Shoset.
 type ConfigProtocol struct {
 	MessageBase
-	CommandName  string
-	LogicalName  string
-	ShosetType   string
-	Address      string
-	MyBrothers   []string
-	YourBrothers []string
+	CommandName  string   // type of config
+	LogicalName  string   // logical name of the Shoset
+	ShosetType   string   // type of the Shoset
+	BindAddress  string   // bindAddress of the Shoset
+	MyBrothers   []string // list of ipAddresses of same Shoset logical name
+	YourBrothers []string // list of ipAddresses of other Shoset logical name
 }
 
-// for link and join
-func NewCfg(address, lName, shosetType, commandName string) *ConfigProtocol {
+// NewConfigProtocol is a simple config for each protocol.
+func NewConfigProtocol(address, lName, shosetType, commandName string) *ConfigProtocol {
 	c := new(ConfigProtocol)
 	c.InitMessageBase()
 	c.CommandName = commandName
-	c.Address = address
+	c.BindAddress = address
 	c.LogicalName = lName
 	c.ShosetType = shosetType
 	return c
 }
 
-// for link and join
-func NewCfgPkiFinished(commandName string) *ConfigProtocol {
-	c := new(ConfigProtocol)
-	c.InitMessageBase()
-	c.CommandName = commandName
-	return c
-}
-
-// for link
-func NewCfgBrothers(myBrothers, yourBrothers []string, commandName, lName, shosetType string) *ConfigProtocol {
+// NewConfigBrothersProtocol is dedicated to Link protocol.*
+//
+func NewConfigBrothersProtocol(myBrothers, yourBrothers []string, commandName, lName, shosetType string) *ConfigProtocol {
 	c := new(ConfigProtocol)
 	c.InitMessageBase()
 	c.CommandName = commandName
@@ -42,14 +35,12 @@ func NewCfgBrothers(myBrothers, yourBrothers []string, commandName, lName, shose
 	return c
 }
 
-// GetMsgType accessor
-func (c ConfigProtocol) GetMsgType() string {
+// GetMessageType returns MessageType from ConfigProtocol.
+func (c ConfigProtocol) GetMessageType() string {
 	switch c.GetCommandName() {
 	case "join":
 		return "cfgjoin"
 	case "acknowledge_join":
-		return "cfgjoin"
-	case "unacknowledge_join":
 		return "cfgjoin"
 	case "member":
 		return "cfgjoin"
@@ -65,20 +56,20 @@ func (c ConfigProtocol) GetMsgType() string {
 	return "Wrong input protocolType"
 }
 
-// GetLogicalName :
+// GetLogicalName returns LogicalName from ConfigProtocol.
 func (c ConfigProtocol) GetLogicalName() string { return c.LogicalName }
 
-// GetShosetType :
+// GetShosetType returns ShosetType from ConfigProtocol.
 func (c ConfigProtocol) GetShosetType() string { return c.ShosetType }
 
-// GetAddress :
-func (c ConfigProtocol) GetAddress() string { return c.Address }
+// GetAddress returns BindAddress from ConfigProtocol.
+func (c ConfigProtocol) GetAddress() string { return c.BindAddress }
 
-// GetCommandName :
+// GetCommandName returns CommandName from ConfigProtocol.
 func (c ConfigProtocol) GetCommandName() string { return c.CommandName }
 
-// GetConns :
+// GetMyBrothers returns MyBrothers from ConfigProtocol.
 func (c ConfigProtocol) GetMyBrothers() []string { return c.MyBrothers }
 
-// GetBros :
+// GetYourBrothers returns YourBrothers from ConfigProtocol.
 func (c ConfigProtocol) GetYourBrothers() []string { return c.YourBrothers }

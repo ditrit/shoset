@@ -50,7 +50,7 @@ const (
 
 // path
 const (
-	PATH_CA_CERT        string = "/cert/CAcert.crt"
+	PATH_CA_CERT        string = "/cert/CAcertificate.crt"
 	PATH_CERT           string = "/cert/cert.crt"
 	PATH_CA_PRIVATE_KEY string = "/cert/privateCAKey.key"
 	PATH_PRIVATE_KEY    string = "/cert/privateKey.key"

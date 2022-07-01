@@ -50,7 +50,7 @@ func (s *Shoset) InitCA(bindAddress string) {
 	fileName := s.ConnsByLname.GetConfig().GetFileName()
 	CApath := cfgDir + fileName + PATH_CA_CERT
 
-	CAcert := &x509.Certificate{
+	CAcertificate := &x509.Certificate{
 		SerialNumber: big.NewInt(1653),
 		Subject: pkix.Name{
 			Organization:  []string{"Ditrit"},
@@ -77,7 +77,7 @@ func (s *Shoset) InitCA(bindAddress string) {
 
 	CApublicKey := &CAprivateKey.PublicKey
 
-	signedCAcert, err := x509.CreateCertificate(rand.Reader, CAcert, CAcert, CApublicKey, CAprivateKey)
+	signedCAcert, err := x509.CreateCertificate(rand.Reader, CAcertificate, CAcertificate, CApublicKey, CAprivateKey)
 	if err != nil {
 		s.Logger.Error().Msg("couldn't create CA : " + err.Error())
 		return
@@ -96,7 +96,7 @@ func (s *Shoset) InitShoset(bindAddress string) {
 	cfgDir := s.ConnsByLname.GetConfig().GetBaseDir()
 	CApath := cfgDir + fileName + PATH_CA_CERT
 
-	certReq, hostPublicKey, hostPrivateKey, err := PrepareCertificate()
+	certificateRequest, hostPublicKey, hostPrivateKey, err := PrepareCertificate()
 	if err != nil {
 		s.Logger.Error().Msg("prepare certificate didn't work")
 		return
@@ -107,7 +107,7 @@ func (s *Shoset) InitShoset(bindAddress string) {
 		return
 	}
 
-	signedHostCert := s.SignCertificate(certReq, hostPublicKey)
+	signedHostCert := s.SignCertificate(certificateRequest, hostPublicKey)
 	if signedHostCert == nil {
 		s.Logger.Error().Msg("sign cert didn't work")
 		return
@@ -143,10 +143,10 @@ func (s *Shoset) GenerateSecret(login, password string) string {
 	return VOID
 }
 
-// PrepareCertificate prepares certificates for a Shoset by returning certReq, hostPublicKey and hostPrivateKey.
+// PrepareCertificate prepares certificates for a Shoset by returning certificateRequest, hostPublicKey and hostPrivateKey.
 // To get more info about the generated cert, use : openssl x509 -in ./cert.crt -text -noout
 func PrepareCertificate() (*x509.Certificate, *rsa.PublicKey, *rsa.PrivateKey, error) {
-	certReq := &x509.Certificate{
+	certificateRequest := &x509.Certificate{
 		SerialNumber: big.NewInt(1658),
 		Subject: pkix.Name{
 			Organization:  []string{"Ditrit"},
@@ -170,13 +170,13 @@ func PrepareCertificate() (*x509.Certificate, *rsa.PublicKey, *rsa.PrivateKey, e
 	}
 	hostPublicKey := &hostPrivateKey.PublicKey
 
-	return certReq, hostPublicKey, hostPrivateKey, nil
+	return certificateRequest, hostPublicKey, hostPrivateKey, nil
 }
 
 // SignCertificate signs a certificate request certificate with a public key and the the CA information.
 // Must be PKI to sign a certificate request.
 // To check the validity of the signed certificate request, use : openssl s_server -accept 8080 -www -cert yourcert.crt -key yourcert.key -CAfile CAcert.crt
-func (s *Shoset) SignCertificate(certReq *x509.Certificate, hostPublicKey *rsa.PublicKey) []byte {
+func (s *Shoset) SignCertificate(certificateRequest *x509.Certificate, hostPublicKey *rsa.PublicKey) []byte {
 	if !s.GetIsPki() {
 		return nil
 	}
@@ -184,7 +184,7 @@ func (s *Shoset) SignCertificate(certReq *x509.Certificate, hostPublicKey *rsa.P
 	filePath := s.ConnsByLname.GetConfig().GetBaseDir() + s.ConnsByLname.GetConfig().GetFileName()
 	loadedCAkeys, err := tls.LoadX509KeyPair(filePath+PATH_CA_CERT, filePath+PATH_CA_PRIVATE_KEY)
 	if err != nil {
-		s.Logger.Error().Msg("couldn't load keypair : " + err.Error())
+		s.Logger.Error().Msg("couldn't load keyPair : " + err.Error())
 		return nil
 	}
 
@@ -194,9 +194,9 @@ func (s *Shoset) SignCertificate(certReq *x509.Certificate, hostPublicKey *rsa.P
 		return nil
 	}
 
-	signedHostCert, err := x509.CreateCertificate(rand.Reader, certReq, parsedCAcert, hostPublicKey, loadedCAkeys.PrivateKey)
+	signedHostCert, err := x509.CreateCertificate(rand.Reader, certificateRequest, parsedCAcert, hostPublicKey, loadedCAkeys.PrivateKey)
 	if err != nil {
-		s.Logger.Error().Msg("couldn't sign certreq : " + err.Error())
+		s.Logger.Error().Msg("couldn't sign certificateRequest : " + err.Error())
 		return nil
 	}
 	return signedHostCert

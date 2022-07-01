@@ -6,16 +6,16 @@ import (
 	"testing"
 )
 
-var certReq *x509.Certificate
+var certificateRequest *x509.Certificate
 var hostPublicKey *rsa.PublicKey
 var hostPrivateKey *rsa.PrivateKey
 var err error
 
-// TestPrepareCertificate verifies if PrepareCertificate() function returns expected certReq, hostPublicKey and hostPrivateKey.
+// TestPrepareCertificate verifies if PrepareCertificate() function returns expected certificateRequest, hostPublicKey and hostPrivateKey.
 func TestPrepareCertificate(t *testing.T) {
-	certReq, hostPublicKey, hostPrivateKey, err = PrepareCertificate()
-	if certReq == nil {
-		t.Errorf("certReq is not valid")
+	certificateRequest, hostPublicKey, hostPrivateKey, err = PrepareCertificate()
+	if certificateRequest == nil {
+		t.Errorf("certificateRequest is not valid")
 	}
 	if hostPublicKey == nil {
 		t.Errorf("hostPublicKey is not valid")
@@ -24,19 +24,19 @@ func TestPrepareCertificate(t *testing.T) {
 		t.Errorf("hostPrivateKey is not valid")
 	}
 	if err != nil {
-		t.Errorf("unexepected error : %s", err)
+		t.Errorf("unexpected error : %s", err)
 	}
 }
 
-// TestSignCertificate verifies if SignCertificate() function returns a correct signedCert.
+// TestSignCertificate verifies if SignCertificate() function returns a correct signedCertificate.
 func TestSignCertificate(t *testing.T) {
 	shoset := NewShoset("cl", "cl") // cluster
 	shoset.InitPKI("localhost:8001")
 
 	TestPrepareCertificate(t)
 
-	signedCert := shoset.SignCertificate(certReq, hostPublicKey)
-	if signedCert == nil {
+	signedCertificate := shoset.SignCertificate(certificateRequest, hostPublicKey)
+	if signedCertificate == nil {
 		t.Errorf("TestSignCertificate didn't work")
 	}
 }

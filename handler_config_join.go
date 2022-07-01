@@ -28,20 +28,20 @@ func (cjh *ConfigJoinHandler) HandleDoubleWay(c *ShosetConn, message msg.Message
 		c.SetRemoteAddress(cfg.GetAddress())
 		c.Store(PROTOCOL_JOIN, c.GetShoset().GetLogicalName(), cfg.GetAddress(), c.GetShoset().GetShosetType())
 
-		configOk := msg.NewCfg(cfg.GetAddress(), c.GetShoset().GetLogicalName(), c.GetShoset().GetShosetType(), ACKNOWLEDGE_JOIN)
-		if err := c.SendMessage(*configOk); err != nil {
+		configOk := msg.NewConfigProtocol(cfg.GetAddress(), c.GetShoset().GetLogicalName(), c.GetShoset().GetShosetType(), ACKNOWLEDGE_JOIN)
+		if err := c.GetWriter().SendMessage(*configOk); err != nil {
 			c.Logger.Warn().Msg("couldn't send configOk : " + err.Error())
 		}
 
-		cfgNewMember := msg.NewCfg(cfg.GetAddress(), c.GetShoset().GetLogicalName(), c.GetShoset().GetShosetType(), MEMBER)
-		mapConns, _ := c.GetShoset().ConnsByLname.smap.Load(c.GetShoset().GetLogicalName())
+		cfgNewMember := msg.NewConfigProtocol(cfg.GetAddress(), c.GetShoset().GetLogicalName(), c.GetShoset().GetShosetType(), MEMBER)
+		mapConns, _ := c.GetShoset().ConnsByLname.Load(c.GetShoset().GetLogicalName())
 		mapConns.(*sync.Map).Range(func(key, value interface{}) bool {
 			func(address string, bro interface{}) {
 				if address == cfg.GetAddress() {
 					return
 				}
-				if err := bro.(*ShosetConn).SendMessage(*cfgNewMember); err != nil {
-					bro.(*ShosetConn).Logger.Warn().Msg("couldn't send cfgnewMember : " + err.Error())
+				if err := bro.(*ShosetConn).GetWriter().SendMessage(*cfgNewMember); err != nil {
+					bro.(*ShosetConn).Logger.Warn().Msg("couldn't send cfgNewMember : " + err.Error())
 				}
 			}(key.(string), value)
 			return true
@@ -55,7 +55,7 @@ func (cjh *ConfigJoinHandler) HandleDoubleWay(c *ShosetConn, message msg.Message
 	case MEMBER:
 		// incoming member information.
 		// need to link protocol on it if not already in the map of known conn.
-		mapConns, _ := c.GetShoset().ConnsByLname.smap.Load(c.GetShoset().GetLogicalName())
+		mapConns, _ := c.GetShoset().ConnsByLname.Load(c.GetShoset().GetLogicalName())
 		if mapConns == nil {
 			return nil
 		}
