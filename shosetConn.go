@@ -259,7 +259,7 @@ func (c *ShosetConn) ReceiveMessage() error {
 }
 
 // handleMessageType deduce handler from messageType and use it adequately.
-func (c *ShosetConn) handleMessageType(messageType string) error {
+func (c *ShosetConn) handleMessageType(messageType string) error {	
 	handler, ok := c.GetShoset().Handlers[messageType]
 	if !ok {
 		if c.GetDir() == IN {
@@ -276,7 +276,7 @@ func (c *ShosetConn) handleMessageType(messageType string) error {
 		return errors.New("ReceiveMessage : can not read value of " + messageType + " : " + err.Error())
 	}
 
-	doubleWayMessageTypes := []string{"cfgjoin", "cfglink", "cfgbye", "pkievt_TLSdoubleWay"}
+	doubleWayMessageTypes := []string{"cfgjoin", "cfglink", "cfgbye", "pkievt_TLSdoubleWay", "routingEvent"}
 	switch {
 	case messageType == TLS_SINGLE_WAY_PKI_EVT:
 		err := c.HandleSingleWay(messageValue)

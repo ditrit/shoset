@@ -34,8 +34,7 @@ type Shoset struct {
 	LnamesByProtocol *MapSyncMap // map[protocolType]map[lName]bool
 	ConnsSingleBool  *sync.Map   // map[ipAddress]bool ipAddresses waiting in singleWay to be handled for TLS double way
 	ConnsSingleConn  *sync.Map   // map[ipAddress]*ShosetConn ShosetConns waiting in singleWay to be handled for TLS double way
-
-	RouteTable *sync.Map //map[string] *Router
+	RouteTable       *sync.Map   // map[lName]*Route Route to another logical name
 
 	bindAddress string       // address on which is bound the Shoset
 	logicalName string       // logical name of the Shoset
@@ -173,6 +172,10 @@ func NewShoset(logicalName, shosetType string) *Shoset {
 	s.Queue["cmd"] = msg.NewQueue()
 	s.Handlers["cmd"] = new(CommandHandler)
 
+	//
+	//s.Queue["routingEvent"] = msg.NewQueue()
+	s.Handlers["routingEvent"] = new(RoutingEventHandler)
+
 	//TODO MOVE TO GANDALF
 	s.Queue["config"] = msg.NewQueue()
 	s.Handlers["config"] = new(ConfigHandler)
@@ -222,7 +225,7 @@ func (s *Shoset) String() string {
 	description += "\n\t- RouteTable (destination : {neighbour, distance, uuid}):\n\t\t"
 	s.RouteTable.Range(
 		func(key, val interface{}) bool {
-			description += fmt.Sprintf("%v : %v", key, val)
+			description += fmt.Sprintf("%v : %v \n\t\t", key, val)
 			return true
 		})
 
@@ -232,7 +235,7 @@ func (s *Shoset) String() string {
 
 // Bind assigns a local protocol address to the Shoset.
 // Runs protocol on other Shosets if needed.
-func (s *Shoset) Bind(address string) error {
+func (s *Shoset) Bind(address string) error {	
 	if err := s.ConnsByLname.GetConfig().ReadConfig(s.ConnsByLname.GetConfig().GetFileName()); err == nil {
 		for _, remote := range s.ConnsByLname.cfg.GetSlice(PROTOCOL_JOIN) {
 			s.Protocol(address, remote, PROTOCOL_JOIN)
@@ -338,4 +341,28 @@ func (s *Shoset) Protocol(bindAddress, remoteAddress, protocolType string) {
 	protocolConn, _ := NewShosetConn(s, remoteAddress, OUT)
 	cfg := msg.NewCfg(s.GetBindAddress(), s.GetLogicalName(), s.GetShosetType(), protocolType)
 	go protocolConn.HandleConfig(cfg)
+}
+
+//Send and Receice Messages :
+
+func (c *Shoset) Send(msg msg.Message) { //Use pointer for msg ?
+	c.Handlers[msg.GetMsgType()].Send(c, msg)
+}
+
+//Wait for message
+//args for event("evt") type : map[string]string{"topic": "topic_name", "event": "event_name"}
+//Leave iterator at nil if you don't want to generate it yourself
+func (c *Shoset) Wait(msgType string, args map[string]string, timeout int, iterator *msg.Iterator) msg.Message {
+	if iterator == nil {
+		iterator = msg.NewIterator(c.Queue[msgType])
+	}
+
+	event := c.Handlers[msgType].Wait(c, iterator, args, timeout)
+
+	if event == nil {
+		return nil
+	} else {
+		return *(event)
+	}
+
 }
