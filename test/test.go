@@ -919,84 +919,93 @@ func testPresentationENIB(ctx context.Context, done context.CancelFunc) {
 	})
 }
 
-func testRouteTable(ctx context.Context, done context.CancelFunc) {
-    cl1 := shoset.NewShoset("A", "A")
-    cl1.InitPKI("localhost:8001")
 
-    cl2 := shoset.NewShoset("B", "B")
-    cl2.Protocol("localhost:8002", "localhost:8001", "link")
-
-    cl3 := shoset.NewShoset("C", "C")
-    cl3.Protocol("localhost:8003", "localhost:8002", "link")
-
-    cl4 := shoset.NewShoset("D", "D")
-    cl4.Protocol("localhost:8004", "localhost:8001", "link")
-
-    cl5 := shoset.NewShoset("E", "E")
-    cl5.Protocol("localhost:8005", "localhost:8003", "link")
-
-    time.Sleep(1 * time.Second)
-
-    routing := msg.NewRoutingEvent("A", "")
-    cl1.Send(routing)
-
-    routing = msg.NewRoutingEvent("B", "")
-    cl2.Send(routing)
-
-    routing = msg.NewRoutingEvent("C", "")
-    cl3.Send(routing)
-
-    routing = msg.NewRoutingEvent("D", "")
-    cl4.Send(routing)
-
-    routing = msg.NewRoutingEvent("E", "")
-    cl5.Send(routing)
-
-    // //received := cl2.Wait("routingEvent", map[string]string{}, 5, nil)
-
-    // //fmt.Println(received)
-
-    // //time.Sleep(1 * time.Second)
-
-    // // loopUntilDone(2*time.Second, ctx, func() {
-    // //  //fmt.Println("\ncl : ", cl1)
-    // //  done()
-    // //  return
-    // // })
-
-    cl6 := shoset.NewShoset("F", "F")
-    cl6.Protocol("localhost:8006", "localhost:8001", "link")
-
-    cl6.Protocol("localhost:8006", "localhost:8005", "link")
-    time.Sleep(1 * time.Second)
-
-    // // routing = msg.NewRoutingEvent("A")
-    // // cl1.Send(routing)
-
-    // // routing = msg.NewRoutingEvent("B")
-    // // cl2.Send(routing)
-
-    // // routing = msg.NewRoutingEvent("C")
-    // // cl3.Send(routing)
-
-    // // routing = msg.NewRoutingEvent("D")
-    // // cl4.Send(routing)
-
-    // // routing = msg.NewRoutingEvent("E")
-    // // cl5.Send(routing)
-
-    routing = msg.NewRoutingEvent("F", "")
-    cl6.Send(routing)
-
-    time.Sleep(1 * time.Second)
-    fmt.Println("\ncl1 : ", cl1)
-    fmt.Println("\ncl2 : ", cl2)
-    fmt.Println("\ncl3 : ", cl3)
-    fmt.Println("\ncl4 : ", cl4)
-    fmt.Println("\ncl5 : ", cl5)
-    fmt.Println("\ncl6 : ", cl6)
+type ShosetCreation struct {
+	lname    string
+	stype    string
+	src      string
+	dst      []string
+	ptype    string
+	launched bool
 }
 
+func createManyShosets(tt []*ShosetCreation, s []*shoset.Shoset) ([]*shoset.Shoset) {
+	for i, t := range tt {
+		if !t.launched {
+			s = append(s, shoset.NewShoset(t.lname, t.stype))
+			//s[i] = shoset.NewShoset(t.lname, t.stype)
+			if t.ptype == "pki" {
+				s[i].InitPKI(t.src)
+			} else {
+				for _, a := range t.dst {
+					s[i].Protocol(t.src, a, t.ptype)
+				}
+			}
+			t.launched = true
+		}
+		//fmt.Println("t : ", t, " i : ", i)
+	}
+	//fmt.Println("(createManyShosets) tt : ", tt)
+	time.Sleep(2 * time.Second)
+
+	return s
+}
+
+func printManyShosets(s []*shoset.Shoset) {
+	for i, t := range s {
+		fmt.Println("\nShoset ", i, ": ", t)
+	}
+}
+
+func routeManyShosets(s []*shoset.Shoset) {
+	for _, t := range s {
+		routing := msg.NewRoutingEvent(t.GetLogicalName(), "")
+		t.Send(routing)
+	}
+	time.Sleep(2 * time.Second)
+}
+
+func testRouteTable(ctx context.Context, done context.CancelFunc) {
+
+	tt := []*ShosetCreation{
+		{lname: "A", stype: "cl", src: "localhost:8001", dst: []string{""}, ptype: "pki", launched: false},
+		{lname: "B", stype: "cl", src: "localhost:8002", dst: []string{"localhost:8001"}, ptype: "link", launched: false},
+		{lname: "C", stype: "cl", src: "localhost:8003", dst: []string{"localhost:8002"}, ptype: "link", launched: false},
+		{lname: "D", stype: "cl", src: "localhost:8004", dst: []string{"localhost:8001"}, ptype: "link", launched: false},
+		{lname: "E", stype: "cl", src: "localhost:8005", dst: []string{"localhost:8003"}, ptype: "link", launched: false},
+	}
+
+	s := []*shoset.Shoset{}
+
+	//fmt.Println("tt", tt)
+
+	s=createManyShosets(tt,s)
+
+	//fmt.Println("tt", tt)
+
+	//routeManyShosets(s)
+
+	routing := msg.NewRoutingEvent("A", "")
+	s[0].Send(routing)
+
+	time.Sleep(5 * time.Second)
+
+	printManyShosets(s)
+
+	tt = append(tt, &(ShosetCreation{lname: "F", stype: "cl", src: "localhost:8006", dst: []string{"localhost:8001", "localhost:8002"}, ptype: "link", launched: false}))
+
+	s=createManyShosets(tt, s)
+
+	printManyShosets(s)
+
+	routing = msg.NewRoutingEvent("F", "")
+	s[len(s)-1].Send(routing)
+	time.Sleep(5 * time.Second)
+
+	// //routeManyShosets(s)
+
+	printManyShosets(s)
+}
 
 func main() {
 	shoset.InitPrettyLogger(false)
