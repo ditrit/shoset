@@ -962,7 +962,7 @@ func routeManyShosets(s []*shoset.Shoset) {
 		routing := msg.NewRoutingEvent(t.GetLogicalName(), "")
 		t.Send(routing)
 	}
-	time.Sleep(2 * time.Second)
+	time.Sleep(5 * time.Second)
 }
 
 func testRouteTable(ctx context.Context, done context.CancelFunc) {
@@ -983,12 +983,12 @@ func testRouteTable(ctx context.Context, done context.CancelFunc) {
 
 	//fmt.Println("tt", tt)
 
-	//routeManyShosets(s)
+	routeManyShosets(s)
 
-	routing := msg.NewRoutingEvent("A", "")
-	s[0].Send(routing)
+	// routing := msg.NewRoutingEvent("A", "")
+	// s[0].Send(routing)
 
-	time.Sleep(5 * time.Second)
+	//time.Sleep(5 * time.Second)
 
 	printManyShosets(s)
 
@@ -996,13 +996,12 @@ func testRouteTable(ctx context.Context, done context.CancelFunc) {
 
 	s=createManyShosets(tt, s)
 
-	printManyShosets(s)
+	routeManyShosets(s)
 
-	routing = msg.NewRoutingEvent("F", "")
-	s[len(s)-1].Send(routing)
-	time.Sleep(5 * time.Second)
+	// routing := msg.NewRoutingEvent("F", "")
+	// s[len(s)-1].Send(routing)
 
-	// //routeManyShosets(s)
+	// time.Sleep(5 * time.Second)
 
 	printManyShosets(s)
 }

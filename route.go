@@ -1,18 +1,18 @@
 package shoset
 
-//uuid "github.com/kjk/betterguid"
-
 type Route struct { // used in map[ destination string] struct{neighbour string, nb_steps int}
 	neighbour string // Direction to send message
 	nb_steps  int    // Number of steps to destination logical name
 	uuid      string // UUID of the message that broadcasted this route
+	timestamp int64
 }
 
-func NewRoute(neighbour string, nb_steps int, uuid string) Route {
+func NewRoute(neighbour string, nb_steps int, uuid string, timestamp int64) Route {
 	return Route{
 		neighbour: neighbour,
 		nb_steps:  nb_steps,
 		uuid:      uuid,
+		timestamp: timestamp,
 	}
 }
 
