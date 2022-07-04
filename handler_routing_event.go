@@ -27,13 +27,16 @@ func (reh *RoutingEventHandler) HandleDoubleWay(c *ShosetConn, message msg.Messa
 	originLogicalName := routingEvt.GetOrigin()
 
 	if c.GetLocalLogicalName() == originLogicalName {
-		c.GetShoset().RouteTable.Store(originLogicalName, NewRouter(c.GetLocalLogicalName(), 1, routingEvt.GetUUID()))
+		c.GetShoset().RouteTable.Store(originLogicalName, NewRoute(c.GetLocalLogicalName(), 1, routingEvt.GetUUID()))
 		return nil
-	} else if value, ok := c.GetShoset().RouteTable.Load(originLogicalName); ok {
+	} 
+	
+	if value, ok := c.GetShoset().RouteTable.Load(originLogicalName); ok {
 		fmt.Println("((reh *RoutingEventHandler) HandleDoubleWay) value : ", value)
 		if ((value.(Route).GetUUID() != routingEvt.GetUUID()) || (routingEvt.GetNbSteps() < value.(Route).nb_steps)) && routingEvt.GetDir() == "IN" { //UUID is different if Route is invalid and need to be replaced
 			// Save route
 			c.GetShoset().RouteTable.Delete(originLogicalName)
+			c.GetShoset().RouteTable.Store(originLogicalName, NewRoute(c.GetRemoteLogicalName(), routingEvt.GetNbSteps(), routingEvt.GetUUID()))
 
 			// Rebroadcast Routing event
 			routingEvt.SetNbSteps(routingEvt.GetNbSteps() + 1)
@@ -44,8 +47,10 @@ func (reh *RoutingEventHandler) HandleDoubleWay(c *ShosetConn, message msg.Messa
 		}
 		// Route not worse saving
 	}
-	// Unknown Route (Origin not found in RouteTable)
-	c.GetShoset().RouteTable.Store(originLogicalName, NewRouter(c.GetRemoteLogicalName(), routingEvt.GetNbSteps(), routingEvt.GetUUID()))
+	
+	// Reroute when saving new entering shoset
+	reRouting := msg.NewRoutingEvent(c.GetLocalLogicalName(), routingEvt.GetUUID())
+	reh.Send(c.GetShoset(), reRouting)
 
 	if lNameMap, _ := c.GetShoset().ConnsByLname.Load(originLogicalName); lNameMap != nil && routingEvt.GetDir() == "IN" {
 		// Reroute when savin new Route
@@ -56,9 +61,7 @@ func (reh *RoutingEventHandler) HandleDoubleWay(c *ShosetConn, message msg.Messa
 
 	// Rebroadcast Routing event
 	routingEvt.SetNbSteps(routingEvt.GetNbSteps() + 1)
-
 	reh.Send(c.GetShoset(), routingEvt)
-
 	return nil
 }
 

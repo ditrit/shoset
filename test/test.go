@@ -937,23 +937,19 @@ func testRouteTable(ctx context.Context, done context.CancelFunc) {
 
     time.Sleep(1 * time.Second)
 
-    //fmt.Println("\ncl2 : ", cl2)
-
-    //cl1.RouteTable.Store("A",shoset.NewRouter("B",2,"UUID"))
-
-    routing := msg.NewRoutingEvent("A","IN")
+    routing := msg.NewRoutingEvent("A", "")
     cl1.Send(routing)
 
-    routing = msg.NewRoutingEvent("B","IN")
+    routing = msg.NewRoutingEvent("B", "")
     cl2.Send(routing)
 
-    routing = msg.NewRoutingEvent("C","IN")
+    routing = msg.NewRoutingEvent("C", "")
     cl3.Send(routing)
 
-    routing = msg.NewRoutingEvent("D","IN")
+    routing = msg.NewRoutingEvent("D", "")
     cl4.Send(routing)
 
-    routing = msg.NewRoutingEvent("E","IN")
+    routing = msg.NewRoutingEvent("E", "")
     cl5.Send(routing)
 
     // //received := cl2.Wait("routingEvent", map[string]string{}, 5, nil)
@@ -967,14 +963,6 @@ func testRouteTable(ctx context.Context, done context.CancelFunc) {
     // //  done()
     // //  return
     // // })
-
-    time.Sleep(1 * time.Second)
-    fmt.Println("\ncl1 : ", cl1)
-    fmt.Println("\ncl2 : ", cl2)
-    fmt.Println("\ncl3 : ", cl3)
-    fmt.Println("\ncl4 : ", cl4)
-    fmt.Println("\ncl4 : ", cl5)
-    time.Sleep(1 * time.Second)
 
     cl6 := shoset.NewShoset("F", "F")
     cl6.Protocol("localhost:8006", "localhost:8001", "link")
@@ -997,7 +985,7 @@ func testRouteTable(ctx context.Context, done context.CancelFunc) {
     // // routing = msg.NewRoutingEvent("E")
     // // cl5.Send(routing)
 
-    routing = msg.NewRoutingEvent("F","IN")
+    routing = msg.NewRoutingEvent("F", "")
     cl6.Send(routing)
 
     time.Sleep(1 * time.Second)

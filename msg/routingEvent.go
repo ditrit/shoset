@@ -5,17 +5,20 @@ type RoutingEvent struct {
 	MessageBase
 	Origin  string
 	NbSteps int
-	Dir     string
+	// Dir     string
 }
 
 // NewRoutingEvent : RoutingEvent constructor
-func NewRoutingEvent(origin, dir string) *RoutingEvent {
+func NewRoutingEvent(origin, uuid string) *RoutingEvent {
 	r := new(RoutingEvent)
 	r.InitMessageBase()
 
 	r.Origin = origin
 	r.NbSteps = 1
-	r.Dir= dir
+	// r.Dir= dir
+	if uuid != "" {
+		r.SetUUID(uuid)
+	}
 	return r
 }
 
@@ -29,7 +32,7 @@ func (r RoutingEvent) GetOrigin() string { return r.Origin }
 func (r RoutingEvent) GetNbSteps() int { return r.NbSteps }
 
 // GetNbSteps accessor
-func (r RoutingEvent) GetDir() string { return r.Dir }
+// func (r RoutingEvent) GetDir() string { return r.Dir }
 
 // GetNb_steps accessor
 func (r *RoutingEvent) SetNbSteps(i int) { r.NbSteps = i }
