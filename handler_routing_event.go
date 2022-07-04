@@ -13,9 +13,9 @@ type RoutingEventHandler struct{}
 
 // Get returns the message for a given ShosetConn.
 func (reh *RoutingEventHandler) Get(c *ShosetConn) (msg.Message, error) {
-	var revt msg.RoutingEvent
-	err := c.GetReader().ReadMessage(&revt)
-	return revt, err
+	var routingEvt msg.RoutingEvent
+	err := c.GetReader().ReadMessage(&routingEvt)
+	return routingEvt, err
 }
 
 // HandleDoubleWay handles message for a ShosetConn accordingly.
@@ -41,7 +41,6 @@ func (reh *RoutingEventHandler) HandleDoubleWay(c *ShosetConn, message msg.Messa
 			// Rebroadcast Routing event
 			routingEvt.SetNbSteps(routingEvt.GetNbSteps() + 1)
 			reh.Send(c.GetShoset(), routingEvt)
-
 			return nil
 		} else {
 			// Route not worse saving
