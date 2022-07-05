@@ -25,18 +25,19 @@ func (reh *RoutingEventHandler) HandleDoubleWay(c *ShosetConn, message msg.Messa
 	originLogicalName := routingEvt.GetOrigin()
 
 	value, ok := c.GetShoset().RouteTable.Load(originLogicalName)
-	shosetLname := c.GetLocalLogicalName()
+
+	//shosetLname := c.GetLocalLogicalName()
 
 	if c.GetLocalLogicalName() == originLogicalName {
-		c.GetShoset().RouteTable.Store(originLogicalName, NewRoute(c.GetLocalLogicalName(), 1, routingEvt.GetUUID(), routingEvt.Timestamp))
+		c.GetShoset().RouteTable.Store(originLogicalName, NewRoute(c.GetLocalLogicalName(), c, 1, routingEvt.GetUUID(), routingEvt.Timestamp))
 		return nil
 	} else if ok {
 		//fmt.Println("((reh *RoutingEventHandler) HandleDoubleWay) value : ", value)
 		if (value.(Route).GetUUID() != routingEvt.GetUUID() && routingEvt.Timestamp > value.(Route).timestamp) || (routingEvt.GetNbSteps() < value.(Route).nb_steps) { //UUID is different if Route is invalid and need to be replaced
 			// Save route
-			fmt.Printf("\n(HandleDoubleWay) shosetLname : %v \n\t message : %v \n\t value : %v ok : %v \nSave better Route.\n", shosetLname, message, value, ok)
+			//fmt.Printf("\n(HandleDoubleWay) shosetLname : %v \n\t message : %v \n\t value : %v ok : %v \nSave better Route.\n", shosetLname, message, value, ok)
 			//c.GetShoset().RouteTable.Delete(originLogicalName)
-			c.GetShoset().RouteTable.Store(originLogicalName, NewRoute(c.GetRemoteLogicalName(), routingEvt.GetNbSteps(), routingEvt.GetUUID(), routingEvt.Timestamp))
+			c.GetShoset().RouteTable.Store(originLogicalName, NewRoute(c.GetRemoteLogicalName(), c, routingEvt.GetNbSteps(), routingEvt.GetUUID(), routingEvt.Timestamp))
 
 			// Rebroadcast Routing event
 			routingEvt.SetNbSteps(routingEvt.GetNbSteps() + 1)
@@ -44,22 +45,22 @@ func (reh *RoutingEventHandler) HandleDoubleWay(c *ShosetConn, message msg.Messa
 			return nil
 		} else {
 			// Route not worse saving
-			fmt.Printf("\n(HandleDoubleWay) shosetLname : %v \n\t message : %v \n\t value : %v ok : %v \nRoute not worse saving.\n", shosetLname, message, value, ok)
+			//fmt.Printf("\n(HandleDoubleWay) shosetLname : %v \n\t message : %v \n\t value : %v ok : %v \nRoute not worse saving.\n", shosetLname, message, value, ok)
 			return nil
 		}
 	}
 	// Unknown Route (Origin not found in RouteTable)
 
-	c.GetShoset().RouteTable.Store(originLogicalName, NewRoute(c.GetRemoteLogicalName(), routingEvt.GetNbSteps(), routingEvt.GetUUID(), routingEvt.Timestamp))
+	c.GetShoset().RouteTable.Store(originLogicalName, NewRoute(c.GetRemoteLogicalName(), c, routingEvt.GetNbSteps(), routingEvt.GetUUID(), routingEvt.Timestamp))
 
 	// Reoute trigered every time the route is unknown :
 	// Store most recent timestamp ans ID to avoid rerouting for no reason
 
-	fmt.Printf("\n(HandleDoubleWay) shosetLname : %v \n\t message : %v \n\t value : %v ok : %v \nStore unknown Route.\n", shosetLname, message, value, ok)
+	//fmt.Printf("\n(HandleDoubleWay) shosetLname : %v \n\t message : %v \n\t value : %v ok : %v \nStore unknown Route.\n", shosetLname, message, value, ok)
 
 	reRouting := msg.NewRoutingEvent(c.GetLocalLogicalName(), routingEvt.GetUUID())
 	reh.Send(c.GetShoset(), reRouting)
-	fmt.Println("Reroute : ", c.GetLocalLogicalName())
+	//fmt.Println("Reroute : ", c.GetLocalLogicalName())
 
 	// Rebroadcast Routing event
 	routingEvt.SetNbSteps(routingEvt.GetNbSteps() + 1)
@@ -80,6 +81,7 @@ func (reh *RoutingEventHandler) Send(s *Shoset, evt msg.Message) { // Add send t
 	)
 }
 
+//Not needed
 // Wait returns the message received for a given Shoset.
 func (reh *RoutingEventHandler) Wait(s *Shoset, replies *msg.Iterator, args map[string]string, timeout int) *msg.Message {
 	//eventName := args["event"]

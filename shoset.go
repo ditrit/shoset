@@ -168,8 +168,11 @@ func NewShoset(logicalName, shosetType string) *Shoset {
 	s.Queue["pkievt_TLSsingleWay"] = msg.NewQueue()
 	s.Handlers["pkievt_TLSsingleWay"] = new(PkiEventHandler)
 
-	// s.Queue["pkievt_TLSsingleWay"] = msg.NewQueue()
+	// s.Queue["routingEvent"] = msg.NewQueue() // Not neeeded, 
 	s.Handlers["routingEvent"] = new(RoutingEventHandler)
+
+	s.Queue["simpleMessage"] = msg.NewQueue()
+	s.Handlers["simpleMessage"] = new(SimpleMessageHandler)
 
 	s.Queue["cmd"] = msg.NewQueue()
 	s.Handlers["cmd"] = new(CommandHandler)
