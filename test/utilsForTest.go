@@ -33,7 +33,7 @@ func createManyShosets(tt []*ShosetCreation, s []*shoset.Shoset) []*shoset.Shose
 			t.launched = true
 		}
 	}
-	time.Sleep(2 * time.Second) // Use Done (not implemented yet ?) chan to know when Shoset is ready for use.
+	time.Sleep(1 * time.Second) // Use Done (not implemented yet ?) chan to know when Shoset is ready for use.
 
 	return s
 }
@@ -49,5 +49,5 @@ func routeManyShosets(s []*shoset.Shoset) {
 		routing := msg.NewRoutingEvent(t.GetLogicalName(), "")
 		t.Send(routing)
 	}
-	time.Sleep(5 * time.Second)
+	time.Sleep(1 * time.Second)
 }

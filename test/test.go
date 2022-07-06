@@ -951,6 +951,10 @@ func testRouteTable(ctx context.Context, done context.CancelFunc) {
 	printManyShosets(s)
 }
 
+func RemoveShoset(s []*shoset.Shoset, index int) []*shoset.Shoset {
+	return append(s[:index], s[index+1:]...)
+}
+
 func testForwardMessage(ctx context.Context, done context.CancelFunc) {
 	tt := []*ShosetCreation{
 		{lname: "A", stype: "cl", src: "localhost:8001", dst: []string{""}, ptype: "pki", launched: false},
@@ -969,11 +973,12 @@ func testForwardMessage(ctx context.Context, done context.CancelFunc) {
 	printManyShosets(s)
 
 	// Send Message
-	message := msg.NewSimpleMessage("E","test_payload") //NewEventClassic("test_topic", "test_event", "test_payload")
+	message := msg.NewSimpleMessage("E", "test_payload") //NewEventClassic("test_topic", "test_event", "test_payload")
 	fmt.Println("Message sent : ", message)
 	s[0].Send(message)
 
 	// Receive Message
+	//time.Sleep(10 * time.Millisecond)
 	event_rc := s[len(s)-1].Wait("simpleMessage", map[string]string{}, 10, nil)
 	fmt.Println("Message received : ", event_rc)
 

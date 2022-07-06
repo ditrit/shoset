@@ -261,14 +261,14 @@ func (c *ShosetConn) handleMessageType(messageType string) error {
 	if (messageValue.GetDestinationLname() != c.GetLocalLogicalName()) && messageValue.GetDestinationLname() != "" {
 		// Forward the message using the RouteTable to get the next destination
 		route, okRoute := c.GetShoset().RouteTable.Load(messageValue.GetDestinationLname())
-		fmt.Println("(handleMessageType) ", c.GetLocalLogicalName(), " is forwarding a message to ", messageValue.GetDestinationLname(), "through ",route.(Route).neighbour,".")
 		if !okRoute {
 			return errors.New("Forward message : Failed to forward message destined to " + messageValue.GetDestinationLname() + " No valid Route.")
-		}
-
-		err = route.(Route).GetNeighborConn().GetWriter().SendMessage(messageValue)
-		if err != nil {
-			return errors.New("couldn't send forwarded message : " + err.Error())
+		} else {
+		fmt.Println("(handleMessageType) ", c.GetLocalLogicalName(), " is forwarding a message to ", messageValue.GetDestinationLname(), "through ", route.(Route).neighbour, ".")
+			err = route.(Route).GetNeighborConn().GetWriter().SendMessage(messageValue)
+			if err != nil {
+				return errors.New("couldn't send forwarded message : " + err.Error())
+			}
 		}
 		return nil
 	}

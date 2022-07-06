@@ -1,9 +1,6 @@
 package shoset
 
 import (
-	"fmt"
-	"time"
-
 	"github.com/ditrit/shoset/msg"
 	"github.com/rs/zerolog/log"
 )
@@ -32,7 +29,6 @@ func (reh *RoutingEventHandler) HandleDoubleWay(c *ShosetConn, message msg.Messa
 		c.GetShoset().RouteTable.Store(originLogicalName, NewRoute(c.GetLocalLogicalName(), c, 1, routingEvt.GetUUID(), routingEvt.Timestamp))
 		return nil
 	} else if ok {
-		//fmt.Println("((reh *RoutingEventHandler) HandleDoubleWay) value : ", value)
 		if (value.(Route).GetUUID() != routingEvt.GetUUID() && routingEvt.Timestamp > value.(Route).timestamp) || (routingEvt.GetNbSteps() < value.(Route).nb_steps) { //UUID is different if Route is invalid and need to be replaced
 			// Save route
 			//fmt.Printf("\n(HandleDoubleWay) shosetLname : %v \n\t message : %v \n\t value : %v ok : %v \nSave better Route.\n", shosetLname, message, value, ok)
@@ -54,7 +50,6 @@ func (reh *RoutingEventHandler) HandleDoubleWay(c *ShosetConn, message msg.Messa
 	c.GetShoset().RouteTable.Store(originLogicalName, NewRoute(c.GetRemoteLogicalName(), c, routingEvt.GetNbSteps(), routingEvt.GetUUID(), routingEvt.Timestamp))
 
 	// Reoute trigered every time the route is unknown :
-	// Store most recent timestamp ans ID to avoid rerouting for no reason
 
 	//fmt.Printf("\n(HandleDoubleWay) shosetLname : %v \n\t message : %v \n\t value : %v ok : %v \nStore unknown Route.\n", shosetLname, message, value, ok)
 
@@ -70,7 +65,7 @@ func (reh *RoutingEventHandler) HandleDoubleWay(c *ShosetConn, message msg.Messa
 }
 
 // Send sends the message through the given Shoset network.
-func (reh *RoutingEventHandler) Send(s *Shoset, evt msg.Message) { // Add send to logical name
+func (reh *RoutingEventHandler) Send(s *Shoset, evt msg.Message) {
 	s.ConnsByLname.Iterate(
 		func(key string, conn interface{}) {
 			err := conn.(*ShosetConn).GetWriter().SendMessage(evt)
@@ -81,35 +76,9 @@ func (reh *RoutingEventHandler) Send(s *Shoset, evt msg.Message) { // Add send t
 	)
 }
 
-//Not needed
 // Wait returns the message received for a given Shoset.
 func (reh *RoutingEventHandler) Wait(s *Shoset, replies *msg.Iterator, args map[string]string, timeout int) *msg.Message {
-	//eventName := args["event"]
-
-	term := make(chan *msg.Message, 1)
-	cont := true
-	go func() {
-		for cont {
-			message := replies.Get().GetMessage()
-			if message == nil {
-				time.Sleep(time.Duration(10) * time.Millisecond)
-				continue
-			}
-			event := message.(msg.RoutingEvent)
-
-			//
-
-			//if event.GetTopic() == topicName && (eventName == VOID || event.GetEvent() == eventName) {
-			term <- &message
-			//}
-			fmt.Println("((RoutingEventHandler) Wait) : ", event)
-		}
-	}()
-	select {
-	case res := <-term:
-		cont = false
-		return res
-	case <-time.After(time.Duration(timeout) * time.Second):
-		return nil
-	}
+	// no-op
+	log.Warn().Msg("RoutingEventHandler.Wait not implemented")
+	return nil
 }

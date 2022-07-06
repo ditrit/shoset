@@ -20,7 +20,7 @@ func (smh *SimpleMessageHandler) Get(c *ShosetConn) (msg.Message, error) {
 
 // HandleDoubleWay handles message for a ShosetConn accordingly.
 func (smh *SimpleMessageHandler) HandleDoubleWay(c *ShosetConn, message msg.Message) error {
-	fmt.Println("((smh *SimpleMessageHandler) HandleDoubleWay) Lname : ",c.GetLocalLogicalName()," message : ", message)
+	fmt.Println("((smh *SimpleMessageHandler) HandleDoubleWay) Lname : ", c.GetLocalLogicalName(), " message : ", message)
 	m := message.(msg.SimpleMessage)
 	if notInQueue := c.GetShoset().Queue["simpleMessage"].Push(m, c.GetRemoteShosetType(), c.GetLocalAddress()); !notInQueue {
 		return errors.New("failed to handle simpleMessage")
@@ -29,16 +29,19 @@ func (smh *SimpleMessageHandler) HandleDoubleWay(c *ShosetConn, message msg.Mess
 }
 
 // Send sends the message through the given Shoset network.
+// Code duplicated in ShosetConn.go (handleMessageType)
 func (smh *SimpleMessageHandler) Send(s *Shoset, m msg.Message) {
-	// Send only to the destination notall conns
-	
-	s.ConnsByLname.Iterate(
-		func(key string, conn interface{}) {
-			if err := conn.(*ShosetConn).GetWriter().SendMessage(m); err != nil {
-				conn.(*ShosetConn).Logger.Warn().Msg("couldn't send simpleMessage : " + err.Error())
-			}
-		},
-	)
+	// Forward the message using the RouteTable to get the next destination
+	route, ok := s.RouteTable.Load(m.GetDestinationLname())
+	if !ok {
+		s.Logger.Error().Msg("Forward message : Failed to forward message destined to " + m.GetDestinationLname() + " No valid Route.")
+	} else {
+		fmt.Println("(handleMessageType) ", s.GetLogicalName(), " is sending a message to ", m.GetDestinationLname(), "through ", route.(Route).neighbour, ".")
+		err := route.(Route).GetNeighborConn().GetWriter().SendMessage(m)
+		if err != nil {
+			s.Logger.Error().Msg("Couldn't send forwarded message : " + err.Error())
+		}
+	}
 }
 
 // Wait returns the message received for a given Shoset.
