@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"sync"
 	"time"
 
 	// "os"
@@ -951,10 +952,6 @@ func testRouteTable(ctx context.Context, done context.CancelFunc) {
 	printManyShosets(s)
 }
 
-func RemoveShoset(s []*shoset.Shoset, index int) []*shoset.Shoset {
-	return append(s[:index], s[index+1:]...)
-}
-
 func testForwardMessage(ctx context.Context, done context.CancelFunc) {
 	tt := []*ShosetCreation{
 		{lname: "A", stype: "cl", src: "localhost:8001", dst: []string{""}, ptype: "pki", launched: false},
@@ -972,16 +969,69 @@ func testForwardMessage(ctx context.Context, done context.CancelFunc) {
 
 	printManyShosets(s)
 
+	var wg sync.WaitGroup
+
+	destination := s[len(s)-1].GetLogicalName()
+
+	// Receive Message
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		//time.Sleep(10 * time.Millisecond)
+		event_rc := s[len(s)-1].Wait("simpleMessage", map[string]string{}, 10, nil)
+		fmt.Println("Message received : ", event_rc)
+	}()
+
 	// Send Message
-	message := msg.NewSimpleMessage("E", "test_payload") //NewEventClassic("test_topic", "test_event", "test_payload")
+	message := msg.NewSimpleMessage(destination, "test_payload")
+	message.Timeout = 1000
 	fmt.Println("Message sent : ", message)
 	s[0].Send(message)
 
-	// Receive Message
-	//time.Sleep(10 * time.Millisecond)
-	event_rc := s[len(s)-1].Wait("simpleMessage", map[string]string{}, 10, nil)
-	fmt.Println("Message received : ", event_rc)
+	wg.Wait()
+}
 
+// To use with multiProcesses.sh
+func testForwardMessageMultiProcess(args []string) {
+	fmt.Println("args : ", args)
+	cl := shoset.NewShoset(args[0], "cl") //args[0] : lname
+	if args[1] == "1" {                   // args[1] : master
+		cl.InitPKI(args[2]) // args[2] : IP
+	} else {
+		cl.Protocol(args[2], args[3], "link") // args[2] : IP , args[3] : remote IP for connexion
+	}
+	time.Sleep(2 * time.Second)
+
+	// fmt.Println("Shoset 1",cl.GetLogicalName()," : ",cl)
+
+	// Route shoset
+	routing := msg.NewRoutingEvent(cl.GetLogicalName(), "")
+	cl.Send(routing)
+
+	time.Sleep(1 * time.Second)
+
+	fmt.Println("Shoset 2", cl.GetLogicalName(), " : ", cl)
+
+	// Receive Message
+	if args[6] == "1" { //args[5] receiver
+		fmt.Println("Receiver : ", cl.GetLogicalName())
+		event_rc := cl.Wait("simpleMessage", map[string]string{}, 5, nil)
+		fmt.Println("Message received : ", event_rc)
+	}
+
+	// Send Message
+	if args[4] == "1" { //args[4] sender
+		time.Sleep(1 * time.Second)
+		fmt.Println("Sender : ", cl.GetLogicalName())
+		message := msg.NewSimpleMessage(args[5], "test_payload")
+		fmt.Println("Message sent : ", message)
+		cl.Send(message)
+		//cl.Send(message)
+		//cl.Send(message)
+	}
+
+
+	time.Sleep(10 * time.Second)
 }
 
 func main() {
@@ -1017,12 +1067,14 @@ func main() {
 	} else if arg == "3" {
 		shoset.Log("simplesimpleConnector")
 		// simplesimpleConnector()
-	} else {
+	} else if arg == "4" {
 		// testPki(ctx, done)
-		//testRouteTable(ctx, done)
-		testForwardMessage(ctx, done)
 		// testPresentationENIB(ctx, done)
 		// testJoin3(ctx, done)
+		//testRouteTable(ctx, done)
+		testForwardMessage(ctx, done)
+	} else if arg == "5" {
+		testForwardMessageMultiProcess((os.Args)[2:])
 	}
 }
 

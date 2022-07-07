@@ -223,7 +223,7 @@ func (s *Shoset) String() string {
 			description += fmt.Sprintf("\t%t", val.(bool))
 		})
 	//
-	description += "\n\t- RouteTable (destination : {neighbor, distance, uuid}):\n\t\t"
+	description += "\n\t- RouteTable (destination : {neighbor, Conn to Neighbor, distance, uuid}):\n\t\t"
 	s.RouteTable.Range(
 		func(key, val interface{}) bool {
 			description += fmt.Sprintf("%v : %v \n\t\t", key, val)

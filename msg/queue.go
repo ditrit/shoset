@@ -146,6 +146,10 @@ func (q *Queue) remove(key string) {
 
 // IsEmpty : the event queue is empty
 func (q *Queue) IsEmpty() bool {
+
+	q.m.Lock()
+	defer q.m.Unlock() 
+
 	return q.qlist.Len() == 0
 }
 

@@ -26,7 +26,8 @@ func (reh *RoutingEventHandler) HandleDoubleWay(c *ShosetConn, message msg.Messa
 	//shosetLname := c.GetLocalLogicalName()
 
 	if c.GetLocalLogicalName() == originLogicalName {
-		c.GetShoset().RouteTable.Store(originLogicalName, NewRoute(c.GetLocalLogicalName(), c, 1, routingEvt.GetUUID(), routingEvt.Timestamp))
+		// There are no shosetConn to self
+		c.GetShoset().RouteTable.Store(originLogicalName, NewRoute(c.GetRemoteLogicalName(), c, 2, routingEvt.GetUUID(), routingEvt.Timestamp))
 		return nil
 	} else if ok {
 		if (value.(Route).GetUUID() != routingEvt.GetUUID() && routingEvt.Timestamp > value.(Route).timestamp) || (routingEvt.GetNbSteps() < value.(Route).nb_steps) { //UUID is different if Route is invalid and need to be replaced
