@@ -4,57 +4,82 @@ import (
 	"bufio"
 	"encoding/gob"
 	"errors"
-	"fmt"
 	"io"
 	"sync"
+	"syscall"
 )
 
 // Writer : simple bufio.Writer safe for goroutines...
 type Writer struct {
-	b *bufio.Writer
-	m sync.Mutex
+	b   *bufio.Writer
+	enc *gob.Encoder
+	m   sync.Mutex
 }
 
-// NewWriter : constructor
-func NewWriter(wd io.Writer) *Writer {
-	s := new(Writer)
-	s.b = bufio.NewWriter(wd)
-	return s
+// UpdateWriter updates writer object with new connection information.
+func (w *Writer) UpdateWriter(wd io.Writer) {
+	w.m.Lock()
+	defer w.m.Unlock()
+	w.b = bufio.NewWriter(wd)
+	w.enc = gob.NewEncoder(w.b)
 }
 
-// WriteString : safe version for goroutines
-func (r *Writer) WriteString(data string) (int, error) {
-	if r.b != nil {
-		r.m.Lock()
-		defer r.m.Unlock()
-		return r.b.WriteString(data + "\n")
+// Flush writes any buffered data to the underlying io.Writer in a safe version for goroutines.
+func (w *Writer) Flush() error {
+	if w.b != nil {
+		return w.b.Flush()
+	}
+	return errors.New("Writer not initialized")
+}
+
+// SendMessage send a message through a connection.
+// Writes message type first.
+// Then writes message.
+func (w *Writer) SendMessage(msg Message) error {
+	w.m.Lock()
+	defer w.m.Unlock()
+
+	_, err := w.WriteString(msg.GetMessageType())
+	if err != nil {
+		if errors.Is(err, syscall.EPIPE) {
+			// https://gosamples.dev/broken-pipe/
+			return nil
+		} else if errors.Is(err, syscall.ECONNRESET) {
+			// https://gosamples.dev/connection-reset-by-peer/
+			return nil
+		}
+		return err
+	}
+
+	err = w.WriteMessage(msg)
+	if err != nil {
+		if errors.Is(err, syscall.EPIPE) {
+			return nil
+		} else if errors.Is(err, syscall.ECONNRESET) {
+			return nil
+		}
+		return err
+	}
+	return nil
+}
+
+// WriteString writes a string in a safe version for goroutines.
+func (w *Writer) WriteString(data string) (int, error) {
+	if w.b != nil {
+		return w.b.WriteString(data + "\n")
 	}
 	return 0, errors.New("Writer not ready")
 }
 
-// Flush : safe version for goroutines
-func (r *Writer) Flush() error {
-	if r.b != nil {
-		r.m.Lock()
-		defer r.m.Unlock()
-		return r.b.Flush()
+// WriteMessage encodes a message in a safe way for goroutines.
+func (w *Writer) WriteMessage(data interface{}) error {
+	if w.b == nil {
+		return errors.New("Writer not initialized")
 	}
-	return errors.New("Writer not initialized")
-}
 
-// WriteMessage : encode a message in a safe way for goroutines
-func (r *Writer) WriteMessage(data interface{}) error {
-	if r.b != nil {
-		r.m.Lock()
-		defer r.m.Unlock()
-		enc := gob.NewEncoder(r.b)
-		err := enc.Encode(data)
-		r.b.Flush()
-		if err != nil {
-			fmt.Println(data)
-			fmt.Printf("error in Writing Message : %s\n", err)
-		}
+	err := w.enc.Encode(data)
+	if err != nil {
 		return err
 	}
-	return errors.New("Writer not initialized")
+	return w.Flush()
 }
