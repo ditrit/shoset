@@ -922,7 +922,7 @@ func testPresentationENIB(ctx context.Context, done context.CancelFunc) {
 
 func main() {
 	shoset.InitPrettyLogger(false)
-	shoset.SetLogLevel("warn")
+	shoset.SetLogLevel("info")
 
 	ctx, done := context.WithTimeout(context.Background(), 1*time.Minute)
 

@@ -48,6 +48,8 @@ type Shoset struct {
 	Handlers map[string]MessageHandlers // map for message handling
 
 	Done chan bool // goroutines synchronization
+
+	mu sync.Mutex
 }
 
 // GetBindAddress returns bindAddress from Shoset.
@@ -66,10 +68,18 @@ func (s *Shoset) GetIsPki() bool { return s.isPki }
 func (s *Shoset) GetListener() net.Listener { return s.listener }
 
 // GetTlsConfigSingleWay returns tlsConfigSingleWay from Shoset.
-func (s *Shoset) GetTlsConfigSingleWay() *tls.Config { return s.tlsConfigSingleWay }
+func (s *Shoset) GetTlsConfigSingleWay() *tls.Config { 
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.tlsConfigSingleWay 
+}
 
 // GetTlsConfigDoubleWay returns tlsConfigDoubleWay from Shoset.
-func (s *Shoset) GetTlsConfigDoubleWay() *tls.Config { return s.tlsConfigDoubleWay }
+func (s *Shoset) GetTlsConfigDoubleWay() *tls.Config { 
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.tlsConfigDoubleWay 
+}
 
 // GetConnsByTypeArray returns an array of *ShosetConn known from a Shoset depending on a specific shosetType.
 func (s *Shoset) GetConnsByTypeArray(shosetType string) []*ShosetConn {

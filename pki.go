@@ -164,16 +164,19 @@ func PrepareCertificate() (*x509.Certificate, *rsa.PublicKey, *rsa.PrivateKey, e
 		SubjectKeyId: []byte{1, 2, 3, 4, 6},
 		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth},
 		KeyUsage:     x509.KeyUsageDigitalSignature,
-		IPAddresses:  []net.IP{net.ParseIP(LOCALHOST)}, // ! need to be changed for distributed !
 	}
 
-	// interfaceAddresses , err := net.InterfaceAddrs()
-	// if err != nil {
-	// 	Log("err in interfaceAddrs : " + err.Error())
-	// }
-	// for _, a := range interfaceAddresses {
-	// 	certificateRequest.IPAddresses = append(certificateRequest.IPAddresses, net.ParseIP(a.String()))
-	// }
+	interfaceAddresses , err := net.InterfaceAddrs()
+	if err != nil {
+		Log("err in interfaceAddrs : " + err.Error())
+	}
+	for _, a := range interfaceAddresses {
+		if ipNet, ok := a.(*net.IPNet); ok {
+			if ipNet.IP.To4() != nil {
+				certificateRequest.IPAddresses = append(certificateRequest.IPAddresses, ipNet.IP)
+			}
+		}
+	}
 
 	hostPrivateKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
@@ -217,6 +220,9 @@ func (s *Shoset) SignCertificate(certificateRequest *x509.Certificate, hostPubli
 // Sets up Double Way for future secured exchanges.
 // Updates Single Way for future exchanges with non-certified Shoset.
 func (s *Shoset) SetUpDoubleWay() error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	fileName := s.ConnsByLname.GetConfig().GetFileName()
 	cfgDirectory := s.ConnsByLname.GetConfig().GetBaseDirectory()
 	CApath := cfgDirectory + fileName + PATH_CA_CERT
