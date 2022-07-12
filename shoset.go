@@ -8,6 +8,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/ditrit/shoset/concurentData"
 	"github.com/ditrit/shoset/msg"
 	uuid "github.com/kjk/betterguid"
 	"github.com/rs/zerolog"
@@ -50,6 +51,10 @@ type Shoset struct {
 	Handlers map[string]MessageHandlers // map for message handling
 
 	Done chan bool // goroutines synchronization
+
+	LaunchedProtocol concurentData.ConcurentSlice // List of IP addesses a Protocol was initiated with (but not yet finished)
+	// The shoset is ready to use when the list is empty
+	// Use WaitForProtocols() to wait for the shoset to be ready.
 }
 
 // GetBindAddress returns bindAddress from Shoset.
@@ -120,6 +125,13 @@ func (s *Shoset) deleteConn(connAddr, connLname string) {
 	}
 }
 
+// Wait for every Conn initialised to be ready for use
+func (s *Shoset) WaitForProtocols() {
+	fmt.Println("Waiting for all Protocol to complete on shoset", s.GetLogicalName())
+	//s.waitGroupProtocol.Wait()
+	s.LaunchedProtocol.WaitForEmpty()
+}
+
 // NewShoset creates a new Shoset object.
 // Initializes each fields, queues and handlers.
 func NewShoset(logicalName, shosetType string) *Shoset {
@@ -133,7 +145,7 @@ func NewShoset(logicalName, shosetType string) *Shoset {
 		LnamesByProtocol: new(MapSyncMap),
 		ConnsSingleBool:  new(sync.Map),
 		ConnsSingleConn:  new(sync.Map),
-		RouteTable: new(sync.Map),
+		RouteTable:       new(sync.Map),
 
 		logicalName: logicalName,
 		shosetType:  shosetType,
@@ -146,6 +158,7 @@ func NewShoset(logicalName, shosetType string) *Shoset {
 
 		Queue:    make(map[string]*msg.Queue),
 		Handlers: make(map[string]MessageHandlers),
+		LaunchedProtocol : concurentData.NewConcurentSlice(),
 	}
 
 	s.ConnsByLname.SetConfig(NewConfig())
@@ -168,7 +181,7 @@ func NewShoset(logicalName, shosetType string) *Shoset {
 	s.Queue["pkievt_TLSsingleWay"] = msg.NewQueue()
 	s.Handlers["pkievt_TLSsingleWay"] = new(PkiEventHandler)
 
-	// s.Queue["routingEvent"] = msg.NewQueue() // Not neeeded, 
+	// s.Queue["routingEvent"] = msg.NewQueue() // Not neeeded,
 	s.Handlers["routingEvent"] = new(RoutingEventHandler)
 
 	s.Queue["simpleMessage"] = msg.NewQueue()
@@ -341,9 +354,11 @@ func (s *Shoset) Protocol(bindAddress, remoteAddress, protocolType string) {
 
 	protocolConn, _ := NewShosetConn(s, remoteAddress, OUT)
 	cfg := msg.NewConfigProtocol(s.GetBindAddress(), s.GetLogicalName(), s.GetShosetType(), protocolType)
+
+	//s.waitGroupProtocol.Add(1)
+	s.LaunchedProtocol.AppendToConcurentSlice(protocolConn.GetRemoteAddress()) // Addremote adress to the list of initiated but not ready connexion
 	go protocolConn.HandleConfig(cfg)
 }
-
 
 //Send and Receice Messages :
 

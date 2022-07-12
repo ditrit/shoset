@@ -16,6 +16,7 @@ const (
 
 	// link
 	PROTOCOL_LINK string = "link"
+	ACKNOWLEDGE_LINK string = "acknowledge_link"
 	BROTHERS      string = "brothers"
 
 	// bye

@@ -1,6 +1,7 @@
 package shoset
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/ditrit/shoset/msg"
@@ -25,8 +26,16 @@ func (clh *ConfigLinkHandler) HandleDoubleWay(c *ShosetConn, message msg.Message
 	case PROTOCOL_LINK:
 		// incoming link request, a socket wants to link to this one.
 		// save info and retrieve brothers to inform network.
+
+		fmt.Println("PROTOCOL_LINK")
+
 		c.SetRemoteAddress(cfg.GetAddress())
 		c.Store(PROTOCOL_LINK, cfg.GetLogicalName(), cfg.GetAddress(), cfg.GetShosetType())
+
+		configOk := msg.NewConfigProtocol(cfg.GetAddress(), c.GetShoset().GetLogicalName(), c.GetShoset().GetShosetType(), ACKNOWLEDGE_LINK)
+		if err := c.GetWriter().SendMessage(*configOk); err != nil {
+			c.Logger.Warn().Msg("couldn't send configOk : " + err.Error())
+		}
 
 		localBrothersArray := []string{}
 		if localBrothers, _ := c.GetShoset().ConnsByLname.Load(c.GetShoset().GetLogicalName()); localBrothers != nil {
@@ -49,12 +58,33 @@ func (clh *ConfigLinkHandler) HandleDoubleWay(c *ShosetConn, message msg.Message
 			return true
 		})
 
+		c.SetIsValid(true) // Send statusChange Event change status
+
+	case ACKNOWLEDGE_LINK:
+		// incoming acknowledge_join, join request validated.
+		// save info.
+
+		fmt.Println("ACKNOWLEDGE_LINK")
+
+		// Placement du store ?
+		//c.Store(PROTOCOL_LINK, c.GetShoset().GetLogicalName(), c.GetRemoteAddress(), c.GetShoset().GetShosetType())
+
+		c.SetIsValid(true) // Send statusChange Event change status
+		//c.GetShoset().waitGroupProtocol.Done()
+		c.GetShoset().LaunchedProtocol.DeleteFromConcurentSlice(c.GetRemoteAddress())
+
 	case BROTHERS:
 		// incoming brother information, new shoset in the network.
 		// save info and call sendToBrothers to handle message.
+
+		fmt.Println("BROTHERS")
+
 		c.Store(PROTOCOL_LINK, cfg.GetLogicalName(), c.GetRemoteAddress(), cfg.GetShosetType())
 
 		sendToBrothers(c, message)
+
+		//c.SetIsValid(true) // Send statusChange Event change status
+		//c.GetShoset().waitGroupProtocol.Done()
 	}
 	return nil
 }

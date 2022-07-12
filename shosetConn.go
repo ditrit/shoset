@@ -17,6 +17,11 @@ import (
 	"github.com/rs/zerolog"
 )
 
+type ProtectedStatus struct {
+	value bool
+	m     sync.Mutex
+} // state of the conn
+
 // ShosetConn : secured connection based on tls.Conn but with upgraded features
 type ShosetConn struct {
 	Logger zerolog.Logger // pretty logger
@@ -33,7 +38,9 @@ type ShosetConn struct {
 	dir              string
 	remoteAddress    string // address of the socket in front of this one
 
-	isValid bool // state of the conn
+	isValid ProtectedStatus // state of the conn
+
+	StatusChange chan bool // Send a message on the channel to notifie waiting GoRoutines that the state of the connexion Changed (Actual value sent is not used)
 }
 
 // GetConn returns conn from ShosetConn.
@@ -70,7 +77,26 @@ func (c *ShosetConn) GetRemoteAddress() string { return c.remoteAddress }
 func (c *ShosetConn) GetLocalAddress() string { return c.GetShoset().GetBindAddress() }
 
 // GetIsValid returns isValid from ShosetConn.
-func (c *ShosetConn) GetIsValid() bool { return c.isValid }
+func (c *ShosetConn) GetIsValid() bool {
+	//c.isValid.m.Lock()
+	//defer c.isValid.m.Unlock() // Create lockup
+	return c.isValid.value
+
+}
+
+// Wait for ShosetConn to be ready for use
+func (c *ShosetConn) WaitForValid() {
+	for {
+		c.isValid.m.Lock()
+		value := c.isValid.value
+		c.isValid.m.Unlock()
+		if !value {
+			<-c.StatusChange
+		} else {
+			return
+		}
+	}
+}
 
 // SetConn sets the lName for a ShosetConn.
 func (c *ShosetConn) SetConn(conn *tls.Conn) { c.conn = conn }
@@ -92,7 +118,20 @@ func (c *ShosetConn) SetLocalAddress(bindAddress string) { c.GetShoset().SetBind
 func (c *ShosetConn) SetRemoteShosetType(ShosetType string) { c.remoteShosetType = ShosetType }
 
 // SetIsValid sets the state for a ShosetConn.
-func (c *ShosetConn) SetIsValid(state bool) { c.isValid = state }
+func (c *ShosetConn) SetIsValid(state bool) {
+	c.isValid.m.Lock()
+	defer c.isValid.m.Unlock()
+
+	c.isValid.value = state
+	if state {
+		fmt.Println(c, "Is ready.")
+	}
+	select {
+	case c.StatusChange <- true:
+	default:
+		fmt.Println("Nobody is waiting for StateChnage")
+	}
+}
 
 // SetRemoteAddress sets the address for a ShosetConn.
 func (c *ShosetConn) SetRemoteAddress(address string) { c.remoteAddress = address }
@@ -128,18 +167,22 @@ func NewShosetConn(s *Shoset, address, dir string) (*ShosetConn, error) {
 		rb:            new(msg.Reader),
 		wb:            new(msg.Writer),
 		remoteAddress: ipAddress,
-		isValid:       true,
+		isValid:       ProtectedStatus{value: false},
 	}, nil
 }
 
 // String returns the formatted string of ShosetConn object in a pretty way.
 func (c *ShosetConn) String() string {
-	return fmt.Sprintf("ShosetConn{name: %s, type: %s, way: %s, remoteAddress: %s}", c.GetRemoteLogicalName(), c.GetRemoteShosetType(), c.GetDir(), c.GetRemoteAddress())
+	return fmt.Sprintf("ShosetConn{name: %s, type: %s, way: %s, remoteAddress: %s, isValid: %v}", c.GetRemoteLogicalName(), c.GetRemoteShosetType(), c.GetDir(), c.GetRemoteAddress(), c.GetIsValid())
 }
 
 // HandleConfig handles ConfigProtocol message.
 // Connects to the remote address and sends the protocol through this connection.
 func (c *ShosetConn) HandleConfig(cfg *msg.ConfigProtocol) {
+	defer func() {
+		c.Logger.Debug().Msg("HandleConfig: socket closed")
+		c.GetConn().Close()
+	}()
 	for {
 		protocolConn, err := tls.Dial(CONNECTION_TYPE, c.GetRemoteAddress(), c.GetShoset().GetTlsConfigDoubleWay())
 		if err != nil {
@@ -147,10 +190,7 @@ func (c *ShosetConn) HandleConfig(cfg *msg.ConfigProtocol) {
 			c.Logger.Error().Msg("HandleConfig err: " + err.Error())
 			continue
 		}
-		defer func() {
-			c.Logger.Debug().Msg("HandleConfig: socket closed")
-			c.GetConn().Close()
-		}()
+
 		c.UpdateConn(protocolConn)
 
 		err = c.GetWriter().SendMessage(*cfg)
@@ -264,7 +304,7 @@ func (c *ShosetConn) handleMessageType(messageType string) error {
 		if !okRoute {
 			return errors.New("Forward message : Failed to forward message destined to " + messageValue.GetDestinationLname() + " No valid Route.")
 		} else {
-		fmt.Println("(handleMessageType) ", c.GetLocalLogicalName(), " is forwarding a message to ", messageValue.GetDestinationLname(), "through ", route.(Route).neighbour, ".")
+			fmt.Println("(handleMessageType) ", c.GetLocalLogicalName(), " is forwarding a message to ", messageValue.GetDestinationLname(), "through ", route.(Route).neighbour, ".")
 			err = route.(Route).GetNeighborConn().GetWriter().SendMessage(messageValue)
 			if err != nil {
 				return errors.New("couldn't send forwarded message : " + err.Error())
@@ -273,7 +313,7 @@ func (c *ShosetConn) handleMessageType(messageType string) error {
 		return nil
 	}
 
-	doubleWayMessageTypes := []string{"cfgjoin", "cfglink", "cfgbye", "pkievt_TLSdoubleWay", "routingEvent", "event", "cmd", "simpleMessage"} //added "routingEvent", "event", "cmd", "simpleMessage"
+	doubleWayMessageTypes := []string{"cfgjoin", "cfglink", "cfgbye", "pkievt_TLSdoubleWay", "routingEvent", "evt", "cmd", "simpleMessage"} //added "routingEvent", "evt", "cmd", "simpleMessage"
 	//fmt.Println("(handleMessageType) messageType : ",messageType)
 	switch {
 	case messageType == TLS_SINGLE_WAY_PKI_EVT:

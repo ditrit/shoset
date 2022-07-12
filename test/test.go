@@ -932,9 +932,9 @@ func testRouteTable(ctx context.Context, done context.CancelFunc) {
 
 	s := []*shoset.Shoset{}
 
-	s = createManyShosets(tt, s)
+	s = createManyShosets(tt, s, true)
 
-	routeManyShosets(s)
+	routeManyShosets(s, true)
 
 	// routing := msg.NewRoutingEvent("A", "")
 	// s[0].Send(routing)
@@ -945,9 +945,9 @@ func testRouteTable(ctx context.Context, done context.CancelFunc) {
 
 	tt = append(tt, &(ShosetCreation{lname: "F", stype: "cl", src: "localhost:8006", dst: []string{"localhost:8001", "localhost:8005"}, ptype: "link", launched: false}))
 
-	s = createManyShosets(tt, s)
+	s = createManyShosets(tt, s, true)
 
-	routeManyShosets(s)
+	routeManyShosets(s, true)
 
 	printManyShosets(s)
 }
@@ -963,9 +963,11 @@ func testForwardMessage(ctx context.Context, done context.CancelFunc) {
 
 	s := []*shoset.Shoset{}
 
-	s = createManyShosets(tt, s)
+	s = createManyShosets(tt, s, false)
 
-	routeManyShosets(s)
+	WaitForManyShosets(s)
+
+	routeManyShosets(s, true)
 
 	printManyShosets(s)
 
@@ -984,6 +986,45 @@ func testForwardMessage(ctx context.Context, done context.CancelFunc) {
 
 	// Send Message
 	message := msg.NewSimpleMessage(destination, "test_payload")
+	message.Timeout = 1000
+	fmt.Println("Message sent : ", message)
+	s[0].Send(message)
+
+	wg.Wait()
+}
+
+func testSendEvent() {
+	tt := []*ShosetCreation{
+		{lname: "A", stype: "cl", src: "localhost:8001", dst: []string{""}, ptype: "pki", launched: false},
+		{lname: "B", stype: "cl", src: "localhost:8002", dst: []string{"localhost:8001"}, ptype: "join", launched: false},
+	}
+
+	s := []*shoset.Shoset{}
+
+	s = createManyShosets(tt, s, false)
+
+	//fmt.Println("TEST !!")
+
+	s[0].WaitForProtocols()
+	s[1].WaitForProtocols()
+
+	printManyShosets(s)
+
+	var wg sync.WaitGroup
+
+	//destination := s[1].GetLogicalName()
+
+	// Receive Message
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		//time.Sleep(10 * time.Millisecond)
+		event_rc := s[1].Wait("evt", map[string]string{"topic": "test_topic", "event": "test_event"}, 10, nil)
+		fmt.Println("Message received : ", event_rc)
+	}()
+
+	// Send Message
+	message := msg.NewEventClassic("test_topic", "test_event", "test_payload") //msg.NewSimpleMessage(destination, "test_payload") // remplacer par un event
 	message.Timeout = 1000
 	fmt.Println("Message sent : ", message)
 	s[0].Send(message)
@@ -1030,7 +1071,6 @@ func testForwardMessageMultiProcess(args []string) {
 		//cl.Send(message)
 	}
 
-
 	time.Sleep(10 * time.Second)
 }
 
@@ -1073,6 +1113,7 @@ func main() {
 		// testJoin3(ctx, done)
 		//testRouteTable(ctx, done)
 		testForwardMessage(ctx, done)
+		//testSendEvent()
 	} else if arg == "5" {
 		testForwardMessageMultiProcess((os.Args)[2:])
 	}

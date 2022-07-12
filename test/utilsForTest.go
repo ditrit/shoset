@@ -18,7 +18,7 @@ type ShosetCreation struct {
 	launched bool
 }
 
-func createManyShosets(tt []*ShosetCreation, s []*shoset.Shoset) []*shoset.Shoset {
+func createManyShosets(tt []*ShosetCreation, s []*shoset.Shoset, wait bool) []*shoset.Shoset {
 	for i, t := range tt {
 		if !t.launched {
 			s = append(s, shoset.NewShoset(t.lname, t.stype))
@@ -33,7 +33,9 @@ func createManyShosets(tt []*ShosetCreation, s []*shoset.Shoset) []*shoset.Shose
 			t.launched = true
 		}
 	}
-	time.Sleep(1 * time.Second) // Use Done (not implemented yet ?) chan to know when Shoset is ready for use.
+	if wait {
+		time.Sleep(1 * time.Second)
+	}
 
 	return s
 }
@@ -44,10 +46,18 @@ func printManyShosets(s []*shoset.Shoset) {
 	}
 }
 
-func routeManyShosets(s []*shoset.Shoset) {
+func WaitForManyShosets(s []*shoset.Shoset) {
+	for _, t := range s {
+		t.WaitForProtocols()
+	}
+}
+
+func routeManyShosets(s []*shoset.Shoset, wait bool) {
 	for _, t := range s {
 		routing := msg.NewRoutingEvent(t.GetLogicalName(), "")
 		t.Send(routing)
 	}
-	time.Sleep(1 * time.Second)
+	if wait {
+		time.Sleep(1 * time.Second)
+	}
 }

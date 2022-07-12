@@ -48,6 +48,8 @@ func (c ConfigProtocol) GetMessageType() string {
 		return "cfglink"
 	case "brothers":
 		return "cfglink"
+	case "acknowledge_link":
+		return "cfglink"
 	case "bye":
 		return "cfgbye"
 	case "delete":

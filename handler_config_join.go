@@ -1,6 +1,7 @@
 package shoset
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/ditrit/shoset/msg"
@@ -25,6 +26,9 @@ func (cjh *ConfigJoinHandler) HandleDoubleWay(c *ShosetConn, message msg.Message
 	case PROTOCOL_JOIN:
 		// incoming join request, a socket wants to join to this one.
 		// save info and retrieve brothers to inform network.
+
+		fmt.Println("PROTOCOL_JOIN")
+
 		c.SetRemoteAddress(cfg.GetAddress())
 		c.Store(PROTOCOL_JOIN, c.GetShoset().GetLogicalName(), cfg.GetAddress(), c.GetShoset().GetShosetType())
 
@@ -47,14 +51,27 @@ func (cjh *ConfigJoinHandler) HandleDoubleWay(c *ShosetConn, message msg.Message
 			return true
 		})
 
+		c.SetIsValid(true) // Send statusChange Event change status
+		//c.GetShoset().waitGroupProtocol.Done()
+
 	case ACKNOWLEDGE_JOIN:
 		// incoming acknowledge_join, join request validated.
 		// save info.
+
+		fmt.Println("ACKNOWLEDGE_JOIN")
+
 		c.Store(PROTOCOL_JOIN, c.GetShoset().GetLogicalName(), c.GetRemoteAddress(), c.GetShoset().GetShosetType())
+
+		c.SetIsValid(true) // Send statusChange Event change status
+		//c.GetShoset().waitGroupProtocol.Done()
+		c.GetShoset().LaunchedProtocol.DeleteFromConcurentSlice(c.GetRemoteAddress())
 
 	case MEMBER:
 		// incoming member information.
 		// need to link protocol on it if not already in the map of known conn.
+
+		fmt.Println("MEMBER")
+
 		mapConns, _ := c.GetShoset().ConnsByLname.Load(c.GetShoset().GetLogicalName())
 		if mapConns == nil {
 			return nil

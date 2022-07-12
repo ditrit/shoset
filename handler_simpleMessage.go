@@ -34,9 +34,11 @@ func (smh *SimpleMessageHandler) Send(s *Shoset, m msg.Message) {
 	// Forward the message using the RouteTable to get the next destination
 	route, ok := s.RouteTable.Load(m.GetDestinationLname())
 	if !ok {
-		s.Logger.Error().Msg("Forward message : Failed to forward message destined to " + m.GetDestinationLname() + " No valid Route.")
+		s.Logger.Error().Msg("Forward message : Failed to forward message destined to " + m.GetDestinationLname() + " No Route.")
 	} else {
 		fmt.Println("((SimpleMessageHandler) Send) ", s.GetLogicalName(), " is sending a message to ", m.GetDestinationLname(), "through ", route.(Route).neighbour, ".")
+		
+		
 		err := route.(Route).GetNeighborConn().GetWriter().SendMessage(m)
 		if err != nil {
 			s.Logger.Error().Msg("Couldn't send forwarded message : " + err.Error())
