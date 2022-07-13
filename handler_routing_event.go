@@ -28,15 +28,24 @@ func (reh *RoutingEventHandler) HandleDoubleWay(c *ShosetConn, message msg.Messa
 	shosetLname := c.GetLocalLogicalName()
 
 	if c.GetLocalLogicalName() == originLogicalName {
-		// There are no shosetConn to self
+		// There are no shosetConn to self or brothers
 		c.GetShoset().RouteTable.Store(originLogicalName, NewRoute(c.GetRemoteLogicalName(), c, 2, routingEvt.GetUUID(), routingEvt.Timestamp))
 		return nil
 	} else if ok {
 		if (value.(Route).GetUUID() != routingEvt.GetUUID() && routingEvt.Timestamp > value.(Route).timestamp) || (routingEvt.GetNbSteps() < value.(Route).nb_steps) { //UUID is different if Route is invalid and need to be replaced
 			// Save route
 			fmt.Printf("\n(HandleDoubleWay) shosetLname : %v \n\t message : %v \n\t value : %v ok : %v \nSave better Route.\n", shosetLname, message, value, ok)
+			
 			//c.GetShoset().RouteTable.Delete(originLogicalName)
 			c.GetShoset().RouteTable.Store(originLogicalName, NewRoute(c.GetRemoteLogicalName(), c, routingEvt.GetNbSteps(), routingEvt.GetUUID(), routingEvt.Timestamp))
+
+			// Send NewRouteEvent
+			select {
+			case c.GetShoset().NewRouteEvent <- originLogicalName:
+				fmt.Println("Sending NewRouteEvent")
+			default:
+				fmt.Println("Nobody is waiting for NewRouteEvent")
+			}
 
 			// Rebroadcast Routing event
 			routingEvt.SetNbSteps(routingEvt.GetNbSteps() + 1)
@@ -51,6 +60,14 @@ func (reh *RoutingEventHandler) HandleDoubleWay(c *ShosetConn, message msg.Messa
 	// Unknown Route (Origin not found in RouteTable)
 
 	c.GetShoset().RouteTable.Store(originLogicalName, NewRoute(c.GetRemoteLogicalName(), c, routingEvt.GetNbSteps(), routingEvt.GetUUID(), routingEvt.Timestamp))
+
+	// Send NewRouteEvent
+	select {
+	case c.GetShoset().NewRouteEvent <- originLogicalName:
+		fmt.Println("Sending NewRouteEvent")
+	default:
+		fmt.Println("Nobody is waiting for NewRouteEvent")
+	}
 
 	// Reoute trigered every time the route is unknown :
 
@@ -73,7 +90,7 @@ func (reh *RoutingEventHandler) Send(s *Shoset, evt msg.Message) {
 		func(key string, conn interface{}) {
 			err := conn.(*ShosetConn).GetWriter().SendMessage(evt)
 			if err != nil {
-				log.Warn().Msg("couldn't send evt : " + err.Error())
+				log.Warn().Msg("couldn't send routingEvent : " + err.Error())
 			}
 		},
 	)

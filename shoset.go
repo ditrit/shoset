@@ -7,7 +7,6 @@ import (
 	"sort"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/ditrit/shoset/concurentData"
 	"github.com/ditrit/shoset/msg"
@@ -37,6 +36,8 @@ type Shoset struct {
 	ConnsSingleBool  *sync.Map   // map[ipAddress]bool ipAddresses waiting in singleWay to be handled for TLS double way
 	ConnsSingleConn  *sync.Map   // map[ipAddress]*ShosetConn ShosetConns waiting in singleWay to be handled for TLS double way
 	RouteTable       *sync.Map   // map[lName]*Route Route to another logical name
+
+	NewRouteEvent chan string // Notify of the discovery of a new route
 
 	bindAddress string       // address on which is bound the Shoset
 	logicalName string       // logical name of the Shoset
@@ -149,6 +150,8 @@ func NewShoset(logicalName, shosetType string) *Shoset {
 		ConnsSingleBool:  new(sync.Map),
 		ConnsSingleConn:  new(sync.Map),
 		RouteTable:       new(sync.Map),
+
+		NewRouteEvent: make(chan string),
 
 		logicalName: logicalName,
 		shosetType:  shosetType,
@@ -364,7 +367,8 @@ func (s *Shoset) Protocol(bindAddress, remoteAddress, protocolType string) {
 }
 
 // Forward messages destined to another Lname to the next step on the Route
-func (s *Shoset) ForwardMessage(m msg.Message) {
+// Launch as goroutine ?
+func (s *Shoset) forwardMessage(m msg.Message) {
 	for {
 		route, ok := s.RouteTable.Load(m.GetDestinationLname())
 		if !ok {
@@ -373,7 +377,16 @@ func (s *Shoset) ForwardMessage(m msg.Message) {
 			routing := msg.NewRoutingEvent(s.GetLogicalName(), "")
 			s.Send(routing)
 
-			time.Sleep(100 * time.Millisecond)
+			// Wait for a route to the destination to be dicovered
+			// Add timeout
+			for {
+				fmt.Println("Wating for a route to",m.GetDestinationLname() )
+				if Lname := <-s.NewRouteEvent; Lname == m.GetDestinationLname() {
+					fmt.Println(s.GetLogicalName(), "Received NewRouteEvent for ", Lname)
+					break
+				}
+			}
+			fmt.Println("Retrying forward")
 
 		} else {
 			fmt.Println("((SimpleMessageHandler) Send) ", s.GetLogicalName(), " is sending a message to ", m.GetDestinationLname(), "through ", route.(Route).neighbour, ".")
@@ -388,7 +401,7 @@ func (s *Shoset) ForwardMessage(m msg.Message) {
 	}
 }
 
-// Send and Receice Messages :
+// ######## Send and Receice Messages : ########
 
 // Find the correct send function for the type of message using the handler and call it
 func (s *Shoset) Send(msg msg.Message) { //Use pointer for msg ?
@@ -397,7 +410,7 @@ func (s *Shoset) Send(msg msg.Message) { //Use pointer for msg ?
 
 //Wait for message
 //args for event("evt") type : map[string]string{"topic": "topic_name", "event": "event_name"}
-//Leave iterator at nil if you don't want to generate it yourself
+//Leave iterator at nil if you don't want to supply it yourself (avoid reading multiple time the same message)
 func (s *Shoset) Wait(msgType string, args map[string]string, timeout int, iterator *msg.Iterator) msg.Message {
 	if iterator == nil {
 		iterator = msg.NewIterator(s.Queue[msgType])

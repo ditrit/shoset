@@ -30,7 +30,7 @@ func (smh *SimpleMessageHandler) HandleDoubleWay(c *ShosetConn, message msg.Mess
 
 // Send sends the message through the given Shoset network.
 func (smh *SimpleMessageHandler) Send(s *Shoset, m msg.Message) {
-	s.ForwardMessage(m)
+	s.forwardMessage(m)
 }
 
 // Wait returns the message received for a given Shoset.
