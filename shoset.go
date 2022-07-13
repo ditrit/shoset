@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/ditrit/shoset/concurentData"
 	"github.com/ditrit/shoset/msg"
@@ -130,6 +131,8 @@ func (s *Shoset) WaitForProtocols() {
 	fmt.Println("Waiting for all Protocol to complete on shoset", s.GetLogicalName())
 	//s.waitGroupProtocol.Wait()
 	s.LaunchedProtocol.WaitForEmpty()
+
+	//fmt.Println("All Protocols done for ", s.GetLogicalName())
 }
 
 // NewShoset creates a new Shoset object.
@@ -156,9 +159,9 @@ func NewShoset(logicalName, shosetType string) *Shoset {
 		tlsConfigSingleWay: &tls.Config{InsecureSkipVerify: true},
 		tlsConfigDoubleWay: nil,
 
-		Queue:    make(map[string]*msg.Queue),
-		Handlers: make(map[string]MessageHandlers),
-		LaunchedProtocol : concurentData.NewConcurentSlice(),
+		Queue:            make(map[string]*msg.Queue),
+		Handlers:         make(map[string]MessageHandlers),
+		LaunchedProtocol: concurentData.NewConcurentSlice(),
 	}
 
 	s.ConnsByLname.SetConfig(NewConfig())
@@ -360,21 +363,47 @@ func (s *Shoset) Protocol(bindAddress, remoteAddress, protocolType string) {
 	go protocolConn.HandleConfig(cfg)
 }
 
-//Send and Receice Messages :
+// Forward messages destined to another Lname to the next step on the Route
+func (s *Shoset) ForwardMessage(m msg.Message) {
+	for {
+		route, ok := s.RouteTable.Load(m.GetDestinationLname())
+		if !ok {
+			s.Logger.Warn().Msg("Forward message : Failed to forward message destined to " + m.GetDestinationLname() + " No Route.")
 
-func (c *Shoset) Send(msg msg.Message) { //Use pointer for msg ?
-	c.Handlers[msg.GetMessageType()].Send(c, msg)
+			routing := msg.NewRoutingEvent(s.GetLogicalName(), "")
+			s.Send(routing)
+
+			time.Sleep(100 * time.Millisecond)
+
+		} else {
+			fmt.Println("((SimpleMessageHandler) Send) ", s.GetLogicalName(), " is sending a message to ", m.GetDestinationLname(), "through ", route.(Route).neighbour, ".")
+
+			err := route.(Route).GetNeighborConn().GetWriter().SendMessage(m)
+			if err != nil {
+				s.Logger.Error().Msg("Couldn't send forwarded message : " + err.Error())
+			}
+
+			return
+		}
+	}
+}
+
+// Send and Receice Messages :
+
+// Find the correct send function for the type of message using the handler and call it
+func (s *Shoset) Send(msg msg.Message) { //Use pointer for msg ?
+	s.Handlers[msg.GetMessageType()].Send(s, msg)
 }
 
 //Wait for message
 //args for event("evt") type : map[string]string{"topic": "topic_name", "event": "event_name"}
 //Leave iterator at nil if you don't want to generate it yourself
-func (c *Shoset) Wait(msgType string, args map[string]string, timeout int, iterator *msg.Iterator) msg.Message {
+func (s *Shoset) Wait(msgType string, args map[string]string, timeout int, iterator *msg.Iterator) msg.Message {
 	if iterator == nil {
-		iterator = msg.NewIterator(c.Queue[msgType])
+		iterator = msg.NewIterator(s.Queue[msgType])
 	}
 
-	event := c.Handlers[msgType].Wait(c, iterator, args, timeout)
+	event := s.Handlers[msgType].Wait(s, iterator, args, timeout)
 
 	if event == nil {
 		return nil

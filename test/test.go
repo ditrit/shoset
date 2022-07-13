@@ -967,7 +967,7 @@ func testForwardMessage(ctx context.Context, done context.CancelFunc) {
 
 	WaitForManyShosets(s)
 
-	routeManyShosets(s, true)
+	//routeManyShosets(s, true)
 
 	printManyShosets(s)
 
@@ -1012,8 +1012,6 @@ func testSendEvent() {
 
 	var wg sync.WaitGroup
 
-	//destination := s[1].GetLogicalName()
-
 	// Receive Message
 	wg.Add(1)
 	go func() {
@@ -1041,14 +1039,15 @@ func testForwardMessageMultiProcess(args []string) {
 	} else {
 		cl.Protocol(args[2], args[3], "link") // args[2] : IP , args[3] : remote IP for connexion
 	}
-	time.Sleep(2 * time.Second)
+	time.Sleep(100 * time.Millisecond)
+
+	cl.WaitForProtocols()
 
 	// fmt.Println("Shoset 1",cl.GetLogicalName()," : ",cl)
 
 	// Route shoset
 	routing := msg.NewRoutingEvent(cl.GetLogicalName(), "")
 	cl.Send(routing)
-
 	time.Sleep(1 * time.Second)
 
 	fmt.Println("Shoset 2", cl.GetLogicalName(), " : ", cl)
@@ -1062,7 +1061,7 @@ func testForwardMessageMultiProcess(args []string) {
 
 	// Send Message
 	if args[4] == "1" { //args[4] sender
-		time.Sleep(1 * time.Second)
+		//time.Sleep(1 * time.Second)
 		fmt.Println("Sender : ", cl.GetLogicalName())
 		message := msg.NewSimpleMessage(args[5], "test_payload")
 		fmt.Println("Message sent : ", message)
@@ -1071,7 +1070,7 @@ func testForwardMessageMultiProcess(args []string) {
 		//cl.Send(message)
 	}
 
-	time.Sleep(10 * time.Second)
+	time.Sleep(5 * time.Second)
 }
 
 func main() {

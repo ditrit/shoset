@@ -29,21 +29,8 @@ func (smh *SimpleMessageHandler) HandleDoubleWay(c *ShosetConn, message msg.Mess
 }
 
 // Send sends the message through the given Shoset network.
-// Code duplicated in ShosetConn.go (handleMessageType)
 func (smh *SimpleMessageHandler) Send(s *Shoset, m msg.Message) {
-	// Forward the message using the RouteTable to get the next destination
-	route, ok := s.RouteTable.Load(m.GetDestinationLname())
-	if !ok {
-		s.Logger.Error().Msg("Forward message : Failed to forward message destined to " + m.GetDestinationLname() + " No Route.")
-	} else {
-		fmt.Println("((SimpleMessageHandler) Send) ", s.GetLogicalName(), " is sending a message to ", m.GetDestinationLname(), "through ", route.(Route).neighbour, ".")
-		
-		
-		err := route.(Route).GetNeighborConn().GetWriter().SendMessage(m)
-		if err != nil {
-			s.Logger.Error().Msg("Couldn't send forwarded message : " + err.Error())
-		}
-	}
+	s.ForwardMessage(m)
 }
 
 // Wait returns the message received for a given Shoset.

@@ -119,10 +119,12 @@ func (c *ShosetConn) SetRemoteShosetType(ShosetType string) { c.remoteShosetType
 
 // SetIsValid sets the state for a ShosetConn.
 func (c *ShosetConn) SetIsValid(state bool) {
-	c.isValid.m.Lock()
-	defer c.isValid.m.Unlock()
+	//c.isValid.m.Lock()
+	//defer c.isValid.m.Unlock()
 
+	c.isValid.m.Lock()
 	c.isValid.value = state
+	c.isValid.m.Unlock()
 	if state {
 		fmt.Println(c, "Is ready.")
 	}
@@ -299,18 +301,7 @@ func (c *ShosetConn) handleMessageType(messageType string) error {
 
 	// Check if the destinationLname is the current Lname
 	if (messageValue.GetDestinationLname() != c.GetLocalLogicalName()) && messageValue.GetDestinationLname() != "" {
-		// Forward the message using the RouteTable to get the next destination
-		route, okRoute := c.GetShoset().RouteTable.Load(messageValue.GetDestinationLname())
-		if !okRoute {
-			return errors.New("Forward message : Failed to forward message destined to " + messageValue.GetDestinationLname() + " No valid Route.")
-		} else {
-			fmt.Println("(handleMessageType) ", c.GetLocalLogicalName(), " is forwarding a message to ", messageValue.GetDestinationLname(), "through ", route.(Route).neighbour, ".")
-			err = route.(Route).GetNeighborConn().GetWriter().SendMessage(messageValue)
-			if err != nil {
-				return errors.New("couldn't send forwarded message : " + err.Error())
-			}
-		}
-		return nil
+		c.GetShoset().ForwardMessage(messageValue)
 	}
 
 	doubleWayMessageTypes := []string{"cfgjoin", "cfglink", "cfgbye", "pkievt_TLSdoubleWay", "routingEvent", "evt", "cmd", "simpleMessage"} //added "routingEvent", "evt", "cmd", "simpleMessage"
