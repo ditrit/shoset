@@ -979,12 +979,12 @@ func testForwardMessage(ctx context.Context, done context.CancelFunc) {
 		{lname: "A", stype: "cl", src: LnameiIP["A"], dst: []string{LnameiIP["D"]}, ptype: "pki", launched: false},
 		{lname: "B", stype: "cl", src: LnameiIP["B"], dst: []string{LnameiIP["A"]}, ptype: "link", launched: false},
 		{lname: "C", stype: "cl", src: LnameiIP["C"], dst: []string{LnameiIP["A"]}, ptype: "link", launched: false},
-		{lname: "D", stype: "cl", src: LnameiIP["D"], dst: []string{LnameiIP["B"],LnameiIP["C"]}, ptype: "link", launched: false},
-		{lname: "E", stype: "cl", src: LnameiIP["E"], dst: []string{LnameiIP["D"],LnameiIP["F"]}, ptype: "link", launched: false},
+		{lname: "D", stype: "cl", src: LnameiIP["D"], dst: []string{LnameiIP["B"], LnameiIP["C"]}, ptype: "link", launched: false},
+		{lname: "E", stype: "cl", src: LnameiIP["E"], dst: []string{LnameiIP["D"], LnameiIP["F"]}, ptype: "link", launched: false},
 		{lname: "F", stype: "cl", src: LnameiIP["F"], dst: []string{LnameiIP["E"]}, ptype: "link", launched: false},
 		{lname: "G", stype: "cl", src: LnameiIP["G"], dst: []string{LnameiIP["F"]}, ptype: "link", launched: false},
 		{lname: "H", stype: "cl", src: LnameiIP["H"], dst: []string{LnameiIP["F"]}, ptype: "link", launched: false},
-		{lname: "I", stype: "cl", src: LnameiIP["I"], dst: []string{LnameiIP["G"],LnameiIP["H"]}, ptype: "link", launched: false},
+		{lname: "I", stype: "cl", src: LnameiIP["I"], dst: []string{LnameiIP["G"], LnameiIP["H"]}, ptype: "link", launched: false},
 	}
 
 	s := []*shoset.Shoset{}
@@ -1039,19 +1039,25 @@ func testSendEvent() {
 	var wg sync.WaitGroup
 
 	// Receive Message
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		//time.Sleep(10 * time.Millisecond)
-		event_rc := s[1].Wait("evt", map[string]string{"topic": "test_topic", "event": "test_event"}, 10, nil)
-		fmt.Println("Message received : ", event_rc)
-	}()
+	for i := 0; i < 1; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			event_rc := s[1].Wait("evt", map[string]string{"topic": "test_topic", "event": "test_event"}, 1, nil)
+			fmt.Println("Message received : ", event_rc)
+		}()
+	}
 
 	// Send Message
-	message := msg.NewEventClassic("test_topic", "test_event", "test_payload") //msg.NewSimpleMessage(destination, "test_payload") // remplacer par un event
-	message.Timeout = 1000
-	fmt.Println("Message sent : ", message)
-	s[0].Send(message)
+	go func() {
+		//for {
+		message := msg.NewEventClassic("test_topic", "test_event", "test_payload")
+		fmt.Println("Message sent : ", message)
+		s[0].Send(message)
+		// Timing minimal pour que la gestion de la réception puisse s'éxécuter
+		time.Sleep(10 * time.Millisecond)
+		//}
+	}()
 
 	wg.Wait()
 }

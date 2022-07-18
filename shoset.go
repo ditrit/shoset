@@ -53,8 +53,6 @@ type Shoset struct {
 	Queue    map[string]*msg.Queue      // map for message queueing
 	Handlers map[string]MessageHandlers // map for message handling
 
-	NewMessageEvent map[string]chan bool // Send a message on the channel coresponding to the message type
-
 	Done chan bool // goroutines synchronization
 
 	LaunchedProtocol concurentData.ConcurentSlice // List of IP addesses a Protocol was initiated with (but not yet finished)
@@ -172,8 +170,6 @@ func NewShoset(logicalName, shosetType string) *Shoset {
 		Queue:    make(map[string]*msg.Queue),
 		Handlers: make(map[string]MessageHandlers),
 
-		NewMessageEvent: make(map[string]chan bool),
-
 		LaunchedProtocol: concurentData.NewConcurentSlice(),
 	}
 
@@ -202,7 +198,6 @@ func NewShoset(logicalName, shosetType string) *Shoset {
 
 	s.Queue["simpleMessage"] = msg.NewQueue()
 	s.Handlers["simpleMessage"] = new(SimpleMessageHandler)
-	s.NewMessageEvent["simpleMessage"] = make(chan bool)
 
 	s.Queue["cmd"] = msg.NewQueue()
 	s.Handlers["cmd"] = new(CommandHandler)

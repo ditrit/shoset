@@ -41,15 +41,20 @@ func (eh *EventHandler) Send(s *Shoset, evt msg.Message) {
 
 // Wait returns the message received for a given Shoset.
 func (eh *EventHandler) Wait(s *Shoset, replies *msg.Iterator, args map[string]string, timeout int) *msg.Message {
+	timer := time.NewTimer(time.Duration(timeout) * time.Second)
+
 	topicName, ok := args["topic"]
 	if !ok {
+		s.Logger.Warn().Msg("no topic provided for Wait evt")
 		return nil
 	}
-	eventName := args["event"]
-	term := make(chan *msg.Message, 1)
-	cont := true
-	go func() {
-		for cont {
+
+	for {
+		select {
+		case <-timer.C:
+			s.Logger.Warn().Msg("No message received in Wait evt (timeout)")
+			return nil
+		default:
 			//Check message presence in two steps to avoid accessing attributs of <nil>
 			cell := replies.Get()
 			if cell == nil {
@@ -62,16 +67,10 @@ func (eh *EventHandler) Wait(s *Shoset, replies *msg.Iterator, args map[string]s
 				continue
 			}
 			event := message.(msg.Event)
-			if event.GetTopic() == topicName && (eventName == VOID || event.GetEvent() == eventName) {
-				term <- &message
+			if event.GetTopic() == topicName && (args["event"] == VOID || event.GetEvent() == args["event"]) {
+				return &message
 			}
 		}
-	}()
-	select {
-	case res := <-term:
-		cont = false
-		return res
-	case <-time.After(time.Duration(timeout) * time.Second):
-		return nil
+
 	}
 }
