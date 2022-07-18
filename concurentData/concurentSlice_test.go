@@ -70,4 +70,12 @@ func Test_concurentSlice(t *testing.T) {
 	}
 
 	fmt.Println(cSlice.String())
+
+	cSlice.AppendToConcurentSlice("TEST")
+
+	err := cSlice.WaitForEmpty()
+
+	if err==nil{
+		t.Errorf("Timeout error failed.")
+	}
 }

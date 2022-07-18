@@ -34,52 +34,28 @@ func (reh *RoutingEventHandler) HandleDoubleWay(c *ShosetConn, message msg.Messa
 	} else if ok {
 		if (value.(Route).GetUUID() != routingEvt.GetUUID() && routingEvt.Timestamp > value.(Route).timestamp) || (routingEvt.GetNbSteps() < value.(Route).nb_steps) { //UUID is different if Route is invalid and need to be replaced
 			// Save route
-			fmt.Printf("\n(HandleDoubleWay) shosetLname : %v \n\t message : %v \n\t value : %v ok : %v \nSave better Route.\n", shosetLname, message, value, ok)
-			
-			//c.GetShoset().RouteTable.Delete(originLogicalName)
-			c.GetShoset().RouteTable.Store(originLogicalName, NewRoute(c.GetRemoteLogicalName(), c, routingEvt.GetNbSteps(), routingEvt.GetUUID(), routingEvt.Timestamp))
+			fmt.Printf("\n(HandleDoubleWay routing_event) shosetLname : %v \n\t message : %v \n\t value : %v ok : %v \nSave better Route.\n", shosetLname, message, value, ok)
 
-			// Send NewRouteEvent
-			select {
-			case c.GetShoset().NewRouteEvent <- originLogicalName:
-				fmt.Println("Sending NewRouteEvent")
-			default:
-				fmt.Println("Nobody is waiting for NewRouteEvent")
-			}
+			c.GetShoset().SaveRoute(c, &routingEvt)
 
-			// Rebroadcast Routing event
-			routingEvt.SetNbSteps(routingEvt.GetNbSteps() + 1)
-			reh.Send(c.GetShoset(), routingEvt)
 			return nil
 		} else {
 			// Route not worse saving
-			fmt.Printf("\n(HandleDoubleWay) shosetLname : %v \n\t message : %v \n\t value : %v ok : %v \nRoute not worse saving.\n", shosetLname, message, value, ok)
+			//fmt.Printf("\n(HandleDoubleWay routing_event) shosetLname : %v \n\t message : %v \n\t value : %v ok : %v \nRoute not worse saving.\n", shosetLname, message, value, ok)
 			return nil
 		}
 	}
 	// Unknown Route (Origin not found in RouteTable)
 
-	c.GetShoset().RouteTable.Store(originLogicalName, NewRoute(c.GetRemoteLogicalName(), c, routingEvt.GetNbSteps(), routingEvt.GetUUID(), routingEvt.Timestamp))
-
-	// Send NewRouteEvent
-	select {
-	case c.GetShoset().NewRouteEvent <- originLogicalName:
-		fmt.Println("Sending NewRouteEvent")
-	default:
-		fmt.Println("Nobody is waiting for NewRouteEvent")
-	}
+	c.GetShoset().SaveRoute(c, &routingEvt)
 
 	// Reoute trigered every time the route is unknown :
 
-	fmt.Printf("\n(HandleDoubleWay) shosetLname : %v \n\t message : %v \n\t value : %v ok : %v \nStore unknown Route.\n", shosetLname, message, value, ok)
+	fmt.Printf("\n(HandleDoubleWay routing_event) shosetLname : %v \n\t message : %v \n\t value : %v ok : %v \nStore unknown Route.\n", shosetLname, message, value, ok)
 
 	reRouting := msg.NewRoutingEvent(c.GetLocalLogicalName(), routingEvt.GetUUID())
 	reh.Send(c.GetShoset(), reRouting)
-	//fmt.Println("Reroute : ", c.GetLocalLogicalName())
-
-	// Rebroadcast Routing event
-	routingEvt.SetNbSteps(routingEvt.GetNbSteps() + 1)
-	reh.Send(c.GetShoset(), routingEvt)
+	fmt.Println("Reroute : ", c.GetLocalLogicalName())
 
 	return nil
 }

@@ -90,3 +90,9 @@ const (
 	WARN  string = "warn"
 	ERROR string = "error"
 )
+
+// Forward message
+const (
+	MASTER_TIMEOUT int = 30 // 30s
+	NO_MESSAGE_TIMEOUT int = 5 // 30s
+)

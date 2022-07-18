@@ -25,6 +25,14 @@ func (smh *SimpleMessageHandler) HandleDoubleWay(c *ShosetConn, message msg.Mess
 	if notInQueue := c.GetShoset().Queue["simpleMessage"].Push(m, c.GetRemoteShosetType(), c.GetLocalAddress()); !notInQueue {
 		return errors.New("failed to handle simpleMessage")
 	}
+
+	// Notify of the new message
+	select {
+	case c.GetShoset().NewMessageEvent["simpleMessage"] <- true:
+	default:
+		fmt.Println("Nobody is waiting for NewMessageEvent[simpleMessage]")
+	}
+
 	return nil
 }
 
@@ -35,29 +43,24 @@ func (smh *SimpleMessageHandler) Send(s *Shoset, m msg.Message) {
 
 // Wait returns the message received for a given Shoset.
 func (smh *SimpleMessageHandler) Wait(s *Shoset, replies *msg.Iterator, args map[string]string, timeout int) *msg.Message {
-	term := make(chan *msg.Message, 1)
-	cont := true
-	go func() {
-		for cont {
+	for {
+		// Possibilité de na pas voir passer un message
+		select {
+		case <-s.NewMessageEvent["simpleMessage"]:
 			//Check message presence in two steps to avoid accessing attributs of <nil>
 			cell := replies.Get()
 			if cell == nil {
-				time.Sleep(time.Duration(10) * time.Millisecond)
-				continue
+				break
 			}
 			message := cell.GetMessage()
 			if message == nil {
-				time.Sleep(time.Duration(10) * time.Millisecond)
-				continue
+				break
 			}
-			term <- &message
+			return &message
+
+		case <-time.After(time.Duration(timeout) * time.Second):
+			s.Logger.Warn().Msg("No message received in Wait : timeout")
+			return nil
 		}
-	}()
-	select {
-	case res := <-term:
-		cont = false
-		return res
-	case <-time.After(time.Duration(timeout) * time.Second):
-		return nil
 	}
 }

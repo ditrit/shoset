@@ -302,6 +302,7 @@ func (c *ShosetConn) handleMessageType(messageType string) error {
 	// Check if the destinationLname is the current Lname
 	if (messageValue.GetDestinationLname() != c.GetLocalLogicalName()) && messageValue.GetDestinationLname() != "" {
 		c.GetShoset().forwardMessage(messageValue)
+		return nil
 	}
 
 	doubleWayMessageTypes := []string{"cfgjoin", "cfglink", "cfgbye", "pkievt_TLSdoubleWay", "routingEvent", "evt", "cmd", "simpleMessage"} //added "routingEvent", "evt", "cmd", "simpleMessage"

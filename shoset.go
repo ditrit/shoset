@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/ditrit/shoset/concurentData"
 	"github.com/ditrit/shoset/msg"
@@ -51,6 +52,8 @@ type Shoset struct {
 
 	Queue    map[string]*msg.Queue      // map for message queueing
 	Handlers map[string]MessageHandlers // map for message handling
+
+	NewMessageEvent map[string]chan bool // Send a message on the channel coresponding to the message type
 
 	Done chan bool // goroutines synchronization
 
@@ -128,12 +131,16 @@ func (s *Shoset) deleteConn(connAddr, connLname string) {
 }
 
 // Wait for every Conn initialised to be ready for use
+// Add timeout
 func (s *Shoset) WaitForProtocols() {
 	fmt.Println("Waiting for all Protocol to complete on shoset", s.GetLogicalName())
 	//s.waitGroupProtocol.Wait()
-	s.LaunchedProtocol.WaitForEmpty()
+	err := s.LaunchedProtocol.WaitForEmpty()
+	if err!=nil{
+		s.Logger.Error().Msg("Failed to establish connection to some adresses (timeout) : "+ s.LaunchedProtocol.String())
+	}
 
-	//fmt.Println("All Protocols done for ", s.GetLogicalName())
+	fmt.Println("All Protocols done for ", s.GetLogicalName())
 }
 
 // NewShoset creates a new Shoset object.
@@ -162,8 +169,11 @@ func NewShoset(logicalName, shosetType string) *Shoset {
 		tlsConfigSingleWay: &tls.Config{InsecureSkipVerify: true},
 		tlsConfigDoubleWay: nil,
 
-		Queue:            make(map[string]*msg.Queue),
-		Handlers:         make(map[string]MessageHandlers),
+		Queue:    make(map[string]*msg.Queue),
+		Handlers: make(map[string]MessageHandlers),
+
+		NewMessageEvent: make(map[string]chan bool),
+
 		LaunchedProtocol: concurentData.NewConcurentSlice(),
 	}
 
@@ -192,6 +202,7 @@ func NewShoset(logicalName, shosetType string) *Shoset {
 
 	s.Queue["simpleMessage"] = msg.NewQueue()
 	s.Handlers["simpleMessage"] = new(SimpleMessageHandler)
+	s.NewMessageEvent["simpleMessage"] = make(chan bool)
 
 	s.Queue["cmd"] = msg.NewQueue()
 	s.Handlers["cmd"] = new(CommandHandler)
@@ -242,7 +253,7 @@ func (s *Shoset) String() string {
 			description += fmt.Sprintf("\t%t", val.(bool))
 		})
 	//
-	description += "\n\t- RouteTable (destination : {neighbor, Conn to Neighbor, distance, uuid}):\n\t\t"
+	description += "\n\t- RouteTable (destination : {neighbor, Conn to Neighbor, distance, uuid, timestamp}):\n\t\t"
 	s.RouteTable.Range(
 		func(key, val interface{}) bool {
 			description += fmt.Sprintf("%v : %v \n\t\t", key, val)
@@ -369,36 +380,72 @@ func (s *Shoset) Protocol(bindAddress, remoteAddress, protocolType string) {
 // Forward messages destined to another Lname to the next step on the Route
 // Launch as goroutine ?
 func (s *Shoset) forwardMessage(m msg.Message) {
+	masterTimeout := time.NewTimer(time.Duration(MASTER_TIMEOUT) * time.Second)
 	for {
 		route, ok := s.RouteTable.Load(m.GetDestinationLname())
-		if !ok {
-			s.Logger.Warn().Msg("Forward message : Failed to forward message destined to " + m.GetDestinationLname() + " No Route.")
-
-			routing := msg.NewRoutingEvent(s.GetLogicalName(), "")
-			s.Send(routing)
-
-			// Wait for a route to the destination to be dicovered
-			// Add timeout
-			for {
-				fmt.Println("Wating for a route to",m.GetDestinationLname() )
-				if Lname := <-s.NewRouteEvent; Lname == m.GetDestinationLname() {
-					fmt.Println(s.GetLogicalName(), "Received NewRouteEvent for ", Lname)
-					break
-				}
-			}
-			fmt.Println("Retrying forward")
-
-		} else {
+		if ok {
 			fmt.Println("((SimpleMessageHandler) Send) ", s.GetLogicalName(), " is sending a message to ", m.GetDestinationLname(), "through ", route.(Route).neighbour, ".")
 
+			// Forward message
 			err := route.(Route).GetNeighborConn().GetWriter().SendMessage(m)
 			if err != nil {
 				s.Logger.Error().Msg("Couldn't send forwarded message : " + err.Error())
 			}
 
 			return
+
+		} else {
+			s.Logger.Warn().Msg("Forward message : Failed to forward message destined to " + m.GetDestinationLname() + " No Route.")
+
+			// Reroute network
+			routing := msg.NewRoutingEvent(s.GetLogicalName(), "")
+			s.Send(routing)
+
+		retry: // Puts a label on the loop to break out of it from inside the select
+			// Wait for a route to the destination to be dicovered
+			// Timeout :
+			// - Since the last addition to the Routetable
+			// - Since the bigenning of the wait
+
+			for {
+				fmt.Println(s.GetLogicalName()," is wating for a route to", m.GetDestinationLname())
+				select {
+				case Lname := <-s.NewRouteEvent:
+					fmt.Println(s.GetLogicalName(), "Received NewRouteEvent for ", Lname)
+					if Lname == m.GetDestinationLname() {
+						break retry
+					}
+				case <-time.After(time.Duration(NO_MESSAGE_TIMEOUT) * time.Second):
+					// When the message is sent when this is not receiving, it is not sent and never received
+					// Retry anyway after some time, maybe the Event was missed
+					
+					s.Logger.Debug().Msg("Timed out before correct route discovery. (No recent NewRouteEvent.) Retrying.")
+					break retry
+
+				case <-masterTimeout.C:
+					s.Logger.Error().Msg("Couldn't send forwarded message : " + "Timed put before correct route discovery. (Waited to long for the route.")
+					return
+				}
+			}
+			fmt.Println("Retrying forward")
 		}
 	}
+}
+
+func (s *Shoset) SaveRoute(c *ShosetConn, routingEvt *msg.RoutingEvent) {
+	s.RouteTable.Store(routingEvt.GetOrigin(), NewRoute(c.GetRemoteLogicalName(), c, routingEvt.GetNbSteps(), routingEvt.GetUUID(), routingEvt.Timestamp))
+
+	// Send NewRouteEvent
+	select {
+	case s.NewRouteEvent <- routingEvt.GetOrigin():
+		fmt.Println(c.GetLocalLogicalName()," is Sending NewRouteEvent for ", routingEvt.GetOrigin())
+	default:
+		//fmt.Println("Nobody is waiting for NewRouteEvent")
+	}
+
+	// Rebroadcast Routing event
+	routingEvt.SetNbSteps(routingEvt.GetNbSteps() + 1)
+	s.Send(routingEvt)
 }
 
 // ######## Send and Receice Messages : ########

@@ -1,8 +1,10 @@
 package concurentData
 
 import (
+	"errors"
 	"fmt"
 	"sync"
+	"time"
 )
 
 type ConcurentSlice struct {
@@ -10,6 +12,10 @@ type ConcurentSlice struct {
 	contentChange chan bool
 	m             sync.Mutex
 }
+
+const (
+	TIMEOUT int = 5
+)
 
 func NewConcurentSlice() ConcurentSlice {
 	return ConcurentSlice{contentChange: make(chan bool)}
@@ -52,17 +58,22 @@ func (cSlice *ConcurentSlice) sendChangeEvent() {
 }
 
 // Wait for the Slice to be empty
-func (cSlice *ConcurentSlice) WaitForEmpty() {
+func (cSlice *ConcurentSlice) WaitForEmpty() error {
 	for {
 		cSlice.m.Lock()
 		len := len(cSlice.sliceValues)
 		cSlice.m.Unlock()
-		if  len != 0 {
-			<-cSlice.contentChange
-			fmt.Println("Received contentChange.")
-			continue
+		if len != 0 {
+			select {
+			case <-cSlice.contentChange:
+				fmt.Println("Received contentChange.")
+				break
+				//continue
+			case <-time.After(time.Duration(TIMEOUT) * time.Second):
+				return errors.New("the list is no empty (timeout)")
+			}
 		} else {
-			return
+			return nil
 		}
 	}
 }
