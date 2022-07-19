@@ -1,5 +1,10 @@
 package shoset
 
+// Supported message type
+var MESSAGE_TYPES = []string{"cfgjoin", "cfglink", "cfgbye", "pkievt_TLSdoubleWay", "routingEvent", "evt", "cmd", "simpleMessage", "forwardAck"} //added "routingEvent", "evt", "cmd", "simpleMessage", "forwardAck"
+
+var FORWARDABLE_TYPES = []string{"evt", "simpleMessage"}
+
 // empty string
 const (
 	VOID string = ""
@@ -15,9 +20,9 @@ const (
 	MEMBER           string = "member"
 
 	// link
-	PROTOCOL_LINK string = "link"
+	PROTOCOL_LINK    string = "link"
 	ACKNOWLEDGE_LINK string = "acknowledge_link"
-	BROTHERS      string = "brothers"
+	BROTHERS         string = "brothers"
 
 	// bye
 	PROTOCOL_EXIT string = "bye"
@@ -93,6 +98,7 @@ const (
 
 // Forward message
 const (
-	MASTER_TIMEOUT int = 30 // 30s
-	NO_MESSAGE_TIMEOUT int = 5 // 30s
+	MASTER_SEND_TIMEOUT      int = 30 //s
+	NO_MESSAGE_ROUTE_TIMEOUT int = 10  //s
+	TIMEOUT_ACK              int = 5 //s
 )

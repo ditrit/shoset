@@ -85,6 +85,7 @@ func (c *ShosetConn) GetIsValid() bool {
 }
 
 // Wait for ShosetConn to be ready for use
+// Work only for a single waiter
 func (c *ShosetConn) WaitForValid() {
 	for {
 		c.isValid.m.Lock()
@@ -299,13 +300,28 @@ func (c *ShosetConn) handleMessageType(messageType string) error {
 		return errors.New("ReceiveMessage : can not read value of " + messageType + " : " + err.Error())
 	}
 
+	// If the message is of a forwardable type, an Acknowledge is expected by the sender
+	if contains(FORWARDABLE_TYPES, messageType){
+		// Send back FowarkAck
+
+		// Create message
+		forwardAck:=msg.NewForwardAck(messageValue.GetUUID(),messageValue.GetTimestamp())
+		// Send message
+		err := c.GetWriter().SendMessage(forwardAck)
+
+		fmt.Println("(ForwardAck) Message sent : ", forwardAck)
+
+		if err != nil {
+			c.Logger.Error().Msg("Couldn't send FowarkAck message : " + err.Error())
+		}
+	}
+
 	// Check if the destinationLname is the current Lname
 	if (messageValue.GetDestinationLname() != c.GetLocalLogicalName()) && messageValue.GetDestinationLname() != "" {
 		c.GetShoset().forwardMessage(messageValue)
 		return nil
 	}
 
-	doubleWayMessageTypes := []string{"cfgjoin", "cfglink", "cfgbye", "pkievt_TLSdoubleWay", "routingEvent", "evt", "cmd", "simpleMessage"} //added "routingEvent", "evt", "cmd", "simpleMessage"
 	//fmt.Println("(handleMessageType) messageType : ",messageType)
 	switch {
 	case messageType == TLS_SINGLE_WAY_PKI_EVT:
@@ -313,7 +329,7 @@ func (c *ShosetConn) handleMessageType(messageType string) error {
 		if err != nil {
 			return err
 		}
-	case contains(doubleWayMessageTypes, messageType):
+	case contains(MESSAGE_TYPES, messageType):
 		err := handler.HandleDoubleWay(c, messageValue)
 		if err != nil {
 			return err

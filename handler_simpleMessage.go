@@ -41,7 +41,7 @@ func (smh *SimpleMessageHandler) Wait(s *Shoset, replies *msg.Iterator, args map
 	for {
 		select {
 		case <-timer.C:
-			s.Logger.Warn().Msg("No message received in Wait evt (timeout)")
+			s.Logger.Warn().Msg("No message received in Wait SimpleMessage (timeout)")
 			return nil
 		default:
 			//Check message presence in two steps to avoid accessing attributs of <nil>

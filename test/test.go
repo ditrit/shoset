@@ -953,39 +953,39 @@ func testRouteTable(ctx context.Context, done context.CancelFunc) {
 }
 
 func testForwardMessage(ctx context.Context, done context.CancelFunc) {
-	// tt := []*ShosetCreation{
-	// 	{lname: "A", stype: "cl", src: "localhost:8001", dst: []string{""}, ptype: "pki", launched: false},
-	// 	{lname: "B", stype: "cl", src: "localhost:8002", dst: []string{"localhost:8001"}, ptype: "link", launched: false},
-	// 	{lname: "C", stype: "cl", src: "localhost:8003", dst: []string{"localhost:8002"}, ptype: "link", launched: false},
-	// 	{lname: "D", stype: "cl", src: "localhost:8004", dst: []string{"localhost:8003"}, ptype: "link", launched: false},
-	// 	{lname: "E", stype: "cl", src: "localhost:8005", dst: []string{"localhost:8004"}, ptype: "link", launched: false},
+	tt := []*ShosetCreation{
+		{lname: "A", stype: "cl", src: "localhost:8001", dst: []string{""}, ptype: "pki", launched: false},
+		{lname: "B", stype: "cl", src: "localhost:8002", dst: []string{"localhost:8001"}, ptype: "link", launched: false},
+		{lname: "C", stype: "cl", src: "localhost:8003", dst: []string{"localhost:8002"}, ptype: "link", launched: false},
+		{lname: "D", stype: "cl", src: "localhost:8004", dst: []string{"localhost:8003"}, ptype: "link", launched: false},
+		{lname: "E", stype: "cl", src: "localhost:8005", dst: []string{"localhost:8004"}, ptype: "link", launched: false},
+	}
+
+	// LnameiIP := map[string]string{
+	// 	"A": "localhost:8001",
+	// 	"B": "localhost:8002",
+	// 	"C": "localhost:8003",
+	// 	"D": "localhost:8004",
+	// 	"E": "localhost:8005",
+	// 	"F": "localhost:8006",
+	// 	"G": "localhost:8007",
+	// 	"H": "localhost:8008",
+	// 	"I": "localhost:8009",
 	// }
 
-	LnameiIP := map[string]string{
-		"A": "localhost:8001",
-		"B": "localhost:8002",
-		"C": "localhost:8003",
-		"D": "localhost:8004",
-		"E": "localhost:8005",
-		"F": "localhost:8006",
-		"G": "localhost:8007",
-		"H": "localhost:8008",
-		"I": "localhost:8009",
-	}
+	// // HandleBind ne revient jamais quand il manque une shoset
 
-	// HandleBind ne revient jamais quand il manque une shoset
-
-	tt := []*ShosetCreation{
-		{lname: "A", stype: "cl", src: LnameiIP["A"], dst: []string{LnameiIP["D"]}, ptype: "pki", launched: false},
-		{lname: "B", stype: "cl", src: LnameiIP["B"], dst: []string{LnameiIP["A"]}, ptype: "link", launched: false},
-		{lname: "C", stype: "cl", src: LnameiIP["C"], dst: []string{LnameiIP["A"]}, ptype: "link", launched: false},
-		{lname: "D", stype: "cl", src: LnameiIP["D"], dst: []string{LnameiIP["B"], LnameiIP["C"]}, ptype: "link", launched: false},
-		{lname: "E", stype: "cl", src: LnameiIP["E"], dst: []string{LnameiIP["D"], LnameiIP["F"]}, ptype: "link", launched: false},
-		{lname: "F", stype: "cl", src: LnameiIP["F"], dst: []string{LnameiIP["E"]}, ptype: "link", launched: false},
-		{lname: "G", stype: "cl", src: LnameiIP["G"], dst: []string{LnameiIP["F"]}, ptype: "link", launched: false},
-		{lname: "H", stype: "cl", src: LnameiIP["H"], dst: []string{LnameiIP["F"]}, ptype: "link", launched: false},
-		{lname: "I", stype: "cl", src: LnameiIP["I"], dst: []string{LnameiIP["G"], LnameiIP["H"]}, ptype: "link", launched: false},
-	}
+	// tt := []*ShosetCreation{
+	// 	{lname: "A", stype: "cl", src: LnameiIP["A"], dst: []string{LnameiIP["D"]}, ptype: "pki", launched: false},
+	// 	{lname: "B", stype: "cl", src: LnameiIP["B"], dst: []string{LnameiIP["A"]}, ptype: "link", launched: false},
+	// 	{lname: "C", stype: "cl", src: LnameiIP["C"], dst: []string{LnameiIP["A"]}, ptype: "link", launched: false},
+	// 	{lname: "D", stype: "cl", src: LnameiIP["D"], dst: []string{LnameiIP["B"], LnameiIP["C"]}, ptype: "link", launched: false},
+	// 	{lname: "E", stype: "cl", src: LnameiIP["E"], dst: []string{LnameiIP["D"], LnameiIP["F"]}, ptype: "link", launched: false},
+	// 	{lname: "F", stype: "cl", src: LnameiIP["F"], dst: []string{LnameiIP["E"]}, ptype: "link", launched: false},
+	// 	{lname: "G", stype: "cl", src: LnameiIP["G"], dst: []string{LnameiIP["F"]}, ptype: "link", launched: false},
+	// 	{lname: "H", stype: "cl", src: LnameiIP["H"], dst: []string{LnameiIP["F"]}, ptype: "link", launched: false},
+	// 	{lname: "I", stype: "cl", src: LnameiIP["I"], dst: []string{LnameiIP["G"], LnameiIP["H"]}, ptype: "link", launched: false},
+	// }
 
 	s := []*shoset.Shoset{}
 
@@ -1006,7 +1006,7 @@ func testForwardMessage(ctx context.Context, done context.CancelFunc) {
 	go func() {
 		defer wg.Done()
 		event_rc := s[len(s)-1].Wait("simpleMessage", map[string]string{}, 30, nil)
-		fmt.Println("Message received : ", event_rc)
+		fmt.Println("(Main) Message received : ", event_rc)
 	}()
 
 	// Send Message

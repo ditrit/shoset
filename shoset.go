@@ -134,8 +134,8 @@ func (s *Shoset) WaitForProtocols() {
 	fmt.Println("Waiting for all Protocol to complete on shoset", s.GetLogicalName())
 	//s.waitGroupProtocol.Wait()
 	err := s.LaunchedProtocol.WaitForEmpty()
-	if err!=nil{
-		s.Logger.Error().Msg("Failed to establish connection to some adresses (timeout) : "+ s.LaunchedProtocol.String())
+	if err != nil {
+		s.Logger.Error().Msg("Failed to establish connection to some adresses (timeout) : " + s.LaunchedProtocol.String())
 	}
 
 	fmt.Println("All Protocols done for ", s.GetLogicalName())
@@ -195,6 +195,9 @@ func NewShoset(logicalName, shosetType string) *Shoset {
 
 	// s.Queue["routingEvent"] = msg.NewQueue() // Not neeeded,
 	s.Handlers["routingEvent"] = new(RoutingEventHandler)
+
+	s.Queue["forwardAck"] = msg.NewQueue()
+	s.Handlers["forwardAck"] = new(forwardAcknownledgeHandler)
 
 	s.Queue["simpleMessage"] = msg.NewQueue()
 	s.Handlers["simpleMessage"] = new(SimpleMessageHandler)
@@ -373,9 +376,8 @@ func (s *Shoset) Protocol(bindAddress, remoteAddress, protocolType string) {
 }
 
 // Forward messages destined to another Lname to the next step on the Route
-// Launch as goroutine ?
 func (s *Shoset) forwardMessage(m msg.Message) {
-	masterTimeout := time.NewTimer(time.Duration(MASTER_TIMEOUT) * time.Second)
+	masterTimeout := time.NewTimer(time.Duration(MASTER_SEND_TIMEOUT) * time.Second)
 	for {
 		route, ok := s.RouteTable.Load(m.GetDestinationLname())
 		if ok {
@@ -386,6 +388,15 @@ func (s *Shoset) forwardMessage(m msg.Message) {
 			if err != nil {
 				s.Logger.Error().Msg("Couldn't send forwarded message : " + err.Error())
 			}
+
+			// Wait for Acknowledge
+			forwardAck := s.Wait("forwardAck", map[string]string{"UUID": m.GetUUID()}, TIMEOUT_ACK, nil)
+			if forwardAck == nil {
+				// Invalidate route and Reroute
+				// Ajouter un nombre d'éssais ?
+				continue
+			}
+			fmt.Println("(ForwardAck) Message received : ", forwardAck)
 
 			return
 
@@ -402,20 +413,22 @@ func (s *Shoset) forwardMessage(m msg.Message) {
 			// - Since the last addition to the Routetable
 			// - Since the bigenning of the wait
 
+			// Marche si seulement une seul goroutine attend de trouver une route (Subscription and Event, one to many)
+
 			for {
-				fmt.Println(s.GetLogicalName()," is wating for a route to", m.GetDestinationLname())
+				fmt.Println(s.GetLogicalName(), " is wating for a route to", m.GetDestinationLname())
 				select {
 				case Lname := <-s.NewRouteEvent:
 					fmt.Println(s.GetLogicalName(), "Received NewRouteEvent for ", Lname)
 					if Lname == m.GetDestinationLname() {
 						break retry
 					}
-				case <-time.After(time.Duration(NO_MESSAGE_TIMEOUT) * time.Second):
+				case <-time.After(time.Duration(NO_MESSAGE_ROUTE_TIMEOUT) * time.Second):
 					// When the message is sent when this is not receiving, it is not sent and never received
 					// Retry anyway after some time, maybe the Event was missed
-					
+
 					s.Logger.Debug().Msg("Timed out before correct route discovery. (No recent NewRouteEvent.) Retrying.")
-					break retry
+					return
 
 				case <-masterTimeout.C:
 					s.Logger.Error().Msg("Couldn't send forwarded message : " + "Timed put before correct route discovery. (Waited to long for the route.")
@@ -433,7 +446,7 @@ func (s *Shoset) SaveRoute(c *ShosetConn, routingEvt *msg.RoutingEvent) {
 	// Send NewRouteEvent
 	select {
 	case s.NewRouteEvent <- routingEvt.GetOrigin():
-		fmt.Println(c.GetLocalLogicalName()," is Sending NewRouteEvent for ", routingEvt.GetOrigin())
+		fmt.Println(c.GetLocalLogicalName(), " is Sending NewRouteEvent for ", routingEvt.GetOrigin())
 	default:
 		//fmt.Println("Nobody is waiting for NewRouteEvent")
 	}
