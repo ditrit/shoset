@@ -79,3 +79,8 @@ func (i *Iterator) Get() *Cell {
 func (i *Iterator) PrintQueue() {
 	i.queue.Print()
 }
+
+// PrintQueue : print la queue
+func (i *Iterator) GetQueue() *Queue {
+	return i.queue
+}

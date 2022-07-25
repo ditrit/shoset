@@ -23,11 +23,11 @@ func (smh *SimpleMessageHandler) HandleDoubleWay(c *ShosetConn, message msg.Mess
 	fmt.Println("((smh *SimpleMessageHandler) HandleDoubleWay) Lname : ", c.GetLocalLogicalName(), " message : ", message)
 	m := message.(msg.SimpleMessage)
 
-	go c.GetShoset().MessageEventBus.Publish("simpleMessage", true) // Sent data is not used
-
 	if notInQueue := c.GetShoset().Queue["simpleMessage"].Push(m, c.GetRemoteShosetType(), c.GetLocalAddress()); !notInQueue {
 		return errors.New("failed to handle simpleMessage")
 	}
+
+	c.GetShoset().MessageEventBus.Publish("simpleMessage", true) // Sent data is not used
 
 	return nil
 }
@@ -51,19 +51,20 @@ func (smh *SimpleMessageHandler) Wait(s *Shoset, replies *msg.Iterator, args map
 				return &message
 			}
 		} else {
-			break
+			replies.GetQueue().LockQueue()
+			break			
 		}
 	}
-
 	// Creation channel
 	chNewMessage := make(chan interface{})
 
 	// Inscription channel
 	s.MessageEventBus.Subscribe("simpleMessage", chNewMessage)
+	replies.GetQueue().UnlockQueue()
 	defer s.MessageEventBus.UnSubscribe("simpleMessage", chNewMessage)
 
 	for {
-		fmt.Println("Waiting for SimpleMessage !!!")
+		//fmt.Println("Waiting for SimpleMessage !!!")
 		select {
 		case <-timer.C:
 			s.Logger.Warn().Msg("No message received in Wait SimpleMessage (timeout)")

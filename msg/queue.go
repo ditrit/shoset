@@ -163,3 +163,11 @@ func (q *Queue) Print() {
 	}
 	fmt.Printf("nb cell : %d\n", q.qlist.Len())
 }
+
+func (q *Queue) LockQueue() {
+	q.m.Lock()
+}
+
+func (q *Queue) UnlockQueue() {
+	q.m.Unlock()
+}
