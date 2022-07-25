@@ -2,7 +2,6 @@ package shoset
 
 import (
 	"errors"
-	"fmt"
 	"time"
 
 	"github.com/ditrit/shoset/msg"
@@ -20,7 +19,7 @@ func (fah *forwardAcknownledgeHandler) Get(c *ShosetConn) (msg.Message, error) {
 
 // HandleDoubleWay handles message for a ShosetConn accordingly.
 func (fah *forwardAcknownledgeHandler) HandleDoubleWay(c *ShosetConn, message msg.Message) error {
-	fmt.Println("((fah *forwardAcknownledgeHandler) HandleDoubleWay) Lname : ", c.GetLocalLogicalName(), " message : ", message)
+	//fmt.Println("((fah *forwardAcknownledgeHandler) HandleDoubleWay) Lname : ", c.GetLocalLogicalName(), " message : ", message)
 
 	m := message.(msg.ForwardAck)
 	if notInQueue := c.GetShoset().Queue["forwardAck"].Push(m, c.GetRemoteShosetType(), c.GetLocalAddress()); !notInQueue {

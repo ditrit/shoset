@@ -309,7 +309,7 @@ func (c *ShosetConn) handleMessageType(messageType string) error {
 		// Send message
 		err := c.GetWriter().SendMessage(forwardAck)
 
-		fmt.Println("(ForwardAck) Message sent : ", forwardAck)
+		fmt.Println("(ForwardAck) Message sent to ",c.GetRemoteLogicalName() ,": ", forwardAck)
 
 		if err != nil {
 			c.Logger.Error().Msg("Couldn't send FowarkAck message : " + err.Error())

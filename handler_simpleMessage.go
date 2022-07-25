@@ -22,6 +22,9 @@ func (smh *SimpleMessageHandler) Get(c *ShosetConn) (msg.Message, error) {
 func (smh *SimpleMessageHandler) HandleDoubleWay(c *ShosetConn, message msg.Message) error {
 	fmt.Println("((smh *SimpleMessageHandler) HandleDoubleWay) Lname : ", c.GetLocalLogicalName(), " message : ", message)
 	m := message.(msg.SimpleMessage)
+
+	go c.GetShoset().MessageEventBus.Publish("simpleMessage", true) // Sent data is not used
+
 	if notInQueue := c.GetShoset().Queue["simpleMessage"].Push(m, c.GetRemoteShosetType(), c.GetLocalAddress()); !notInQueue {
 		return errors.New("failed to handle simpleMessage")
 	}
@@ -38,26 +41,44 @@ func (smh *SimpleMessageHandler) Send(s *Shoset, m msg.Message) {
 func (smh *SimpleMessageHandler) Wait(s *Shoset, replies *msg.Iterator, args map[string]string, timeout int) *msg.Message {
 	timer := time.NewTimer(time.Duration(timeout) * time.Second)
 
+	// Check every message in the queue before waiting for a new message
+	//Check message presence in two steps to avoid accessing attributs of <nil>
 	for {
+		cell := replies.Get()
+		if cell != nil {
+			message := cell.GetMessage()
+			if message != nil {
+				return &message
+			}
+		} else {
+			break
+		}
+	}
+
+	// Creation channel
+	chNewMessage := make(chan interface{})
+
+	// Inscription channel
+	s.MessageEventBus.Subscribe("simpleMessage", chNewMessage)
+	defer s.MessageEventBus.UnSubscribe("simpleMessage", chNewMessage)
+
+	for {
+		fmt.Println("Waiting for SimpleMessage !!!")
 		select {
 		case <-timer.C:
 			s.Logger.Warn().Msg("No message received in Wait SimpleMessage (timeout)")
 			return nil
-		default:
+		case <-chNewMessage:
 			//Check message presence in two steps to avoid accessing attributs of <nil>
 			cell := replies.Get()
 			if cell == nil {
-				time.Sleep(time.Duration(10) * time.Millisecond)
-				continue
+				break
 			}
 			message := cell.GetMessage()
 			if message == nil {
-				time.Sleep(time.Duration(10) * time.Millisecond)
-				continue
+				break
 			}
 			return &message
-
 		}
-
 	}
 }

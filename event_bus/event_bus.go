@@ -30,7 +30,7 @@ func (eb *EventBus) Publish(topic string, data interface{}) {
 	eb.m.Lock()
 	defer eb.m.Unlock()
 
-	fmt.Println("Data : ", data, "topic : ", topic)
+	//fmt.Println("Data : ", data, "topic : ", topic)
 	if chans, found := eb.subscribers[topic]; found {
 		// this is done because the slices refer to same array even though they are passed by value
 		// thus we are creating a new slice with our elements thus preserve locking correctly.
@@ -43,6 +43,7 @@ func (eb *EventBus) Publish(topic string, data interface{}) {
 				defer func() {
 					recover() // Avoids panicking when the channel was closed (by unsubscribing) before the send was completed
 				}()
+				fmt.Println("Publishing to topic :", topic)
 				Channel <- data
 				// Add timeout
 			}(data, ch)
@@ -55,6 +56,9 @@ func (eb *EventBus) Publish(topic string, data interface{}) {
 func (eb *EventBus) Subscribe(topic string, ch DataChannel) {
 	eb.m.Lock()
 	defer eb.m.Unlock()
+
+	fmt.Println("Subscribing to topic : ", topic)
+
 	if prev, found := eb.subscribers[topic]; found {
 		eb.subscribers[topic] = append(prev, ch)
 	} else {
@@ -70,6 +74,9 @@ func (eb *EventBus) UnSubscribe(topic string, ch DataChannel) error {
 	if prev, found := eb.subscribers[topic]; found {
 		for i, a := range eb.subscribers[topic] {
 			if a == ch {
+
+				fmt.Println("UnSubscribing from topic : ", topic)
+
 				close(ch)
 				last := len(prev) - 1
 				prev[i], prev[last] = prev[last], prev[i]

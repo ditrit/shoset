@@ -995,7 +995,7 @@ func testForwardMessage(ctx context.Context, done context.CancelFunc) {
 
 	WaitForManyShosets(s)
 
-	printManyShosets(s)
+	//printManyShosets(s)
 
 	var wg sync.WaitGroup
 
@@ -1005,12 +1005,15 @@ func testForwardMessage(ctx context.Context, done context.CancelFunc) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
+		time.Sleep(1 * time.Second)
 		event_rc := s[len(s)-1].Wait("simpleMessage", map[string]string{}, 30, nil)
 		fmt.Println("(Main) Message received : ", event_rc)
 	}()
 
 	// Send Message
+	//time.Sleep(1 * time.Second)
 	message := msg.NewSimpleMessage(destination, "test_payload")
+	message.Timeout=10000
 	fmt.Println("Message sent : ", message)
 	s[0].Send(message)
 

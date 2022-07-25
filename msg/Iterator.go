@@ -16,6 +16,10 @@ type Iterator struct {
 func NewIterator(queue *Queue) *Iterator {
 	i := new(Iterator)
 	i.Init(queue)
+
+	i.queue.m.Lock() //
+	defer i.queue.m.Unlock() ///
+
 	queue.iters[i] = true
 	return i
 }

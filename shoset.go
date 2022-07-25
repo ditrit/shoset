@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/ditrit/shoset/concurentData"
+	eventBus "github.com/ditrit/shoset/event_bus"
 	"github.com/ditrit/shoset/msg"
 	uuid "github.com/kjk/betterguid"
 	"github.com/rs/zerolog"
@@ -38,7 +39,9 @@ type Shoset struct {
 	ConnsSingleConn  *sync.Map   // map[ipAddress]*ShosetConn ShosetConns waiting in singleWay to be handled for TLS double way
 	RouteTable       *sync.Map   // map[lName]*Route Route to another logical name
 
-	NewRouteEvent chan string // Notify of the discovery of a new route
+	//NewRouteEvent   chan string // Notify of the discovery of a new route
+	RoutingEventBus eventBus.EventBus // When a route to a Lname is discovered, sends an event to everyone waiting for a route to this Lname
+	// topic : discovveredLname
 
 	bindAddress string       // address on which is bound the Shoset
 	logicalName string       // logical name of the Shoset
@@ -52,6 +55,9 @@ type Shoset struct {
 
 	Queue    map[string]*msg.Queue      // map for message queueing
 	Handlers map[string]MessageHandlers // map for message handling
+
+	MessageEventBus eventBus.EventBus // Sends an event to everyone waiting for a message of the type received
+	// topic : MessageType
 
 	Done chan bool // goroutines synchronization
 
@@ -156,7 +162,8 @@ func NewShoset(logicalName, shosetType string) *Shoset {
 		ConnsSingleConn:  new(sync.Map),
 		RouteTable:       new(sync.Map),
 
-		NewRouteEvent: make(chan string),
+		//NewRouteEvent: make(chan string),
+		RoutingEventBus: eventBus.NewEventBus(),
 
 		logicalName: logicalName,
 		shosetType:  shosetType,
@@ -167,8 +174,9 @@ func NewShoset(logicalName, shosetType string) *Shoset {
 		tlsConfigSingleWay: &tls.Config{InsecureSkipVerify: true},
 		tlsConfigDoubleWay: nil,
 
-		Queue:    make(map[string]*msg.Queue),
-		Handlers: make(map[string]MessageHandlers),
+		Queue:           make(map[string]*msg.Queue),
+		Handlers:        make(map[string]MessageHandlers),
+		MessageEventBus: eventBus.NewEventBus(),
 
 		LaunchedProtocol: concurentData.NewConcurentSlice(),
 	}
@@ -384,7 +392,7 @@ func (s *Shoset) forwardMessage(m msg.Message) {
 	for {
 		route, ok := s.RouteTable.Load(m.GetDestinationLname())
 		if ok { // There is a known Route to the destination Lname
-			fmt.Println("((SimpleMessageHandler) Send) ", s.GetLogicalName(), " is sending a message to ", m.GetDestinationLname(), "through ", route.(Route).neighbour, ".")
+			//fmt.Println("((SimpleMessageHandler) Send) ", s.GetLogicalName(), " is sending a message to ", m.GetDestinationLname(), "through ", route.(Route).neighbour, ".")
 
 			// Forward message
 			err := route.(Route).GetNeighborConn().GetWriter().SendMessage(m)
@@ -395,7 +403,7 @@ func (s *Shoset) forwardMessage(m msg.Message) {
 			// Wait for Acknowledge
 			forwardAck := s.Wait("forwardAck", map[string]string{"UUID": m.GetUUID()}, TIMEOUT_ACK, nil)
 			if forwardAck == nil {
-				s.Logger.Warn().Msg("Forward message : Failed to forward message destined to " + m.GetDestinationLname() + "Forward Acknowledge not received. (retrying)")
+				s.Logger.Warn().Msg("Forward message : Failed to forward message destined to " + m.GetDestinationLname() + " Forward Acknowledge not received. (retrying)")
 
 				// Invalidate route
 				s.RouteTable.Delete(m.GetDestinationLname())
@@ -422,34 +430,50 @@ func (s *Shoset) forwardMessage(m msg.Message) {
 			routing := msg.NewRoutingEvent(s.GetLogicalName(), "")
 			s.Send(routing)
 
-		retry: // Puts a label on the loop to break out of it from inside the select
+			//retry: // Puts a label on the loop to break out of it from inside the select
 			// Wait for a route to the destination to be dicovered
 			// Timeout :
 			// - Since the last addition to the Routetable
 			// - Since the bigenning of the wait
 
-			// Marche si seulement une seul goroutine attend de trouver une route (Subscription and Event, one to many)
+			//for {
 
-			for {
-				fmt.Println(s.GetLogicalName(), " is wating for a route to", m.GetDestinationLname())
-				select {
-				case Lname := <-s.NewRouteEvent:
-					fmt.Println(s.GetLogicalName(), "Received NewRouteEvent for ", Lname)
-					if Lname == m.GetDestinationLname() {
-						break retry
-					}
-				case <-time.After(time.Duration(NO_MESSAGE_ROUTE_TIMEOUT) * time.Second):
-					// When the message is sent when this is not receiving, it is not sent and never received
-					// Retry anyway after some time, maybe the Event was missed
+			// Creation channel
+			chRoute := make(chan interface{})
 
-					s.Logger.Debug().Msg("Timed out before correct route discovery. (no recent NewRouteEvent) (retrying)")
-					return
+			// defer un Unsub
 
-				case <-masterTimeout.C:
-					s.Logger.Error().Msg("Couldn't send forwarded message : " + "Timed put before correct route discovery. (Waited to long for the route.")
-					return
-				}
+			// Inscription channel
+			s.RoutingEventBus.Subscribe(m.GetDestinationLname(), chRoute)
+
+			defer s.RoutingEventBus.UnSubscribe(m.GetDestinationLname(), chRoute) // ?
+
+			fmt.Println(s.GetLogicalName(), " is wating for a route to ", m.GetDestinationLname())
+
+			// Possibilité de trouver la bonne route avant d'être abonné ? (Refaire le load avant d'attendre ?)
+			_, ok := s.RouteTable.Load(m.GetDestinationLname())
+			if ok {
+				continue
 			}
+			select {
+			case <-chRoute:
+				fmt.Println(s.GetLogicalName(), "Received NewRouteEvent for ", m.GetDestinationLname())
+				break
+				// if Lname == m.GetDestinationLname() {
+				// 	break retry
+				// }
+			// case <-time.After(time.Duration(NO_MESSAGE_ROUTE_TIMEOUT) * time.Second):
+			// 	// When the message is sent when this is not receiving, it is not sent and never received
+			// 	// Retry anyway after some time, maybe the Event was missed
+
+			// 	s.Logger.Debug().Msg("Timed out before correct route discovery. (no recent NewRouteEvent) (retrying)")
+			// 	return
+
+			case <-masterTimeout.C:
+				s.Logger.Error().Msg("Couldn't send forwarded message : " + "Timed out before correct route discovery. (Waited to long for the route.")
+				return
+			}
+			//}
 			fmt.Println("Retrying forward")
 		}
 	}
@@ -459,12 +483,14 @@ func (s *Shoset) SaveRoute(c *ShosetConn, routingEvt *msg.RoutingEvent) {
 	s.RouteTable.Store(routingEvt.GetOrigin(), NewRoute(c.GetRemoteLogicalName(), c, routingEvt.GetNbSteps(), routingEvt.GetUUID(), routingEvt.Timestamp))
 
 	// Send NewRouteEvent
-	select {
-	case s.NewRouteEvent <- routingEvt.GetOrigin():
-		fmt.Println(c.GetLocalLogicalName(), " is Sending NewRouteEvent for ", routingEvt.GetOrigin())
-	default:
-		//fmt.Println("Nobody is waiting for NewRouteEvent")
-	}
+	s.RoutingEventBus.Publish(routingEvt.GetOrigin(), true) // Sent data is not used
+
+	// select {
+	// case s.NewRouteEvent <- routingEvt.GetOrigin():
+	// 	fmt.Println(c.GetLocalLogicalName(), " is Sending NewRouteEvent for ", routingEvt.GetOrigin())
+	// default:
+	// 	//fmt.Println("Nobody is waiting for NewRouteEvent")
+	// }
 
 	// Rebroadcast Routing event
 	routingEvt.SetNbSteps(routingEvt.GetNbSteps() + 1)
