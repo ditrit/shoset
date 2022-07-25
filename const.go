@@ -3,7 +3,7 @@ package shoset
 // Supported message type
 var MESSAGE_TYPES = []string{"cfgjoin", "cfglink", "cfgbye", "pkievt_TLSdoubleWay", "routingEvent", "evt", "cmd", "simpleMessage", "forwardAck"} //added "routingEvent", "evt", "cmd", "simpleMessage", "forwardAck"
 
-var FORWARDABLE_TYPES = []string{"evt", "simpleMessage"}
+var FORWARDABLE_TYPES = []string{"simpleMessage"}
 
 // empty string
 const (

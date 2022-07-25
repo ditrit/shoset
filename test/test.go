@@ -1013,7 +1013,7 @@ func testForwardMessage(ctx context.Context, done context.CancelFunc) {
 	// Send Message
 	//time.Sleep(1 * time.Second)
 	message := msg.NewSimpleMessage(destination, "test_payload")
-	message.Timeout=10000
+	message.Timeout = 10000
 	fmt.Println("Message sent : ", message)
 	s[0].Send(message)
 
@@ -1042,24 +1042,24 @@ func testSendEvent() {
 	var wg sync.WaitGroup
 
 	// Receive Message
-	for i := 0; i < 1; i++ {
+	for i := 0; i < 10; i++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			event_rc := s[1].Wait("evt", map[string]string{"topic": "test_topic", "event": "test_event"}, 1, nil)
-			fmt.Println("Message received : ", event_rc)
+			event_rc := s[1].Wait("evt", map[string]string{"topic": "test_topic", "event": "test_event"}, 1, msg.NewIterator(s[1].Queue["evt"]))
+			fmt.Println("(main) Message received : ", event_rc)
 		}()
 	}
 
 	// Send Message
 	go func() {
-		//for {
-		message := msg.NewEventClassic("test_topic", "test_event", "test_payload")
-		fmt.Println("Message sent : ", message)
-		s[0].Send(message)
-		// Timing minimal pour que la gestion de la réception puisse s'éxécuter
-		time.Sleep(10 * time.Millisecond)
-		//}
+		for {
+			message := msg.NewEventClassic("test_topic", "test_event", "test_payload")
+			fmt.Println("Message sent : ", message)
+			s[0].Send(message)
+			// Timing minimal pour que la gestion de la réception puisse s'éxécuter
+			time.Sleep(10 * time.Millisecond)
+		}
 	}()
 
 	wg.Wait()
@@ -1090,11 +1090,11 @@ func testForwardMessageMultiProcess(args []string) {
 	// Receive Message
 	if args[6] == "1" { //args[5] receiver
 		fmt.Println("Receiver : ", cl.GetLogicalName())
-		for {
-			event_rc := cl.Wait("simpleMessage", map[string]string{}, 10, msg.NewIterator(cl.Queue["simpleMessage"]))
-			fmt.Println("Message received : ", event_rc)
-			time.Sleep(10 * time.Millisecond)
-		}
+		//for {
+		event_rc := cl.Wait("simpleMessage", map[string]string{}, 10, msg.NewIterator(cl.Queue["simpleMessage"]))
+		fmt.Println("(main) Message received : ", event_rc)
+		time.Sleep(10 * time.Millisecond)
+		//}
 	}
 
 	// Send Message
@@ -1104,8 +1104,6 @@ func testForwardMessageMultiProcess(args []string) {
 		message := msg.NewSimpleMessage(args[5], "test_payload "+cl.GetLogicalName())
 		fmt.Println("Message sent : ", message)
 		cl.Send(message)
-		//cl.Send(message)
-		//cl.Send(message)
 	}
 
 	fmt.Println("DONE !!")
@@ -1151,8 +1149,8 @@ func main() {
 		// testPresentationENIB(ctx, done)
 		// testJoin3(ctx, done)
 		//testRouteTable(ctx, done)
-		testForwardMessage(ctx, done)
-		//testSendEvent()
+		//testForwardMessage(ctx, done)
+		testSendEvent()
 	} else if arg == "5" {
 		testForwardMessageMultiProcess((os.Args)[2:])
 	}

@@ -23,6 +23,9 @@ func (eh *EventHandler) HandleDoubleWay(c *ShosetConn, message msg.Message) erro
 	if notInQueue := c.GetShoset().Queue["evt"].Push(evt, c.GetRemoteShosetType(), c.GetLocalAddress()); notInQueue {
 		eh.Send(c.GetShoset(), evt)
 	}
+
+	c.GetShoset().MessageEventBus.Publish("evt", true) // Sent data is not use
+
 	return nil
 }
 
@@ -49,22 +52,42 @@ func (eh *EventHandler) Wait(s *Shoset, replies *msg.Iterator, args map[string]s
 		return nil
 	}
 
+	// Check every message in the queue before waiting for a new message
+	//Check message presence in two steps to avoid accessing attributs of <nil>
+	for {
+		cell := replies.Get()
+		if cell != nil {
+			message := cell.GetMessage()
+			if message != nil {
+				return &message
+			}
+		} else {
+			replies.GetQueue().LockQueue()
+			break			
+		}
+	}
+	// Creation channel
+	chNewMessage := make(chan interface{})
+
+	// Inscription channel
+	s.MessageEventBus.Subscribe("evt", chNewMessage)
+	replies.GetQueue().UnlockQueue()
+	defer s.MessageEventBus.UnSubscribe("evt", chNewMessage)
+
 	for {
 		select {
 		case <-timer.C:
 			s.Logger.Warn().Msg("No message received in Wait evt (timeout)")
 			return nil
-		default:
+		case <-chNewMessage:
 			//Check message presence in two steps to avoid accessing attributs of <nil>
 			cell := replies.Get()
 			if cell == nil {
-				time.Sleep(time.Duration(10) * time.Millisecond)
-				continue
+				break
 			}
 			message := cell.GetMessage()
 			if message == nil {
-				time.Sleep(time.Duration(10) * time.Millisecond)
-				continue
+				break
 			}
 			event := message.(msg.Event)
 			if event.GetTopic() == topicName && (args["event"] == VOID || event.GetEvent() == args["event"]) {

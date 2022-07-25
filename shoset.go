@@ -321,7 +321,9 @@ func (s *Shoset) handleBind() {
 			doubleWayConn, _ := NewShosetConn(s, acceptedConn.RemoteAddr().String(), IN)
 			doubleWayConn.UpdateConn(tlsConnDoubleWay)
 
-			_, err = doubleWayConn.GetConn().Write([]byte(TLS_DOUBLE_WAY_TEST_WRITE + "\n"))
+			fmt.Println("(handleBind) doubleWayConn.GetConn()",doubleWayConn.GetConn())
+
+			_, err = doubleWayConn.GetConn().Write([]byte(TLS_DOUBLE_WAY_TEST_WRITE + "\n")) // Crash
 			if err == nil {
 				go doubleWayConn.RunInConnDouble()
 			} else {
