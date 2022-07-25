@@ -58,7 +58,7 @@ func (clh *ConfigLinkHandler) HandleDoubleWay(c *ShosetConn, message msg.Message
 			return true
 		})
 
-		c.SetIsValid(true) // Send statusChange Event change status
+		//c.SetIsValid(true) // Send statusChange Event change status
 
 	case ACKNOWLEDGE_LINK:
 		// incoming acknowledge_join, join request validated.
@@ -69,7 +69,7 @@ func (clh *ConfigLinkHandler) HandleDoubleWay(c *ShosetConn, message msg.Message
 		// Placement du store ?
 		//c.Store(PROTOCOL_LINK, c.GetShoset().GetLogicalName(), c.GetRemoteAddress(), c.GetShoset().GetShosetType())
 
-		c.SetIsValid(true) // Send statusChange Event change status
+		//c.SetIsValid(true) // Send statusChange Event change status
 		//c.GetShoset().waitGroupProtocol.Done()
 		c.GetShoset().LaunchedProtocol.DeleteFromConcurentSlice(c.GetRemoteAddress())
 

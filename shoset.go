@@ -378,9 +378,12 @@ func (s *Shoset) Protocol(bindAddress, remoteAddress, protocolType string) {
 // Forward messages destined to another Lname to the next step on the Route
 func (s *Shoset) forwardMessage(m msg.Message) {
 	masterTimeout := time.NewTimer(time.Duration(MASTER_SEND_TIMEOUT) * time.Second)
+
+	tryNumber := 0
+
 	for {
 		route, ok := s.RouteTable.Load(m.GetDestinationLname())
-		if ok {
+		if ok { // There is a known Route to the destination Lname
 			fmt.Println("((SimpleMessageHandler) Send) ", s.GetLogicalName(), " is sending a message to ", m.GetDestinationLname(), "through ", route.(Route).neighbour, ".")
 
 			// Forward message
@@ -392,16 +395,28 @@ func (s *Shoset) forwardMessage(m msg.Message) {
 			// Wait for Acknowledge
 			forwardAck := s.Wait("forwardAck", map[string]string{"UUID": m.GetUUID()}, TIMEOUT_ACK, nil)
 			if forwardAck == nil {
-				// Invalidate route and Reroute
-				// Ajouter un nombre d'éssais ?
-				continue
+				s.Logger.Warn().Msg("Forward message : Failed to forward message destined to " + m.GetDestinationLname() + "Forward Acknowledge not received. (retrying)")
+
+				// Invalidate route
+				s.RouteTable.Delete(m.GetDestinationLname())
+				// Reroute network
+				routing := msg.NewRoutingEvent(s.GetLogicalName(), "")
+				s.Send(routing)
+
+				tryNumber++
+				if tryNumber > MAX_FORWARD_TRY {
+					return
+				} else {
+					continue
+				}
+
 			}
 			fmt.Println("(ForwardAck) Message received : ", forwardAck)
 
 			return
 
-		} else {
-			s.Logger.Warn().Msg("Forward message : Failed to forward message destined to " + m.GetDestinationLname() + " No Route.")
+		} else { // There is no known Route to the destination Lname -> Wait for one to be available
+			s.Logger.Warn().Msg("Forward message : Failed to forward message destined to " + m.GetDestinationLname() + ". (no route) (waiting for correct route")
 
 			// Reroute network
 			routing := msg.NewRoutingEvent(s.GetLogicalName(), "")
@@ -427,7 +442,7 @@ func (s *Shoset) forwardMessage(m msg.Message) {
 					// When the message is sent when this is not receiving, it is not sent and never received
 					// Retry anyway after some time, maybe the Event was missed
 
-					s.Logger.Debug().Msg("Timed out before correct route discovery. (No recent NewRouteEvent.) Retrying.")
+					s.Logger.Debug().Msg("Timed out before correct route discovery. (no recent NewRouteEvent) (retrying)")
 					return
 
 				case <-masterTimeout.C:

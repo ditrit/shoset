@@ -189,7 +189,7 @@ func (c *ShosetConn) HandleConfig(cfg *msg.ConfigProtocol) {
 	for {
 		protocolConn, err := tls.Dial(CONNECTION_TYPE, c.GetRemoteAddress(), c.GetShoset().GetTlsConfigDoubleWay())
 		if err != nil {
-			time.Sleep(time.Millisecond * time.Duration(10))
+			time.Sleep(time.Millisecond * time.Duration(100)) //10
 			c.Logger.Error().Msg("HandleConfig err: " + err.Error())
 			continue
 		}

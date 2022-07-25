@@ -51,7 +51,7 @@ func (cjh *ConfigJoinHandler) HandleDoubleWay(c *ShosetConn, message msg.Message
 			return true
 		})
 
-		c.SetIsValid(true) // Send statusChange Event change status
+		//c.SetIsValid(true) // Send statusChange Event change status
 		//c.GetShoset().waitGroupProtocol.Done()
 
 	case ACKNOWLEDGE_JOIN:
@@ -62,7 +62,7 @@ func (cjh *ConfigJoinHandler) HandleDoubleWay(c *ShosetConn, message msg.Message
 
 		c.Store(PROTOCOL_JOIN, c.GetShoset().GetLogicalName(), c.GetRemoteAddress(), c.GetShoset().GetShosetType())
 
-		c.SetIsValid(true) // Send statusChange Event change status
+		//c.SetIsValid(true) // Send statusChange Event change status
 		//c.GetShoset().waitGroupProtocol.Done()
 		c.GetShoset().LaunchedProtocol.DeleteFromConcurentSlice(c.GetRemoteAddress())
 

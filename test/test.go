@@ -1071,36 +1071,41 @@ func testForwardMessageMultiProcess(args []string) {
 	} else {
 		cl.Protocol(args[2], args[3], "link") // args[2] : IP , args[3] : remote IP for connexion
 	}
-	time.Sleep(100 * time.Millisecond)
+	//time.Sleep(100 * time.Millisecond)
 
 	cl.WaitForProtocols()
 
 	// fmt.Println("Shoset 1",cl.GetLogicalName()," : ",cl)
 
 	// Route shoset
-	routing := msg.NewRoutingEvent(cl.GetLogicalName(), "")
-	cl.Send(routing)
-	time.Sleep(1 * time.Second)
+	// routing := msg.NewRoutingEvent(cl.GetLogicalName(), "")
+	// cl.Send(routing)
+	// time.Sleep(1 * time.Second)
 
 	fmt.Println("Shoset 2", cl.GetLogicalName(), " : ", cl)
 
 	// Receive Message
 	if args[6] == "1" { //args[5] receiver
 		fmt.Println("Receiver : ", cl.GetLogicalName())
-		event_rc := cl.Wait("simpleMessage", map[string]string{}, 5, nil)
-		fmt.Println("Message received : ", event_rc)
+		for {
+			event_rc := cl.Wait("simpleMessage", map[string]string{}, 10, msg.NewIterator(cl.Queue["simpleMessage"]))
+			fmt.Println("Message received : ", event_rc)
+			time.Sleep(10 * time.Millisecond)
+		}
 	}
 
 	// Send Message
 	if args[4] == "1" { //args[4] sender
 		//time.Sleep(1 * time.Second)
 		fmt.Println("Sender : ", cl.GetLogicalName())
-		message := msg.NewSimpleMessage(args[5], "test_payload")
+		message := msg.NewSimpleMessage(args[5], "test_payload "+cl.GetLogicalName())
 		fmt.Println("Message sent : ", message)
 		cl.Send(message)
 		//cl.Send(message)
 		//cl.Send(message)
 	}
+
+	fmt.Println("DONE !!")
 
 	time.Sleep(5 * time.Second)
 }

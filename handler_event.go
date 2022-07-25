@@ -30,7 +30,7 @@ func (eh *EventHandler) HandleDoubleWay(c *ShosetConn, message msg.Message) erro
 func (eh *EventHandler) Send(s *Shoset, evt msg.Message) {
 	s.ConnsByLname.Iterate(
 		func(key string, conn interface{}) {
-			conn.(*ShosetConn).WaitForValid() //
+			//conn.(*ShosetConn).WaitForValid() //
 			err := conn.(*ShosetConn).GetWriter().SendMessage(evt)
 			if err != nil {
 				log.Warn().Msg("couldn't send evt : " + err.Error())

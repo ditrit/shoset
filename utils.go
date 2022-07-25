@@ -130,7 +130,7 @@ func GetPrivateKey(filePath string) (*rsa.PrivateKey, error) {
 func GetIP(address string) (string, error) {
 	parts := strings.Split(address, ":")
 	if len(parts) != 2 {
-		return VOID, errors.New("address '" + address + "should respect the format hots_name_or_ip:port")
+		return VOID, errors.New("address '" + address + " should respect the format hots_name_or_ip:port")
 	}
 	hostIps, err := net.LookupHost(parts[0])
 	if err != nil || len(hostIps) == 0 {

@@ -16,6 +16,14 @@ func Test_concurentSlice(t *testing.T) {
 
 	number := 10
 
+	go func() {
+		for {
+			cSlice.WaitForChange()
+		}
+	}()
+	
+	time.Sleep(10*time.Millisecond)
+
 	for i := 0; i < number; i++ {
 		cSlice.AppendToConcurentSlice("Test " + fmt.Sprint(i))
 	}
@@ -78,4 +86,6 @@ func Test_concurentSlice(t *testing.T) {
 	if err==nil{
 		t.Errorf("Timeout error failed.")
 	}
+
+	//time.Sleep(1*time.Second)
 }
