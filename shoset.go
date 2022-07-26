@@ -181,7 +181,7 @@ func NewShoset(logicalName, shosetType string) *Shoset {
 		LaunchedProtocol: concurentData.NewConcurentSlice(),
 	}
 
-	s.ConnsByLname.SetConfig(NewConfig())
+	s.ConnsByLname.SetConfig(NewConfig(s.logicalName)) // Add baseDir parameter
 
 	s.Queue["cfglink"] = msg.NewQueue()
 	s.Handlers["cfglink"] = new(ConfigLinkHandler)
@@ -321,7 +321,7 @@ func (s *Shoset) handleBind() {
 			doubleWayConn, _ := NewShosetConn(s, acceptedConn.RemoteAddr().String(), IN)
 			doubleWayConn.UpdateConn(tlsConnDoubleWay)
 
-			fmt.Println("(handleBind) doubleWayConn.GetConn()",doubleWayConn.GetConn())
+			//fmt.Println("(handleBind) doubleWayConn.GetConn() : ",doubleWayConn.GetConn())
 
 			_, err = doubleWayConn.GetConn().Write([]byte(TLS_DOUBLE_WAY_TEST_WRITE + "\n")) // Crash
 			if err == nil {
@@ -350,12 +350,14 @@ func (s *Shoset) Protocol(bindAddress, remoteAddress, protocolType string) {
 	if !s.IsCertified(s.ConnsByLname.GetConfig().baseDir + formattedIpAddress) {
 		s.Logger.Debug().Msg("ask certification")
 
+		// Ajouter le Lname au path du fichier de config
 		_, err = s.ConnsByLname.GetConfig().InitFolders(formattedIpAddress)
 		if err != nil {
 			s.Logger.Error().Msg("couldn't init folder: " + err.Error())
 			return
 		}
 
+		// Ajouter le Lname au path du fichier de config
 		s.ConnsByLname.GetConfig().SetFileName(formattedIpAddress)
 
 		err = s.Certify(bindAddress, remoteAddress)
@@ -381,7 +383,7 @@ func (s *Shoset) Protocol(bindAddress, remoteAddress, protocolType string) {
 	cfg := msg.NewConfigProtocol(s.GetBindAddress(), s.GetLogicalName(), s.GetShosetType(), protocolType)
 
 	//s.waitGroupProtocol.Add(1)
-	s.LaunchedProtocol.AppendToConcurentSlice(protocolConn.GetRemoteAddress()) // Addremote adress to the list of initiated but not ready connexion
+	s.LaunchedProtocol.AppendToConcurentSlice(protocolConn.GetRemoteAddress()) // Adds remote adress to the list of initiated but not ready connexion
 	go protocolConn.HandleConfig(cfg)
 }
 

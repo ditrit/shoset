@@ -2,7 +2,7 @@
 
 alias shosetRun='go run -race test/*.go 5'
 
-#sleep 3
+sleep 4
 
 # lname pki IP remote IP sender destination receiver
 

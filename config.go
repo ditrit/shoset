@@ -18,14 +18,14 @@ type Config struct {
 
 // NewConfig returns a *Config object.
 // Initialize home directory and viper.
-func NewConfig() *Config {
+func NewConfig(name string) *Config {
 	homeDir := "."
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		log.Error().Msg("couldn't home dir folder: " + err.Error())
 	}
 	cfg := &Config{
-		baseDir: homeDir + "/.shoset/",
+		baseDir: homeDir + "/.shoset/"+ name + "/",
 		viper:   viper.New(),
 	}
 	if err := mkdir(cfg.baseDir); err != nil {
@@ -36,8 +36,10 @@ func NewConfig() *Config {
 
 // GetBaseDir returns baseDir from config, baseDir corresponds to homeDir + shoset repertory.
 func (cfg *Config) GetBaseDir() string { return cfg.baseDir }
+
 // GetFileName returns fileName from config.
 func (cfg *Config) GetFileName() string { return cfg.fileName }
+
 // SetFileName sets fileName for a config.
 func (cfg *Config) SetFileName(fileName string) { cfg.fileName = fileName }
 

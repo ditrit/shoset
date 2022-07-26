@@ -31,7 +31,7 @@ func fileExists(filepath string) bool {
 // mkdir creates a repertory if it doesn't already exist
 func mkdir(path string) error {
 	if !fileExists(path) {
-		return os.Mkdir(path, 0700)
+		return os.MkdirAll(path, 0700)
 	}
 	return nil
 }
