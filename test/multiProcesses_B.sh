@@ -1,12 +1,10 @@
 #!/bin/sh
 
-alias shosetRun='go run -race test/*.go 5'
+#alias shosetRun='go run -race test/*.go 5'
 
-#sleep 1
+sleep 1
 
-# lname pki IP remote IP sender destination receiver
-
-shosetRun B 0 localhost:8002 localhost:8001 0 rien 0 &
+./shoset_build 5 B 0 0 rien &
 #P2=$!
 
 wait

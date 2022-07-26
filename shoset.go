@@ -474,7 +474,7 @@ func (s *Shoset) forwardMessage(m msg.Message) {
 			// 	return
 
 			case <-masterTimeout.C:
-				s.Logger.Error().Msg("Couldn't send forwarded message : " + "Timed out before correct route discovery. (Waited to long for the route.")
+				s.Logger.Error().Msg("Couldn't send forwarded message : " + "Timed out before correct route discovery. (Waited to long for the route)")
 				return
 			}
 			//}

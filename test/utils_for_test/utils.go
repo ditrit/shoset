@@ -8,10 +8,6 @@ import (
 	"github.com/ditrit/shoset/msg"
 )
 
-func TEST() {
-	fmt.Println("TEST")
-}
-
 func CreateManyShosets(tt []*ShosetCreation, s []*shoset.Shoset, wait bool) []*shoset.Shoset {
 	for i, t := range tt {
 		if !t.Launched {
@@ -32,6 +28,24 @@ func CreateManyShosets(tt []*ShosetCreation, s []*shoset.Shoset, wait bool) []*s
 	}
 
 	return s
+}
+
+func CreateShosetFromTopology(Lname string, tt []*ShosetCreation) *shoset.Shoset {
+	for _, t := range tt {
+		if !t.Launched && t.Lname == Lname {
+			s := shoset.NewShoset(t.Lname, t.Stype)
+			if t.Ptype == "pki" {
+				s.InitPKI(t.Src)
+			} else {
+				for _, a := range t.Dst {
+					s.Protocol(t.Src, a, t.Ptype)
+				}
+			}
+			t.Launched = true
+			return s
+		}
+	}
+	return nil
 }
 
 func PrintManyShosets(s []*shoset.Shoset) {

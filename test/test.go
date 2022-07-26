@@ -216,14 +216,13 @@ func testSendEvent() {
 			fmt.Println("Message sent : ", message)
 			s[0].Send(message)
 			// Timing minimal pour que la gestion de la réception puisse s'éxécuter
-			time.Sleep(10 * time.Millisecond)
+			time.Sleep(1 * time.Second)
 		}
 	}()
 
 	wg.Wait()
 }
 
-// To use with multiProcesses.sh
 func testForwardMessageMultiProcess(args []string) {
 	fmt.Println("args : ", args)
 	cl := shoset.NewShoset(args[0], "cl") //args[0] : lname
@@ -257,6 +256,47 @@ func testForwardMessageMultiProcess(args []string) {
 	fmt.Println("DONE !!")
 
 	time.Sleep(5 * time.Second)
+}
+
+func testForwardMessageMultiProcess2(args []string) {
+	fmt.Println("args : ", args)
+	cl := utilsForTest.CreateShosetFromTopology(args[0], utilsForTest.Circle)
+
+	cl.WaitForProtocols()
+
+	// Receive Message
+	if args[1] == "1" { //args[1] receiver
+		fmt.Println("Receiver : ", cl.GetLogicalName())
+		for {
+			event_rc := cl.Wait("simpleMessage", map[string]string{}, 10, msg.NewIterator(cl.Queue["simpleMessage"]))
+			fmt.Println("(main) Message received : ", event_rc)
+			//time.Sleep(10 * time.Millisecond)
+		}
+	}
+
+	// Send Message
+	if args[2] == "1" { //args[2] sender
+
+		for {
+			fmt.Println("Sender : ", cl.GetLogicalName())
+			message := msg.NewSimpleMessage(args[3], "test_payload "+cl.GetLogicalName()) //args[3] destination
+			fmt.Println("Message sent : ", message)
+			cl.Send(message)
+			time.Sleep(1 * time.Second)
+		}
+	}
+
+	fmt.Println("DONE !!")
+
+	// go func() {
+	// 	time.Sleep(6 * time.Second)
+	// 	panic(nil)
+	// }()
+	time.Sleep(60 * time.Second)
+
+	fmt.Println("Returning !!")
+
+	//panic(nil)
 }
 
 func main() {
@@ -300,7 +340,8 @@ func main() {
 		testForwardMessage(ctx, done)
 		//testSendEvent()
 	} else if arg == "5" {
-		testForwardMessageMultiProcess((os.Args)[2:])
+		//testForwardMessageMultiProcess((os.Args)[2:])
+		testForwardMessageMultiProcess2((os.Args)[2:])
 	}
 }
 

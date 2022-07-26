@@ -1,10 +1,5 @@
 package utilsForTest
 
-import (
-	"encoding/json"
-	"fmt"
-)
-
 type ShosetCreation struct {
 	Lname    string
 	Stype    string
@@ -63,12 +58,4 @@ var Circle = []*ShosetCreation{
 	{Lname: "C", Stype: "cl", Src: LnameiIP["C"], Dst: []string{LnameiIP["A"]}, Ptype: "link", Launched: false},
 	{Lname: "D", Stype: "cl", Src: LnameiIP["D"], Dst: []string{LnameiIP["C"]}, Ptype: "link", Launched: false},
 	{Lname: "E", Stype: "cl", Src: LnameiIP["E"], Dst: []string{LnameiIP["D"], LnameiIP["B"]}, Ptype: "link", Launched: false},
-}
-
-func StoreTopology(path string, tt []*ShosetCreation) {
-	fmt.Println(json.Marshal(tt))
-}
-
-func LoadTopology(path string) []*ShosetCreation {
-	return nil
 }

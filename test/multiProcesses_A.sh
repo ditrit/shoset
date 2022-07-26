@@ -1,10 +1,10 @@
 #!/bin/sh
 
-alias shosetRun='go run -race test/*.go 5'
+go build -v -race -gcflags=all="-N -l" test/*.go
 
-# lname pki IP remote IP sender destination receiver
+#alias shosetRun='go run -race -gcflags=all="-N -l" test/*.go 5'
 
-shosetRun A 1 localhost:8001 rien 0 rien 1 &
+./shoset_build 5 A 1 0 rien &
 #P1=$!
 
 wait

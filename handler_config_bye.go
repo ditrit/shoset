@@ -22,6 +22,17 @@ func (cbh *ConfigByeHandler) Get(c *ShosetConn) (msg.Message, error) {
 func (cbh *ConfigByeHandler) HandleDoubleWay(c *ShosetConn, message msg.Message) error {
 	cfg := message.(msg.ConfigProtocol)
 
+	// Finds and deletes Routes going through the Lname initiating bye/delete (not tester)
+	// Chercher le Lname ou juste la Conn ?
+	deleteLname := c.GetRemoteLogicalName()
+	c.GetShoset().RouteTable.Range(
+		func(key, val interface{}) bool {
+			if val.(Route).neighbour == deleteLname {
+				c.GetShoset().RouteTable.Delete(key)
+			}
+			return true
+		})
+
 	switch cfg.GetCommandName() {
 	case PROTOCOL_EXIT:
 		// incoming bye request.
