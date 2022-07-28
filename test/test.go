@@ -156,7 +156,7 @@ func testForwardMessage(ctx context.Context, done context.CancelFunc) {
 
 	utilsForTest.WaitForManyShosets(s)
 
-	//PrintManyShosets(s)
+	utilsForTest.PrintManyShosets(s)
 
 	var wg sync.WaitGroup
 
@@ -197,17 +197,21 @@ func testSendEvent() {
 
 	utilsForTest.PrintManyShosets(s)
 
-	var wg sync.WaitGroup
+	//var wg sync.WaitGroup
 
 	// Receive Message
-	for i := 0; i < 10; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			event_rc := s[1].Wait("evt", map[string]string{"topic": "test_topic", "event": "test_event"}, 1, msg.NewIterator(s[1].Queue["evt"]))
+
+	iterator := msg.NewIterator(s[1].Queue["evt"])
+
+	go func() {
+		for { //i := 0; i < 10; i++
+			//wg.Add(1)
+			//defer wg.Done()
+
+			event_rc := s[1].Wait("evt", map[string]string{"topic": "test_topic", "event": "test_event"}, 10, iterator)
 			fmt.Println("(main) Message received : ", event_rc)
-		}()
-	}
+		}
+	}()
 
 	// Send Message
 	go func() {
@@ -220,7 +224,15 @@ func testSendEvent() {
 		}
 	}()
 
-	wg.Wait()
+	time.Sleep(3 * time.Second)
+
+	s[1].Protocol("localhost:8002", "localhost:8001", "bye")
+
+	time.Sleep(10 * time.Second)
+
+	utilsForTest.PrintManyShosets(s)
+
+	//wg.Wait()
 }
 
 func testForwardMessageMultiProcess(args []string) {
@@ -262,28 +274,36 @@ func testForwardMessageMultiProcess2(args []string) {
 	fmt.Println("args : ", args)
 	cl := utilsForTest.CreateShosetFromTopology(args[0], utilsForTest.Circle)
 
+	fmt.Println("Waiting for protocols to complete !!")
 	cl.WaitForProtocols()
+
+	fmt.Println("Shoset : ", cl)
 
 	// Receive Message
 	if args[1] == "1" { //args[1] receiver
 		fmt.Println("Receiver : ", cl.GetLogicalName())
-		for {
-			event_rc := cl.Wait("simpleMessage", map[string]string{}, 10, msg.NewIterator(cl.Queue["simpleMessage"]))
-			fmt.Println("(main) Message received : ", event_rc)
-			//time.Sleep(10 * time.Millisecond)
-		}
+		iterator := msg.NewIterator(cl.Queue["simpleMessage"])
+		go func() {
+			for {
+				event_rc := cl.Wait("simpleMessage", map[string]string{}, 10, iterator)
+				fmt.Println("(main) Message received : ", event_rc)
+				//time.Sleep(10 * time.Millisecond)
+			}
+		}()
+
 	}
 
 	// Send Message
 	if args[2] == "1" { //args[2] sender
-
-		for {
-			fmt.Println("Sender : ", cl.GetLogicalName())
-			message := msg.NewSimpleMessage(args[3], "test_payload "+cl.GetLogicalName()) //args[3] destination
-			fmt.Println("Message sent : ", message)
-			cl.Send(message)
-			time.Sleep(1 * time.Second)
-		}
+		go func() {
+			for {
+				fmt.Println("Sender : ", cl.GetLogicalName())
+				message := msg.NewSimpleMessage(args[3], "test_payload "+cl.GetLogicalName()) //args[3] destination
+				fmt.Println("Message sent : ", message)
+				cl.Send(message)
+				time.Sleep(5 * time.Second)
+			}
+		}()
 	}
 
 	fmt.Println("DONE !!")
@@ -292,15 +312,17 @@ func testForwardMessageMultiProcess2(args []string) {
 	// 	time.Sleep(6 * time.Second)
 	// 	panic(nil)
 	// }()
-	time.Sleep(60 * time.Second)
 
-	fmt.Println("Returning !!")
+	time.Sleep(10 * time.Second)
+	fmt.Println("Shoset : ", cl)
+
+	select{}
 
 	//panic(nil)
 }
 
 func main() {
-	shoset.InitPrettyLogger(false)
+	shoset.InitPrettyLogger(true)
 	shoset.SetLogLevel("debug")
 
 	ctx, done := context.WithTimeout(context.Background(), 1*time.Minute)

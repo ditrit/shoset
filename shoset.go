@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ditrit/shoset/concurentData"
+	concurentData "github.com/ditrit/shoset/concurent_data"
 	eventBus "github.com/ditrit/shoset/event_bus"
 	"github.com/ditrit/shoset/msg"
 	uuid "github.com/kjk/betterguid"
@@ -43,7 +43,7 @@ type Shoset struct {
 	RoutingEventBus eventBus.EventBus // When a route to a Lname is discovered, sends an event to everyone waiting for a route to this Lname
 	// topic : discovveredLname
 
-	bindAddress string       // address on which is bound the Shoset
+	bindAddress string       // address on which the Shoset is bound
 	logicalName string       // logical name of the Shoset
 	shosetType  string       // logical type of the shoset
 	isValid     bool         // state of the Shoset - must be done differently in future review
@@ -129,6 +129,7 @@ func (s *Shoset) SetListener(listener net.Listener) { s.listener = listener }
 func (s *Shoset) deleteConn(connAddr, connLname string) {
 	if connsByLname, _ := s.ConnsByLname.Load(connLname); connsByLname != nil {
 		if conn, _ := connsByLname.(*sync.Map).Load(connAddr); conn != nil {
+			fmt.Println("ConnsByLname : ", s.ConnsByLname)
 			s.ConnsByLname.DeleteConfig(connLname, connAddr)
 		}
 	}
@@ -224,7 +225,7 @@ func NewShoset(logicalName, shosetType string) *Shoset {
 // String returns the formatted string of Shoset object in a pretty indented way.
 func (s *Shoset) String() string {
 	description := fmt.Sprintf("Shoset{\n\t- lName: %s,\n\t- bindAddr : %s,\n\t- type : %s, \n\t- isPki : %t, \n\t- ConnsByLname:", s.GetLogicalName(), s.GetBindAddress(), s.GetShosetType(), s.GetIsPki())
-
+	
 	connsByName := []*ShosetConn{}
 	s.ConnsByLname.Iterate(
 		func(key string, val interface{}) {
@@ -237,28 +238,11 @@ func (s *Shoset) String() string {
 		description += fmt.Sprintf("\n\t\t* %s", connByName)
 	}
 
-	description += "\n\t- LnamesByProtocol:\n\t\t"
-	keys := s.LnamesByProtocol.Keys(ALL)
-	for _, key := range keys {
-		description += key + "\t"
-	}
-	description += "\n\t"
-	s.LnamesByProtocol.Iterate(
-		func(key string, val interface{}) {
-			description += fmt.Sprintf("\t%t", val.(bool))
-		})
+	description += "\n\t- LnamesByProtocol:\n\t"
+	description += s.LnamesByProtocol.String()
+	description += "\n\t- LnamesByType:\n\t"
+	description += s.LnamesByType.String()
 
-	description += "\n\t- LnamesByType:\n\t\t"
-	keys = s.LnamesByType.Keys(ALL)
-	for _, key := range keys {
-		description += key + "\t\t"
-	}
-	description += "\n\t"
-	s.LnamesByType.Iterate(
-		func(key string, val interface{}) {
-			description += fmt.Sprintf("\t%t", val.(bool))
-		})
-	//
 	description += "\n\t- RouteTable (destination : {neighbor, Conn to Neighbor, distance, uuid, timestamp}):\n\t\t"
 	s.RouteTable.Range(
 		func(key, val interface{}) bool {
@@ -383,7 +367,7 @@ func (s *Shoset) Protocol(bindAddress, remoteAddress, protocolType string) {
 	cfg := msg.NewConfigProtocol(s.GetBindAddress(), s.GetLogicalName(), s.GetShosetType(), protocolType)
 
 	//s.waitGroupProtocol.Add(1)
-	s.LaunchedProtocol.AppendToConcurentSlice(protocolConn.GetRemoteAddress()) // Adds remote adress to the list of initiated but not ready connexion
+	s.LaunchedProtocol.AppendToConcurentSlice(protocolConn.GetRemoteAddress()) // Adds remote adress to the list of initiated but not ready connexion adresses
 	go protocolConn.HandleConfig(cfg)
 }
 
@@ -461,7 +445,7 @@ func (s *Shoset) forwardMessage(m msg.Message) {
 			}
 			select {
 			case <-chRoute:
-				fmt.Println(s.GetLogicalName(), "Received NewRouteEvent for ", m.GetDestinationLname())
+				//fmt.Println(s.GetLogicalName(), "Received NewRouteEvent for ", m.GetDestinationLname())
 				break
 				// if Lname == m.GetDestinationLname() {
 				// 	break retry

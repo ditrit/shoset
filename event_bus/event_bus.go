@@ -43,13 +43,13 @@ func (eb *EventBus) Publish(topic string, data interface{}) {
 				defer func() {
 					recover() // Avoids panicking when the channel was closed (by unsubscribing) before the send was completed
 				}()
-				fmt.Println("Publishing to topic :", topic)
+				//fmt.Println("Publishing to topic :", topic)
 				Channel <- data
 				// Add timeout
 			}(data, ch)
 		}
 	} else {
-		fmt.Println("Nobody is subscribed to this topic : ", topic)
+		//fmt.Println("Nobody is subscribed to this topic : ", topic)
 	}
 }
 
@@ -57,7 +57,7 @@ func (eb *EventBus) Subscribe(topic string, ch DataChannel) {
 	eb.m.Lock()
 	defer eb.m.Unlock()
 
-	fmt.Println("Subscribing to topic : ", topic)
+	//fmt.Println("Subscribing to topic : ", topic)
 
 	if prev, found := eb.subscribers[topic]; found {
 		eb.subscribers[topic] = append(prev, ch)
@@ -75,7 +75,7 @@ func (eb *EventBus) UnSubscribe(topic string, ch DataChannel) error {
 		for i, a := range eb.subscribers[topic] {
 			if a == ch {
 
-				fmt.Println("UnSubscribing from topic : ", topic)
+				//fmt.Println("UnSubscribing from topic : ", topic)
 
 				close(ch)
 				last := len(prev) - 1

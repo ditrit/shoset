@@ -1,7 +1,6 @@
 package shoset
 
 import (
-	"fmt"
 	"sync"
 
 	"github.com/ditrit/shoset/msg"
@@ -27,7 +26,7 @@ func (cjh *ConfigJoinHandler) HandleDoubleWay(c *ShosetConn, message msg.Message
 		// incoming join request, a socket wants to join to this one.
 		// save info and retrieve brothers to inform network.
 
-		fmt.Println("PROTOCOL_JOIN")
+		//fmt.Println("PROTOCOL_JOIN")
 
 		c.SetRemoteAddress(cfg.GetAddress())
 		c.Store(PROTOCOL_JOIN, c.GetShoset().GetLogicalName(), cfg.GetAddress(), c.GetShoset().GetShosetType())
@@ -58,7 +57,7 @@ func (cjh *ConfigJoinHandler) HandleDoubleWay(c *ShosetConn, message msg.Message
 		// incoming acknowledge_join, join request validated.
 		// save info.
 
-		fmt.Println("ACKNOWLEDGE_JOIN")
+		//fmt.Println("ACKNOWLEDGE_JOIN")
 
 		c.Store(PROTOCOL_JOIN, c.GetShoset().GetLogicalName(), c.GetRemoteAddress(), c.GetShoset().GetShosetType())
 
@@ -70,7 +69,7 @@ func (cjh *ConfigJoinHandler) HandleDoubleWay(c *ShosetConn, message msg.Message
 		// incoming member information.
 		// need to link protocol on it if not already in the map of known conn.
 
-		fmt.Println("MEMBER")
+		//fmt.Println("MEMBER")
 
 		mapConns, _ := c.GetShoset().ConnsByLname.Load(c.GetShoset().GetLogicalName())
 		if mapConns == nil {

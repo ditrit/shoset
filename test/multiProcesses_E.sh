@@ -2,7 +2,7 @@
 
 #alias shosetRun='go run -race test/*.go 5'
 
-sleep 4
+sleep 8
 
 ./shoset_build 5 E 0 1 A &
 #P4=$!

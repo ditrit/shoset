@@ -1,6 +1,7 @@
 package shoset
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/rs/zerolog/log"
@@ -9,7 +10,7 @@ import (
 // MapSyncMap : safe for concurrent use by multiple goroutines without additional locking or coordination.
 // Loads, stores, and deletes run in amortized constant time.
 type MapSyncMap struct {
-	sync.Map // map[string]*sync.Map
+	sync.Map         // map[string]*sync.Map
 	cfg      *Config // config file handler
 }
 
@@ -71,15 +72,25 @@ func (m *MapSyncMap) StoreConfig(lName, key, protocol string, value interface{})
 // It also updates the viper config file to keep new changes up to date by saving some data to handle before deleting the value.
 // Overrides Delete from sync.Map
 func (m *MapSyncMap) DeleteConfig(lName, connIpAddress string) {
+	fmt.Println("lname : ", lName, "connIpAddress : ", connIpAddress)
+
+	//fmt.Println("MapSyncMap : ",m)
+
 	syncMap, _ := m.Load(lName)
 	conn, _ := syncMap.(*sync.Map).Load(connIpAddress)
+
+	fmt.Println("syncMap : ", syncMap.(*sync.Map)) //.Load(lName)
+	fmt.Println("conn : ", conn.(*ShosetConn))
 
 	// OUT is because we only handle the IPaddresses we had to protocol on at some point.
 	// They are the one we need to manually reconnect if a problem happens.
 	ipAddresses := Keys(syncMap.(*sync.Map), OUT)
 
+	fmt.Println("LnamesByProtocol : ", conn.(*ShosetConn).GetShoset().LnamesByProtocol)
+
 	conn.(*ShosetConn).GetShoset().LnamesByProtocol.Range(func(protocol, syncMap interface{}) bool {
 		// LnamesByProtocol[protocol][lName]false || protocol != "bye"
+		fmt.Println("(func) syncMap : ", syncMap.(*sync.Map))
 		if lnameInLnamesByProtocol, _ := syncMap.(*sync.Map).Load(lName); !lnameInLnamesByProtocol.(bool) || protocol != PROTOCOL_EXIT {
 			return false
 		}
@@ -95,6 +106,7 @@ func (m *MapSyncMap) Iterate(iter func(string, interface{})) {
 	for _, key := range m.Keys(ALL) {
 		syncMap, _ := m.Load(key)
 		if syncMap != nil {
+			//fmt.Println("(Iterate) syncMap : ",syncMap.(*sync.Map))
 			syncMap.(*sync.Map).Range(func(key, value interface{}) bool {
 				iter(key.(string), value)
 				return true
@@ -124,4 +136,22 @@ func (m *MapSyncMap) Keys(sType string) []string {
 	}
 
 	return removeDuplicateStr(keys)
+}
+
+func (m *MapSyncMap) String() string {
+	description := ""
+	if m != nil {
+		m.Range(func(key, syncMap interface{}) bool {
+			description += fmt.Sprintf("\tkey : %v", key)
+			if syncMap != nil {
+				syncMap.(*sync.Map).Range(func(key2, val2 interface{}) bool {
+					description += fmt.Sprintf("\n\t\t\tkey : %v val : %v \n", key2, val2)
+					return true
+				})
+			}
+			description += "\n"
+			return true
+		})
+	}
+	return description
 }

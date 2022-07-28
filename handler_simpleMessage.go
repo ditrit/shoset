@@ -2,7 +2,6 @@ package shoset
 
 import (
 	"errors"
-	"fmt"
 	"time"
 
 	"github.com/ditrit/shoset/msg"
@@ -20,7 +19,7 @@ func (smh *SimpleMessageHandler) Get(c *ShosetConn) (msg.Message, error) {
 
 // HandleDoubleWay handles message for a ShosetConn accordingly.
 func (smh *SimpleMessageHandler) HandleDoubleWay(c *ShosetConn, message msg.Message) error {
-	fmt.Println("((smh *SimpleMessageHandler) HandleDoubleWay) Lname : ", c.GetLocalLogicalName(), " message : ", message)
+	//fmt.Println("((smh *SimpleMessageHandler) HandleDoubleWay) Lname : ", c.GetLocalLogicalName(), " message : ", message)
 	m := message.(msg.SimpleMessage)
 
 	if notInQueue := c.GetShoset().Queue["simpleMessage"].Push(m, c.GetRemoteShosetType(), c.GetLocalAddress()); !notInQueue {
@@ -52,7 +51,7 @@ func (smh *SimpleMessageHandler) Wait(s *Shoset, replies *msg.Iterator, args map
 			}
 		} else {
 			replies.GetQueue().LockQueue()
-			break			
+			break
 		}
 	}
 	// Creation channel

@@ -28,7 +28,7 @@ func (cSlice *ConcurentSlice) AppendToConcurentSlice(data string) {
 
 	cSlice.sliceValues = append(cSlice.sliceValues, data)
 
-	fmt.Println("Sending change")
+	//fmt.Println("Sending change")
 	cSlice.eventBus.Publish("change", true)
 
 	//fmt.Println("cSlice Append : ", cSlice, "data : ", data)
@@ -44,11 +44,11 @@ func (cSlice *ConcurentSlice) DeleteFromConcurentSlice(data string) {
 			cSlice.sliceValues[i] = cSlice.sliceValues[len(cSlice.sliceValues)-1]
 			cSlice.sliceValues = cSlice.sliceValues[:len(cSlice.sliceValues)-1]
 
-			fmt.Println("Sending change")
+			//fmt.Println("Sending change")
 			cSlice.eventBus.Publish("change", true)
 
 			if len(cSlice.sliceValues) == 0 {
-				fmt.Println("Sending empty")
+				//fmt.Println("Sending empty")
 				cSlice.eventBus.Publish("empty", true)
 			}
 
@@ -72,7 +72,7 @@ func (cSlice *ConcurentSlice) WaitForEmpty() error {
 		cSlice.m.Unlock()
 		select {
 		case <-chEmpty:
-			fmt.Println("Received Empty")
+			//fmt.Println("Received Empty")
 			//cSlice.eventBus.UnSubscribe("empty", chEmpty)
 			return nil
 
@@ -100,7 +100,7 @@ func (cSlice *ConcurentSlice) WaitForChange() error {
 	//fmt.Println("Subscribed to change")
 	select {
 	case <-chChange:
-		fmt.Println("Received change")
+		//fmt.Println("Received change")
 		//cSlice.eventBus.UnSubscribe("change", chChange)
 		return nil
 
