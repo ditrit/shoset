@@ -138,6 +138,18 @@ func (m *MapSyncMap) Keys(sType string) []string {
 	return removeDuplicateStr(keys)
 }
 
+// Apppend a valye to a MapSyncMap : m[key1][key2]=value
+func (m *MapSyncMap) AppendToKey(key1 string, key2 string, value interface{}) {
+	if mapSync, ok := m.Load(key1); ok {
+		mapSync.(*sync.Map).Store(key2, true)
+		m.Store(key1, mapSync)
+	} else {
+		mapSync := new(sync.Map)
+		mapSync.Store(key2, true)
+		m.Store(key1, mapSync)
+	}
+}
+
 func (m *MapSyncMap) String() string {
 	description := ""
 	if m != nil {
@@ -145,7 +157,7 @@ func (m *MapSyncMap) String() string {
 			description += fmt.Sprintf("\tkey : %v", key)
 			if syncMap != nil {
 				syncMap.(*sync.Map).Range(func(key2, val2 interface{}) bool {
-					description += fmt.Sprintf("\n\t\t\tkey : %v val : %v \n", key2, val2)
+					description += fmt.Sprintf("\n\t\t\tkey : %v val : %v", key2, val2)
 					return true
 				})
 			}

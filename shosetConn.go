@@ -146,8 +146,8 @@ func (c *ShosetConn) Store(protocol, lName, address, shosetType string) {
 
 	mapSync := new(sync.Map)
 	mapSync.Store(lName, true)
-	c.GetShoset().LnamesByProtocol.Store(protocol, mapSync)
-	c.GetShoset().LnamesByType.Store(shosetType, mapSync)
+	c.GetShoset().LnamesByProtocol.AppendToKey(protocol,lName,true)
+	c.GetShoset().LnamesByType.AppendToKey(shosetType,lName,true)
 	c.GetShoset().ConnsByLname.StoreConfig(lName, address, protocol, c)
 }
 
@@ -301,15 +301,15 @@ func (c *ShosetConn) handleMessageType(messageType string) error {
 	}
 
 	// If the message is of a forwardable type, an Acknowledge is expected by the sender
-	if contains(FORWARDABLE_TYPES, messageType){
+	if contains(FORWARDABLE_TYPES, messageType) {
 		// Send back FowarkAck
 
 		// Create message
-		forwardAck:=msg.NewForwardAck(messageValue.GetUUID(),messageValue.GetTimestamp())
+		forwardAck := msg.NewForwardAck(messageValue.GetUUID(), messageValue.GetTimestamp())
 		// Send message
 		err := c.GetWriter().SendMessage(forwardAck)
 
-		fmt.Println("(ForwardAck) Message sent to ",c.GetRemoteLogicalName() ,": ", forwardAck)
+		fmt.Println("(ForwardAck) Message sent to ", c.GetRemoteLogicalName(), ": ", forwardAck)
 
 		if err != nil {
 			c.Logger.Error().Msg("Couldn't send FowarkAck message : " + err.Error())
