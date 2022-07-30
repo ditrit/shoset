@@ -59,11 +59,14 @@ func (eh *EventHandler) Wait(s *Shoset, replies *msg.Iterator, args map[string]s
 		if cell != nil {
 			message := cell.GetMessage()
 			if message != nil {
-				return &message
+				event := message.(msg.Event)
+				if event.GetTopic() == topicName && (args["event"] == VOID || event.GetEvent() == args["event"]) {
+					return &message
+				}
 			}
 		} else {
 			replies.GetQueue().LockQueue()
-			break			
+			break
 		}
 	}
 	// Creation channel
