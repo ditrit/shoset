@@ -23,6 +23,8 @@ func (reh *RoutingEventHandler) HandleDoubleWay(c *ShosetConn, message msg.Messa
 
 	originLogicalName := routingEvt.GetOrigin()
 
+	fmt.Println(c.GetLocalLogicalName(), "received a Routing Event for ", originLogicalName)
+
 	value, ok := c.GetShoset().RouteTable.Load(originLogicalName)
 
 	//shosetLname := c.GetLocalLogicalName()
@@ -37,6 +39,9 @@ func (reh *RoutingEventHandler) HandleDoubleWay(c *ShosetConn, message msg.Messa
 			//fmt.Printf("\n(HandleDoubleWay routing_event) shosetLname : %v \n\t message : %v \n\t value : %v ok : %v \nSave better Route.\n", shosetLname, message, value, ok)
 
 			c.GetShoset().SaveRoute(c, &routingEvt)
+
+			// reRouting := msg.NewRoutingEvent(c.GetLocalLogicalName(), routingEvt.GetUUID())
+			// reh.Send(c.GetShoset(), reRouting)
 
 			return nil
 		} else {
@@ -53,9 +58,9 @@ func (reh *RoutingEventHandler) HandleDoubleWay(c *ShosetConn, message msg.Messa
 
 	//fmt.Printf("\n(HandleDoubleWay routing_event) shosetLname : %v \n\t message : %v \n\t value : %v ok : %v \nStore unknown Route.\n", shosetLname, message, value, ok)
 
-	reRouting := msg.NewRoutingEvent(c.GetLocalLogicalName(), routingEvt.GetUUID())
-	reh.Send(c.GetShoset(), reRouting)
-	
+	// reRouting := msg.NewRoutingEvent(c.GetLocalLogicalName(), routingEvt.GetUUID())
+	// reh.Send(c.GetShoset(), reRouting)
+
 	fmt.Println("Reroute : ", c.GetLocalLogicalName())
 
 	return nil

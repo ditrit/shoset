@@ -72,25 +72,25 @@ func (m *MapSyncMap) StoreConfig(lName, key, protocol string, value interface{})
 // It also updates the viper config file to keep new changes up to date by saving some data to handle before deleting the value.
 // Overrides Delete from sync.Map
 func (m *MapSyncMap) DeleteConfig(lName, connIpAddress string) {
-	fmt.Println("lname : ", lName, "connIpAddress : ", connIpAddress)
+	//fmt.Println("lname : ", lName, "connIpAddress : ", connIpAddress)
 
 	//fmt.Println("MapSyncMap : ",m)
 
 	syncMap, _ := m.Load(lName)
 	conn, _ := syncMap.(*sync.Map).Load(connIpAddress)
 
-	fmt.Println("syncMap : ", syncMap.(*sync.Map)) //.Load(lName)
-	fmt.Println("conn : ", conn.(*ShosetConn))
+	//fmt.Println("syncMap : ", syncMap.(*sync.Map)) //.Load(lName)
+	//fmt.Println("conn : ", conn.(*ShosetConn))
 
 	// OUT is because we only handle the IPaddresses we had to protocol on at some point.
 	// They are the one we need to manually reconnect if a problem happens.
 	ipAddresses := Keys(syncMap.(*sync.Map), OUT)
 
-	fmt.Println("LnamesByProtocol : ", conn.(*ShosetConn).GetShoset().LnamesByProtocol)
+	//fmt.Println("LnamesByProtocol : ", conn.(*ShosetConn).GetShoset().LnamesByProtocol)
 
 	conn.(*ShosetConn).GetShoset().LnamesByProtocol.Range(func(protocol, syncMap interface{}) bool {
 		// LnamesByProtocol[protocol][lName]false || protocol != "bye"
-		fmt.Println("(func) syncMap : ", syncMap.(*sync.Map))
+		//fmt.Println("(func) syncMap : ", syncMap.(*sync.Map))
 		if lnameInLnamesByProtocol, _ := syncMap.(*sync.Map).Load(lName); !lnameInLnamesByProtocol.(bool) || protocol != PROTOCOL_EXIT {
 			return false
 		}

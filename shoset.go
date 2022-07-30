@@ -129,7 +129,7 @@ func (s *Shoset) SetListener(listener net.Listener) { s.listener = listener }
 func (s *Shoset) deleteConn(connAddr, connLname string) {
 	if connsByLname, _ := s.ConnsByLname.Load(connLname); connsByLname != nil {
 		if conn, _ := connsByLname.(*sync.Map).Load(connAddr); conn != nil {
-			fmt.Println("ConnsByLname : ", s.ConnsByLname)
+			//fmt.Println("ConnsByLname : ", s.ConnsByLname)
 			s.ConnsByLname.DeleteConfig(connLname, connAddr)
 		}
 	}
@@ -225,7 +225,7 @@ func NewShoset(logicalName, shosetType string) *Shoset {
 // String returns the formatted string of Shoset object in a pretty indented way.
 func (s *Shoset) String() string {
 	description := fmt.Sprintf("Shoset{\n\t- lName: %s,\n\t- bindAddr : %s,\n\t- type : %s, \n\t- isPki : %t, \n\t- ConnsByLname:", s.GetLogicalName(), s.GetBindAddress(), s.GetShosetType(), s.GetIsPki())
-	
+
 	connsByName := []*ShosetConn{}
 	s.ConnsByLname.Iterate(
 		func(key string, val interface{}) {
@@ -405,7 +405,6 @@ func (s *Shoset) forwardMessage(m msg.Message) {
 				} else {
 					continue
 				}
-
 			}
 			fmt.Println("(ForwardAck) Message received : ", forwardAck)
 
@@ -479,6 +478,9 @@ func (s *Shoset) SaveRoute(c *ShosetConn, routingEvt *msg.RoutingEvent) {
 	// default:
 	// 	//fmt.Println("Nobody is waiting for NewRouteEvent")
 	// }
+
+	reRouting := msg.NewRoutingEvent(c.GetLocalLogicalName(), routingEvt.GetUUID())
+	s.Send(reRouting)
 
 	// Rebroadcast Routing event
 	routingEvt.SetNbSteps(routingEvt.GetNbSteps() + 1)

@@ -1,8 +1,10 @@
 #!/bin/sh
 
-# To anable attachin to process  : /proc/sys/kernel/yama/ptrace_scope to 1
+# To anable attachin to process  : /proc/sys/kernel/yama/ptrace_scope to 1 (0?)
 
-go build -v -o shoset_build  -race -gcflags=all="-N -l" test/*.go
+#-gcflags=all="-N -l" Disable optimizations for debugging
+
+go build -v -o shoset_build -race -gcflags=all="-N -l" test/*.go
 
 rm -rf ~/.shoset
 
