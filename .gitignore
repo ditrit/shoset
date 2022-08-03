@@ -6,6 +6,7 @@
 !**/*.sh
 !**/
 !./test/*
+!**/.vscode/*
 
 !/.gitignore
 !/go.mod
