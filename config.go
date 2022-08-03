@@ -25,7 +25,7 @@ func NewConfig(name string) *Config {
 		log.Error().Msg("couldn't home dir folder: " + err.Error())
 	}
 	cfg := &Config{
-		baseDir: homeDir + "/.shoset/"+ name + "/",
+		baseDir: homeDir + "/.shoset/" + name + "/",
 		viper:   viper.New(),
 	}
 	if err := mkdir(cfg.baseDir); err != nil {
@@ -60,11 +60,24 @@ func (cfg *Config) InitFolders(name string) (string, error) {
 // ReadConfig will load the configuration file from disk for a given fileName.
 // Initialize viper parameters before reading.
 func (cfg *Config) ReadConfig(fileName string) error {
+
+	//fmt.Println("(ReadConfig) filename : ", fileName)
+
+	//fmt.Println("(ReadConfig) path : ", cfg.baseDir+fileName+PATH_CONFIG_DIR)
+
+	//fmt.Println("(ReadConfig) fileExists : ", fileExists(cfg.baseDir+fileName+PATH_CONFIG_DIR+"/config.yaml"))
+
 	cfg.viper.AddConfigPath(cfg.baseDir + fileName + PATH_CONFIG_DIR)
-	cfg.viper.SetConfigName(fileName)
+	//cfg.viper.SetConfigName(fileName) // ???
 	cfg.viper.SetConfigType(CONFIG_TYPE)
 
-	return cfg.viper.ReadInConfig()
+	//fmt.Println("(ReadConfig) config viper", cfg.viper.AllSettings())
+
+	err := cfg.viper.ReadInConfig()
+
+	//cfg.viper.Debug()
+
+	return err
 }
 
 // WriteConfig writes current configuration to a given shoset.

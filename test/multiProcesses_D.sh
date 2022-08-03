@@ -5,6 +5,14 @@
 sleep 6
 
 ./shoset_build 5 D 0 0 rien &
-#P4=$!
+P=$!
+
+sleep 11
+
+kill $P
+
+sleep 1
+
+./shoset_build 6 D 0 0 rien &
 
 wait

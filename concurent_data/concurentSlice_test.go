@@ -18,7 +18,7 @@ func Test_concurentSlice(t *testing.T) {
 
 	go func() {
 		for {
-			cSlice.WaitForChange()
+			cSlice.WaitForChange(5)
 		}
 	}()
 	
@@ -71,7 +71,7 @@ func Test_concurentSlice(t *testing.T) {
 		}
 	}()
 
-	cSlice.WaitForEmpty()
+	cSlice.WaitForEmpty(5)
 
 	if cSlice.String() != "[]" {
 		t.Errorf("Wrong content after Clearing.")
@@ -81,7 +81,7 @@ func Test_concurentSlice(t *testing.T) {
 
 	cSlice.AppendToConcurentSlice("TEST")
 
-	err := cSlice.WaitForEmpty()
+	err := cSlice.WaitForEmpty(5)
 
 	if err==nil{
 		t.Errorf("Timeout error failed.")

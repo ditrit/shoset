@@ -15,9 +15,9 @@ type ConcurentSlice struct {
 	m           sync.Mutex
 }
 
-const (
-	TIMEOUT int = 5
-)
+// const (
+// 	TIMEOUT int = 5
+// )
 
 func NewConcurentSlice() ConcurentSlice {
 	return ConcurentSlice{eventBus: eventBus.NewEventBus()}
@@ -48,7 +48,7 @@ func (cSlice *ConcurentSlice) DeleteFromConcurentSlice(data string) {
 			cSlice.eventBus.Publish("change", true)
 
 			if len(cSlice.sliceValues) == 0 {
-				//fmt.Println("Sending empty")
+				fmt.Println("Sending empty")
 				cSlice.eventBus.Publish("empty", true)
 			}
 
@@ -59,25 +59,24 @@ func (cSlice *ConcurentSlice) DeleteFromConcurentSlice(data string) {
 }
 
 // Wait for the Slice to be empty
-func (cSlice *ConcurentSlice) WaitForEmpty() error {
+func (cSlice *ConcurentSlice) WaitForEmpty(timeout int) error {
 	// Subscribe a channel to the empty topic :
 	cSlice.m.Lock()
-
-	chEmpty := make(chan interface{})
-	cSlice.eventBus.Subscribe("empty", chEmpty)
-
-	defer cSlice.eventBus.UnSubscribe("empty", chEmpty)
-
 	if len(cSlice.sliceValues) != 0 {
+
+		chEmpty := make(chan interface{})
+		cSlice.eventBus.Subscribe("empty", chEmpty)
+
+		defer cSlice.eventBus.UnSubscribe("empty", chEmpty)
+
 		cSlice.m.Unlock()
 		select {
 		case <-chEmpty:
 			//fmt.Println("Received Empty")
-			//cSlice.eventBus.UnSubscribe("empty", chEmpty)
 			return nil
 
-		case <-time.After(time.Duration(TIMEOUT) * time.Second):
-			//cSlice.eventBus.UnSubscribe("empty", chEmpty)
+		case <-time.After(time.Duration(timeout) * time.Second):
+			fmt.Println("TIMEOUT !!")
 			return errors.New("the list is no empty (timeout)")
 		}
 	}
@@ -86,7 +85,7 @@ func (cSlice *ConcurentSlice) WaitForEmpty() error {
 }
 
 // Wait for the Slice to change
-func (cSlice *ConcurentSlice) WaitForChange() error {
+func (cSlice *ConcurentSlice) WaitForChange(timeout int) error {
 	// Subscribe a channel to the empty topic :
 	cSlice.m.Lock()
 
@@ -104,7 +103,7 @@ func (cSlice *ConcurentSlice) WaitForChange() error {
 		//cSlice.eventBus.UnSubscribe("change", chChange)
 		return nil
 
-	case <-time.After(time.Duration(TIMEOUT) * time.Second):
+	case <-time.After(time.Duration(timeout) * time.Second):
 		//cSlice.eventBus.UnSubscribe("change", chChange)
 		return errors.New("the list did not change (timeout)")
 	}

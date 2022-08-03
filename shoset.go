@@ -137,15 +137,15 @@ func (s *Shoset) deleteConn(connAddr, connLname string) {
 
 // Wait for every Conn initialised to be ready for use
 // Add timeout
-func (s *Shoset) WaitForProtocols() {
+func (s *Shoset) WaitForProtocols(timeout int) {
 	fmt.Println("Waiting for all Protocol to complete on shoset", s.GetLogicalName())
 	//s.waitGroupProtocol.Wait()
-	err := s.LaunchedProtocol.WaitForEmpty()
+	err := s.LaunchedProtocol.WaitForEmpty(timeout)
 	if err != nil {
 		s.Logger.Error().Msg("Failed to establish connection to some adresses (timeout) : " + s.LaunchedProtocol.String())
+	} else {
+		fmt.Println("All Protocols done for ", s.GetLogicalName())
 	}
-
-	fmt.Println("All Protocols done for ", s.GetLogicalName())
 }
 
 // NewShoset creates a new Shoset object.
@@ -257,14 +257,7 @@ func (s *Shoset) String() string {
 // Bind assigns a local protocol address to the Shoset.
 // Runs protocol on other Shosets if needed.
 func (s *Shoset) Bind(address string) error {
-	if err := s.ConnsByLname.GetConfig().ReadConfig(s.ConnsByLname.GetConfig().GetFileName()); err == nil {
-		for _, remote := range s.ConnsByLname.cfg.GetSlice(PROTOCOL_JOIN) {
-			s.Protocol(address, remote, PROTOCOL_JOIN)
-		}
-		for _, remote := range s.ConnsByLname.cfg.GetSlice(PROTOCOL_LINK) {
-			s.Protocol(address, remote, PROTOCOL_LINK)
-		}
-	}
+	fmt.Println("Bind")
 
 	ipAddress, err := GetIP(address)
 	if err != nil {
@@ -272,6 +265,22 @@ func (s *Shoset) Bind(address string) error {
 		return err
 	}
 	s.SetBindAddress(ipAddress)
+	//fmt.Println("(Bind) BindAdress : ", s.GetBindAddress())
+
+	//fmt.Println("FileName : ", s.ConnsByLname.GetConfig().GetFileName())
+
+	err = s.ConnsByLname.GetConfig().ReadConfig(s.ConnsByLname.GetConfig().GetFileName())
+
+	if err == nil {
+		fmt.Println("Sclice JOIN : ", s.ConnsByLname.cfg.GetSlice(PROTOCOL_JOIN))
+		for _, remote := range s.ConnsByLname.cfg.GetSlice(PROTOCOL_JOIN) {
+			s.Protocol(address, remote, PROTOCOL_JOIN)
+		}
+		fmt.Println("Sclice LINK : ", s.ConnsByLname.cfg.GetSlice(PROTOCOL_LINK))
+		for _, remote := range s.ConnsByLname.cfg.GetSlice(PROTOCOL_LINK) {
+			s.Protocol(address, remote, PROTOCOL_LINK)
+		}
+	}
 
 	listener, err := net.Listen(CONNECTION_TYPE, DEFAULT_IP+strings.Split(ipAddress, ":")[1])
 	if err != nil {
@@ -321,6 +330,7 @@ func (s *Shoset) handleBind() {
 // Inits certification if Shoset is not certified yet.
 // Binds Shoset to the bindAddress if not bound yet.
 func (s *Shoset) Protocol(bindAddress, remoteAddress, protocolType string) {
+	fmt.Println("PROTOCOL !!!!")
 	s.Logger.Debug().Strs("params", []string{bindAddress, remoteAddress, protocolType}).Msg("protocol init")
 
 	ipAddress, err := GetIP(bindAddress)
@@ -331,27 +341,28 @@ func (s *Shoset) Protocol(bindAddress, remoteAddress, protocolType string) {
 	formattedIpAddress := strings.Replace(ipAddress, ":", "_", -1)
 	formattedIpAddress = strings.Replace(formattedIpAddress, ".", "-", -1) // formats for filesystem to 127-0-0-1_8001 instead of 127.0.0.1:8001
 
+	//fmt.Println("File Path : ", s.ConnsByLname.GetConfig().baseDir+formattedIpAddress, "Certified : ", s.IsCertified(s.ConnsByLname.GetConfig().baseDir+formattedIpAddress))
+
+	s.ConnsByLname.GetConfig().SetFileName(formattedIpAddress)
+
 	if !s.IsCertified(s.ConnsByLname.GetConfig().baseDir + formattedIpAddress) {
 		s.Logger.Debug().Msg("ask certification")
 
-		// Ajouter le Lname au path du fichier de config
 		_, err = s.ConnsByLname.GetConfig().InitFolders(formattedIpAddress)
 		if err != nil {
 			s.Logger.Error().Msg("couldn't init folder: " + err.Error())
 			return
 		}
-
-		// Ajouter le Lname au path du fichier de config
-		s.ConnsByLname.GetConfig().SetFileName(formattedIpAddress)
-
 		err = s.Certify(bindAddress, remoteAddress)
 		if err != nil {
 			return
 		}
 	}
 
+	//fmt.Println("(Protocol) BindAdress : ", s.GetBindAddress())
 	if s.GetBindAddress() == VOID {
 		err := s.Bind(bindAddress)
+		
 		if err != nil {
 			s.Logger.Error().Msg("couldn't set bindAddress : " + err.Error())
 			return
@@ -363,12 +374,14 @@ func (s *Shoset) Protocol(bindAddress, remoteAddress, protocolType string) {
 		return
 	}
 
-	protocolConn, _ := NewShosetConn(s, remoteAddress, OUT)
-	cfg := msg.NewConfigProtocol(s.GetBindAddress(), s.GetLogicalName(), s.GetShosetType(), protocolType)
+	if remoteAddress != "" {
+		protocolConn, _ := NewShosetConn(s, remoteAddress, OUT)
+		cfg := msg.NewConfigProtocol(s.GetBindAddress(), s.GetLogicalName(), s.GetShosetType(), protocolType)
 
-	//s.waitGroupProtocol.Add(1)
-	s.LaunchedProtocol.AppendToConcurentSlice(protocolConn.GetRemoteAddress()) // Adds remote adress to the list of initiated but not ready connexion adresses
-	go protocolConn.HandleConfig(cfg)
+		//s.waitGroupProtocol.Add(1)
+		s.LaunchedProtocol.AppendToConcurentSlice(protocolConn.GetRemoteAddress()) // Adds remote adress to the list of initiated but not ready connexion adresses
+		go protocolConn.HandleConfig(cfg)
+	}
 }
 
 // Forward messages destined to another Lname to the next step on the Route

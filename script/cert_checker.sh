@@ -8,26 +8,40 @@ LOGFILE=$REPERTORY/cert_checker.txt
 
 i=0
 
-for SHOSET in $REPERTORY/*;
-do 
-    PORT=`expr 8080 + $i`
-    echo $SHOSET
-    cd $SHOSET/cert;
-    for FILE in *;
-    do 
-        echo $FILE
+for SHOSET in $REPERTORY/*; do
+    #PORT=$(expr 8080 + $i)
+    #echo $SHOSET
+    for CONN in $SHOSET/*; do
+        if [ -d "${CONN}" ]; then
+            echo "${CONN}" # your processing here
+
+            #PORT=$(expr 8080 + $i)
+            cd $CONN/cert
+            echo "$PWD"
+            ls
+            #echo -n "$SHOSET : " >> $LOGFILE ??
+
+            #echo $i
+            #echo $PORT
+
+            # # run openssl command server and check if it worked
+            # openssl s_server -accept $PORT -www -cert ./cert.crt -key ./privateKey.key -CAfile ./CAcertificate.crt -naccept 1 | grep ACCEPT >>$LOGFILE &
+
+            # sleep 0.5
+
+            # # run openssl command client and quit when connected
+            # # https://stackoverflow.com/questions/25760596/how-to-terminate-openssl-s-client-after-connection
+            # openssl s_client -connect localhost:$PORT -showcerts -CAfile ./CAcert.crt <<<"Q"
+
+            # sleep 0.5
+
+            openssl pkey -in ./privateKey.key -pubout -outform pem | sha256sum
+            openssl x509 -in ./cert.crt -pubkey -noout -outform pem | sha256sum
+            openssl verify -verbose -CAfile ./CAcertificate.crt  ./cert.crt
+            #openssl req -in CSR.csr -pubkey -noout -outform pem | sha256sum
+
+            echo DONE
+            #i=$(expr $i + 1)
+        fi
     done
-    echo -n "$SHOSET : " >> $LOGFILE
-
-    # run openssl command server and check if it worked
-    openssl s_server -accept $PORT -www -cert cert.crt -key privateKey.key -CAfile CAcert.crt -naccept 1 | grep ACCEPT >> $LOGFILE & 
-    
-    sleep 0.5
-    
-    # run openssl command client and quit when connected
-    # https://stackoverflow.com/questions/25760596/how-to-terminate-openssl-s-client-after-connection
-    openssl s_client -connect localhost:$PORT -showcerts -CAfile CAcert.crt <<< "Q"
-
-    echo ""
-    i=`expr $i + 1`
 done

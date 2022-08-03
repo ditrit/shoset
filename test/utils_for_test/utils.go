@@ -48,6 +48,19 @@ func CreateShosetFromTopology(Lname string, tt []*ShosetCreation) *shoset.Shoset
 	return nil
 }
 
+func CreateShosetOnlyBindFromTopology(Lname string, tt []*ShosetCreation) *shoset.Shoset {
+	for _, t := range tt {
+		if !t.Launched && t.Lname == Lname {
+			s := shoset.NewShoset(t.Lname, t.Stype)
+			s.Protocol(t.Src, "", t.Ptype)
+			//s.Bind(t.Src)
+			t.Launched = true
+			return s
+		}
+	}
+	return nil
+}
+
 func PrintManyShosets(s []*shoset.Shoset) {
 	for i, t := range s {
 		fmt.Println("\nShoset ", i, ": ", t)
@@ -56,7 +69,7 @@ func PrintManyShosets(s []*shoset.Shoset) {
 
 func WaitForManyShosets(s []*shoset.Shoset) {
 	for _, t := range s {
-		t.WaitForProtocols()
+		t.WaitForProtocols(10)
 	}
 }
 

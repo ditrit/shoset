@@ -146,8 +146,8 @@ func (c *ShosetConn) Store(protocol, lName, address, shosetType string) {
 
 	mapSync := new(sync.Map)
 	mapSync.Store(lName, true)
-	c.GetShoset().LnamesByProtocol.AppendToKey(protocol,lName,true)
-	c.GetShoset().LnamesByType.AppendToKey(shosetType,lName,true)
+	c.GetShoset().LnamesByProtocol.AppendToKey(protocol, lName, true)
+	c.GetShoset().LnamesByType.AppendToKey(shosetType, lName, true)
 	c.GetShoset().ConnsByLname.StoreConfig(lName, address, protocol, c)
 }
 
@@ -187,6 +187,7 @@ func (c *ShosetConn) HandleConfig(cfg *msg.ConfigProtocol) {
 		c.GetConn().Close()
 	}()
 	for {
+		fmt.Println("ConfigDoubleWay : ",c.GetShoset().GetTlsConfigDoubleWay())
 		protocolConn, err := tls.Dial(CONNECTION_TYPE, c.GetRemoteAddress(), c.GetShoset().GetTlsConfigDoubleWay())
 		if err != nil {
 			time.Sleep(time.Millisecond * time.Duration(100)) //10
@@ -209,6 +210,8 @@ func (c *ShosetConn) HandleConfig(cfg *msg.ConfigProtocol) {
 				break
 			}
 		}
+
+		time.Sleep(100*time.Millisecond) //
 
 	}
 }
@@ -237,6 +240,7 @@ func (c *ShosetConn) RunInConnDouble() {
 			c.Logger.Error().Msg("err in ReceiveMessage RunInConnDouble: " + err.Error())
 			return
 		}
+		//time.Sleep(10 * time.Millisecond)
 
 		for {
 			err := c.ReceiveMessage()
@@ -245,6 +249,7 @@ func (c *ShosetConn) RunInConnDouble() {
 				c.Logger.Error().Msg("socket closed: err in ReceiveMessage HandleConfig: " + err.Error())
 				break
 			}
+			//time.Sleep(10 * time.Millisecond)
 		}
 
 	}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"runtime/trace"
 	"sync"
 	"time"
 
@@ -192,8 +193,8 @@ func testSendEvent() {
 
 	//fmt.Println("TEST !!")
 
-	s[0].WaitForProtocols()
-	s[1].WaitForProtocols()
+	s[0].WaitForProtocols(10)
+	s[1].WaitForProtocols(10)
 
 	utilsForTest.PrintManyShosets(s)
 
@@ -244,7 +245,7 @@ func testForwardMessageMultiProcess(args []string) {
 		cl.Protocol(args[2], args[3], "link") // args[2] : IP , args[3] : remote IP for connexion
 	}
 
-	cl.WaitForProtocols()
+	cl.WaitForProtocols(10)
 
 	// Receive Message
 	if args[6] == "1" { //args[5] receiver
@@ -272,10 +273,33 @@ func testForwardMessageMultiProcess(args []string) {
 
 func testForwardMessageMultiProcess2(args []string) {
 	fmt.Println("args : ", args)
-	cl := utilsForTest.CreateShosetFromTopology(args[0], utilsForTest.Circle)
+
+	// if args[0] != "D" {
+	// 	f, _ := os.Create("./profiler/trace_" + args[0] + ".out")
+	// 	defer f.Close()
+	// 	trace.Start(f)
+	// 	defer trace.Stop()
+
+	// 	var cpuprofile = flag.String("cpuprofile", "./profiler/cpu_"+args[0]+".prof", "write cpu profile to `file`")
+
+	// 	flag.Parse()
+	// 	if *cpuprofile != "" {
+	// 		f, err := os.Create(*cpuprofile)
+	// 		if err != nil {
+	// 			log.Fatal("could not create CPU profile: ", err)
+	// 		}
+	// 		defer f.Close() // error handling omitted for example
+	// 		if err := pprof.StartCPUProfile(f); err != nil {
+	// 			log.Fatal("could not start CPU profile: ", err)
+	// 		}
+	// 		defer pprof.StopCPUProfile()
+	// 	}
+	// }
+
+	cl := utilsForTest.CreateShosetFromTopology(args[0], utilsForTest.StraightLine)
 
 	fmt.Println("Waiting for protocols to complete !!")
-	cl.WaitForProtocols()
+	cl.WaitForProtocols(10)
 
 	fmt.Println("Shoset : ", cl)
 
@@ -316,12 +340,86 @@ func testForwardMessageMultiProcess2(args []string) {
 	time.Sleep(10 * time.Second)
 	fmt.Println("Shoset : ", cl)
 
-	select{}
+	time.Sleep(20 * time.Second)
+
+	//select {}
 
 	//panic(nil)
 }
 
+func testRelaunch(args []string) {
+	fmt.Println("args : ", args)
+
+	f, _ := os.Create("./profiler/trace_" + args[0] + ".out")
+	defer f.Close()
+	trace.Start(f)
+	defer trace.Stop()
+
+	// Create Shoset
+	cl := utilsForTest.CreateShosetOnlyBindFromTopology(args[0], utilsForTest.StraightLine)
+
+	fmt.Println("Waiting for protocols to complete !!")
+	cl.WaitForProtocols(10)
+
+	fmt.Println("Shoset : ", cl)
+
+	// Receive Message
+	if args[1] == "1" { //args[1] receiver
+		fmt.Println("Receiver : ", cl.GetLogicalName())
+		iterator := msg.NewIterator(cl.Queue["simpleMessage"])
+		go func() {
+			for {
+				event_rc := cl.Wait("simpleMessage", map[string]string{}, 10, iterator)
+				fmt.Println("(main) Message received : ", event_rc)
+				//time.Sleep(10 * time.Millisecond)
+			}
+		}()
+
+	}
+
+	// Send Message
+	if args[2] == "1" { //args[2] sender
+		go func() {
+			for {
+				fmt.Println("Sender : ", cl.GetLogicalName())
+				message := msg.NewSimpleMessage(args[3], "test_payload "+cl.GetLogicalName()) //args[3] destination
+				fmt.Println("Message sent : ", message)
+				cl.Send(message)
+				time.Sleep(5 * time.Second)
+			}
+		}()
+	}
+
+	fmt.Println("DONE !!")
+
+	time.Sleep(10 * time.Second)
+	fmt.Println("Shoset : ", cl)
+
+	time.Sleep(20 * time.Second)
+
+	//select {}
+}
+
 func main() {
+	// var cpuprofile = flag.String("cpuprofile", "./profiler/cpu.prof", "write cpu profile to `file`")
+	// // var memprofile = flag.String("memprofile", "mem.prof", "write memory profile to `file`")
+
+	// os.RemoveAll("./profiler/")
+	// os.MkdirAll("./profiler/", 0777)
+
+	// flag.Parse()
+	// if *cpuprofile != "" {
+	// 	f, err := os.Create(*cpuprofile)
+	// 	if err != nil {
+	// 		log.Fatal("could not create CPU profile: ", err)
+	// 	}
+	// 	defer f.Close() // error handling omitted for example
+	// 	if err := pprof.StartCPUProfile(f); err != nil {
+	// 		log.Fatal("could not start CPU profile: ", err)
+	// 	}
+	// 	defer pprof.StopCPUProfile()
+	// }
+
 	shoset.InitPrettyLogger(true)
 	shoset.SetLogLevel("debug")
 
@@ -364,7 +462,21 @@ func main() {
 	} else if arg == "5" {
 		//testForwardMessageMultiProcess((os.Args)[2:])
 		testForwardMessageMultiProcess2((os.Args)[2:])
+
+	} else if arg == "6" {
+		testRelaunch((os.Args)[2:])
 	}
+	// if *memprofile != "" {
+	// 	f, err := os.Create(*memprofile)
+	// 	if err != nil {
+	// 		log.Fatal("could not create memory profile: ", err)
+	// 	}
+	// 	defer f.Close() // error handling omitted for example
+	// 	runtime.GC()    // get up-to-date statistics
+	// 	if err := pprof.WriteHeapProfile(f); err != nil {
+	// 		log.Fatal("could not write memory profile: ", err)
+	// 	}
+	// }
 }
 
 // linkOk
