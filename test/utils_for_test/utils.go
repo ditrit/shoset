@@ -48,11 +48,28 @@ func CreateShosetFromTopology(Lname string, tt []*ShosetCreation) *shoset.Shoset
 	return nil
 }
 
+func AddConnToShosetFromTopology(s *shoset.Shoset,Lname string, tt []*ShosetCreation) *shoset.Shoset {
+	for _, t := range tt {
+		if t.Lname == Lname {
+			if t.Ptype == "pki" {
+				s.InitPKI(t.Src)
+			} else {
+				for _, a := range t.Dst {
+					s.Protocol(t.Src, a, t.Ptype)
+				}
+			}
+			t.Launched = true
+			return s
+		}
+	}
+	return nil
+}
+
 func CreateShosetOnlyBindFromTopology(Lname string, tt []*ShosetCreation) *shoset.Shoset {
 	for _, t := range tt {
 		if !t.Launched && t.Lname == Lname {
 			s := shoset.NewShoset(t.Lname, t.Stype)
-			s.Protocol(t.Src, "", t.Ptype)
+			s.Protocol(t.Src, "", "")
 			//s.Bind(t.Src)
 			t.Launched = true
 			return s

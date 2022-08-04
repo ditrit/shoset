@@ -1,6 +1,7 @@
 package shoset
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/ditrit/shoset/msg"
@@ -26,7 +27,7 @@ func (clh *ConfigLinkHandler) HandleDoubleWay(c *ShosetConn, message msg.Message
 		// incoming link request, a socket wants to link to this one.
 		// save info and retrieve brothers to inform network.
 
-		//fmt.Println("PROTOCOL_LINK")
+		fmt.Println("PROTOCOL_LINK")
 
 		c.SetRemoteAddress(cfg.GetAddress())
 		c.Store(PROTOCOL_LINK, cfg.GetLogicalName(), cfg.GetAddress(), cfg.GetShosetType())
@@ -63,22 +64,24 @@ func (clh *ConfigLinkHandler) HandleDoubleWay(c *ShosetConn, message msg.Message
 		// incoming acknowledge_join, join request validated.
 		// save info.
 
-		//fmt.Println("ACKNOWLEDGE_LINK")
+		fmt.Println("ACKNOWLEDGE_LINK")
 
 		// Placement du store ?
 		//c.Store(PROTOCOL_LINK, c.GetShoset().GetLogicalName(), c.GetRemoteAddress(), c.GetShoset().GetShosetType())
 
 		//c.SetIsValid(true) // Send statusChange Event change status
 		//c.GetShoset().waitGroupProtocol.Done()
+
+		c.Store(PROTOCOL_LINK, cfg.GetLogicalName(), c.GetRemoteAddress(), cfg.GetShosetType()) // Move grom brother case
+		// D'ou sort le BROTHER quand on lance un link ?
+
 		c.GetShoset().LaunchedProtocol.DeleteFromConcurentSlice(c.GetRemoteAddress())
 
 	case BROTHERS:
 		// incoming brother information, new shoset in the network.
 		// save info and call sendToBrothers to handle message.
 
-		//fmt.Println("BROTHERS")
-
-		c.Store(PROTOCOL_LINK, cfg.GetLogicalName(), c.GetRemoteAddress(), cfg.GetShosetType())
+		fmt.Println("BROTHERS")
 
 		sendToBrothers(c, message)
 

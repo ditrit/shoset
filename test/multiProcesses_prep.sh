@@ -1,6 +1,7 @@
 #!/bin/sh
 
-# To anable attachin to process  : /proc/sys/kernel/yama/ptrace_scope to 1 (0?)
+# To anable attachin to process  : /proc/sys/kernel/yama/ptrace_scope to 0
+#code /proc/sys/kernel/yama/ptrace_scope
 
 #go tool pprof -http=":" ./shoset_build "./profiler_save/cpu_C_normal.prof"
 

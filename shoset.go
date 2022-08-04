@@ -140,9 +140,11 @@ func (s *Shoset) deleteConn(connAddr, connLname string) {
 func (s *Shoset) WaitForProtocols(timeout int) {
 	fmt.Println("Waiting for all Protocol to complete on shoset", s.GetLogicalName())
 	//s.waitGroupProtocol.Wait()
+	//fmt.Println("s.LaunchedProtocol : ", s.LaunchedProtocol.String())
 	err := s.LaunchedProtocol.WaitForEmpty(timeout)
 	if err != nil {
 		s.Logger.Error().Msg("Failed to establish connection to some adresses (timeout) : " + s.LaunchedProtocol.String())
+		//fmt.Println("Shoset after Protocol : ",s)
 	} else {
 		fmt.Println("All Protocols done for ", s.GetLogicalName())
 	}
@@ -357,12 +359,18 @@ func (s *Shoset) Protocol(bindAddress, remoteAddress, protocolType string) {
 		if err != nil {
 			return
 		}
+	} else {
+		err = s.SetUpDoubleWay()
+		if err != nil {
+			s.Logger.Error().Msg(err.Error())
+			return
+		}
 	}
 
 	//fmt.Println("(Protocol) BindAdress : ", s.GetBindAddress())
 	if s.GetBindAddress() == VOID {
 		err := s.Bind(bindAddress)
-		
+
 		if err != nil {
 			s.Logger.Error().Msg("couldn't set bindAddress : " + err.Error())
 			return
@@ -375,12 +383,16 @@ func (s *Shoset) Protocol(bindAddress, remoteAddress, protocolType string) {
 	}
 
 	if remoteAddress != "" {
+		fmt.Println("PROTOCOL ON  REMOTE !!!!")
 		protocolConn, _ := NewShosetConn(s, remoteAddress, OUT)
 		cfg := msg.NewConfigProtocol(s.GetBindAddress(), s.GetLogicalName(), s.GetShosetType(), protocolType)
 
 		//s.waitGroupProtocol.Add(1)
 		s.LaunchedProtocol.AppendToConcurentSlice(protocolConn.GetRemoteAddress()) // Adds remote adress to the list of initiated but not ready connexion adresses
 		go protocolConn.HandleConfig(cfg)
+
+		fmt.Println("Certificates singleWay : ", s.tlsConfigSingleWay)
+		fmt.Println("Certificates doubleWay : ", s.tlsConfigDoubleWay)
 	}
 }
 

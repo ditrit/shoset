@@ -229,12 +229,12 @@ func (s *Shoset) SetUpDoubleWay() error {
 		Certificates:       []tls.Certificate{loadedCAkeys},
 		ClientCAs:          caCertPool,
 		ClientAuth:         tls.RequireAndVerifyClientCert,
-		InsecureSkipVerify: false,
+		InsecureSkipVerify: false, //
 	}
 
 	s.tlsConfigSingleWay = &tls.Config{
 		Certificates:       []tls.Certificate{loadedCAkeys},
-		InsecureSkipVerify: false,
+		InsecureSkipVerify: false, // ?? Set on True in NewShoset
 	}
 	return nil
 }

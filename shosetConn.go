@@ -141,6 +141,9 @@ func (c *ShosetConn) SetRemoteAddress(address string) { c.remoteAddress = addres
 
 // Store stores info concerning ShosetConn and Shoset for protocols
 func (c *ShosetConn) Store(protocol, lName, address, shosetType string) {
+
+	//fmt.Println("Storing ShoseConn : ", c)
+
 	c.SetRemoteLogicalName(lName)
 	c.SetRemoteShosetType(shosetType)
 
@@ -149,6 +152,8 @@ func (c *ShosetConn) Store(protocol, lName, address, shosetType string) {
 	c.GetShoset().LnamesByProtocol.AppendToKey(protocol, lName, true)
 	c.GetShoset().LnamesByType.AppendToKey(shosetType, lName, true)
 	c.GetShoset().ConnsByLname.StoreConfig(lName, address, protocol, c)
+
+	fmt.Println("Storing ShoseConn : ", c)
 }
 
 // NewShosetConn creates a new ShosetConn object for a specific address.
@@ -187,10 +192,12 @@ func (c *ShosetConn) HandleConfig(cfg *msg.ConfigProtocol) {
 		c.GetConn().Close()
 	}()
 	for {
-		fmt.Println("ConfigDoubleWay : ",c.GetShoset().GetTlsConfigDoubleWay())
+		//fmt.Println("(HandleConfig) ConfigDoubleWay : ", c.GetShoset().GetTlsConfigDoubleWay())
+		//fmt.Println("ConfigDoubleWay Certificates : ",c.GetShoset().GetTlsConfigDoubleWay().Certificates)
+
 		protocolConn, err := tls.Dial(CONNECTION_TYPE, c.GetRemoteAddress(), c.GetShoset().GetTlsConfigDoubleWay())
 		if err != nil {
-			time.Sleep(time.Millisecond * time.Duration(100)) //10
+			time.Sleep(time.Millisecond * time.Duration(200)) //10
 			c.Logger.Error().Msg("HandleConfig err: " + err.Error())
 			continue
 		}
@@ -211,8 +218,7 @@ func (c *ShosetConn) HandleConfig(cfg *msg.ConfigProtocol) {
 			}
 		}
 
-		time.Sleep(100*time.Millisecond) //
-
+		time.Sleep(200 * time.Millisecond) //
 	}
 }
 
@@ -269,6 +275,7 @@ func (c *ShosetConn) ReceiveMessage() error {
 	case errors.Is(err, syscall.EPIPE):
 		return nil
 	case err != nil:
+		fmt.Println("ReceiveMessage error : ", err)
 		if c.GetDir() == IN {
 			c.GetShoset().deleteConn(c.GetRemoteAddress(), c.GetRemoteLogicalName())
 		}

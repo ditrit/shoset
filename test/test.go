@@ -300,7 +300,6 @@ func testForwardMessageMultiProcess2(args []string) {
 
 	fmt.Println("Waiting for protocols to complete !!")
 	cl.WaitForProtocols(10)
-
 	fmt.Println("Shoset : ", cl)
 
 	// Receive Message
@@ -342,7 +341,7 @@ func testForwardMessageMultiProcess2(args []string) {
 
 	time.Sleep(20 * time.Second)
 
-	//select {}
+	select {}
 
 	//panic(nil)
 }
@@ -392,12 +391,12 @@ func testRelaunch(args []string) {
 
 	fmt.Println("DONE !!")
 
-	time.Sleep(10 * time.Second)
+	time.Sleep(15 * time.Second)
 	fmt.Println("Shoset : ", cl)
 
 	time.Sleep(20 * time.Second)
 
-	//select {}
+	select {}
 }
 
 func main() {
