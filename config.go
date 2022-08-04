@@ -1,6 +1,7 @@
 package shoset
 
 import (
+	"fmt"
 	"os"
 	"sync"
 
@@ -88,12 +89,21 @@ func (cfg *Config) WriteConfig(fileName string) error {
 	return cfg.viper.WriteConfigAs(cfg.baseDir + fileName + PATH_CONFIG_DIR + CONFIG_FILE)
 }
 
-// Set sets the value for a key for viper config.
-func (cfg *Config) Set(key string, value interface{}) {
+// AppendToKey sets the value for a key for viper config.
+func (cfg *Config) AppendToKey(key string, value []string) {
 	cfg.mu.Lock()
 	defer cfg.mu.Unlock()
 
-	cfg.viper.Set(key, value)
+	fmt.Println("value : ", value)
+
+	// Avoid duplicate
+	valueSlice := cfg.GetSlice(key)
+	for _,a := range value {
+		if ! contains(valueSlice, a) {
+			valueSlice = append(valueSlice, a)
+		}
+	}	
+	cfg.viper.Set(key, valueSlice)
 }
 
 // GetSlice returns the viper config for a specific protocol.

@@ -41,7 +41,7 @@ func (m *MapSyncMap) prepareUpdateFile(protocol string, ipAddresses []string) {
 
 // updateFile updates config after being set
 func (m *MapSyncMap) updateFile(protocol string, keys []string) {
-	m.cfg.Set(protocol, keys)
+	m.cfg.AppendToKey(protocol, keys)
 
 	if err := m.cfg.WriteConfig(m.cfg.GetFileName()); err != nil {
 		log.Error().Msg("error writing config: " + err.Error())
@@ -62,7 +62,8 @@ func (m *MapSyncMap) StoreConfig(lName, key, protocol string, value interface{})
 	// OUT is because we only handle the IPaddresses we had to protocol on at some point.
 	// They are the one we need to manually reconnect if a problem happens.
 	syncMap, _ = m.Load(lName)
-	keys := Keys(syncMap.(*sync.Map), OUT)
+	keys := Keys(syncMap.(*sync.Map), ALL) //OUT
+	fmt.Println("(StoreConfig) keys : ", keys)
 	if len(keys) != 0 {
 		m.updateFile(protocol, keys)
 	}

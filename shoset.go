@@ -391,8 +391,8 @@ func (s *Shoset) Protocol(bindAddress, remoteAddress, protocolType string) {
 		s.LaunchedProtocol.AppendToConcurentSlice(protocolConn.GetRemoteAddress()) // Adds remote adress to the list of initiated but not ready connexion adresses
 		go protocolConn.HandleConfig(cfg)
 
-		fmt.Println("Certificates singleWay : ", s.tlsConfigSingleWay)
-		fmt.Println("Certificates doubleWay : ", s.tlsConfigDoubleWay)
+		//fmt.Println("Certificates singleWay : ", s.tlsConfigSingleWay)
+		//fmt.Println("Certificates doubleWay : ", s.tlsConfigDoubleWay)
 	}
 }
 

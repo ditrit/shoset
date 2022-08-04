@@ -54,7 +54,7 @@ var LinkedCircles = []*ShosetCreation{
 
 var Circle = []*ShosetCreation{
 	{Lname: "A", Stype: "cl", Src: LnameiIP["A"], Dst: []string{}, Ptype: "pki", Launched: false},
-	{Lname: "B", Stype: "cl", Src: LnameiIP["B"], Dst: []string{LnameiIP["A"], LnameiIP["E"]}, Ptype: "link", Launched: false},
+	{Lname: "B", Stype: "cl", Src: LnameiIP["B"], Dst: []string{LnameiIP["A"]}, Ptype: "link", Launched: false},
 	{Lname: "C", Stype: "cl", Src: LnameiIP["C"], Dst: []string{LnameiIP["A"]}, Ptype: "link", Launched: false},
 	{Lname: "D", Stype: "cl", Src: LnameiIP["D"], Dst: []string{LnameiIP["C"]}, Ptype: "link", Launched: false},
 	{Lname: "E", Stype: "cl", Src: LnameiIP["E"], Dst: []string{LnameiIP["D"], LnameiIP["B"]}, Ptype: "link", Launched: false},

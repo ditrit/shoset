@@ -72,7 +72,7 @@ func (clh *ConfigLinkHandler) HandleDoubleWay(c *ShosetConn, message msg.Message
 		//c.SetIsValid(true) // Send statusChange Event change status
 		//c.GetShoset().waitGroupProtocol.Done()
 
-		c.Store(PROTOCOL_LINK, cfg.GetLogicalName(), c.GetRemoteAddress(), cfg.GetShosetType()) // Move grom brother case
+		c.Store(PROTOCOL_LINK, cfg.GetLogicalName(), c.GetRemoteAddress(), cfg.GetShosetType()) // Move from brother case
 		// D'ou sort le BROTHER quand on lance un link ?
 
 		c.GetShoset().LaunchedProtocol.DeleteFromConcurentSlice(c.GetRemoteAddress())
