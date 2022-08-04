@@ -1,6 +1,7 @@
 package shoset
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/ditrit/shoset/msg"
@@ -20,9 +21,11 @@ func (cbh *ConfigByeHandler) Get(c *ShosetConn) (msg.Message, error) {
 
 // HandleDoubleWay handles message for a ShosetConn accordingly.
 func (cbh *ConfigByeHandler) HandleDoubleWay(c *ShosetConn, message msg.Message) error {
+	fmt.Println("Handling bye")
+	
 	cfg := message.(msg.ConfigProtocol)
 
-	// Finds and deletes Routes going through the Lname initiating bye/delete (not tester)
+	// Finds and deletes Routes going through the Lname initiating bye/delete (not tested)
 	// Chercher le Lname ou juste la Conn ?
 	// deleteLname := c.GetRemoteLogicalName()
 	// c.GetShoset().RouteTable.Range(

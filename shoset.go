@@ -208,7 +208,7 @@ func NewShoset(logicalName, shosetType string) *Shoset {
 	s.Handlers["routingEvent"] = new(RoutingEventHandler)
 
 	s.Queue["forwardAck"] = msg.NewQueue()
-	s.Handlers["forwardAck"] = new(forwardAcknownledgeHandler)
+	s.Handlers["forwardAck"] = new(ForwardAcknownledgeHandler)
 
 	s.Queue["simpleMessage"] = msg.NewQueue()
 	s.Handlers["simpleMessage"] = new(SimpleMessageHandler)
@@ -516,7 +516,12 @@ func (s *Shoset) SaveRoute(c *ShosetConn, routingEvt *msg.RoutingEvent) {
 
 // Find the correct send function for the type of message using the handler and call it
 func (s *Shoset) Send(msg msg.Message) { //Use pointer for msg ?
-	s.Handlers[msg.GetMessageType()].Send(s, msg)
+	if msgType := msg.GetMessageType(); contains(MESSAGE_TYPES, msgType) {
+		s.Handlers[msgType].Send(s, msg)
+	} else {
+		s.Logger.Error().Msg("Trying to send an invalid message type or message of a type without a send function.")
+	}
+
 }
 
 //Wait for message

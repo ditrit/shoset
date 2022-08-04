@@ -16,7 +16,7 @@
         {
             "name": "Launch Package",
             "type": "go",
-            "preLaunchTask": "RemoveConfig",
+            "preLaunchTask": "MultiProcesses_prep",
             "request": "launch",
             "mode": "auto",
             "program": "./test",

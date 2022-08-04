@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"runtime/trace"
 	"sync"
 	"time"
 
@@ -227,48 +226,19 @@ func testSendEvent() {
 
 	time.Sleep(3 * time.Second)
 
-	s[1].Protocol("localhost:8002", "localhost:8001", "bye")
+	//s[1].Protocol("localhost:8002", "localhost:8001", "bye")
 
-	time.Sleep(10 * time.Second)
+	message := msg.NewConfigProtocol(s[1].GetBindAddress(), s[1].GetLogicalName(), s[1].GetShosetType(), "bye")
+	fmt.Println("Message sent : ", message)
+	s[1].Handlers["config"].Send(s[1],message)
+
+	time.Sleep(5 * time.Second)
 
 	utilsForTest.PrintManyShosets(s)
 
+	select{}
+
 	//wg.Wait()
-}
-
-func testForwardMessageMultiProcess(args []string) {
-	fmt.Println("args : ", args)
-	cl := shoset.NewShoset(args[0], "cl") //args[0] : lname
-	if args[1] == "1" {                   // args[1] : master
-		cl.InitPKI(args[2]) // args[2] : IP
-	} else {
-		cl.Protocol(args[2], args[3], "link") // args[2] : IP , args[3] : remote IP for connexion
-	}
-
-	cl.WaitForProtocols(10)
-
-	// Receive Message
-	if args[6] == "1" { //args[5] receiver
-		fmt.Println("Receiver : ", cl.GetLogicalName())
-		//for {
-		event_rc := cl.Wait("simpleMessage", map[string]string{}, 10, msg.NewIterator(cl.Queue["simpleMessage"]))
-		fmt.Println("(main) Message received : ", event_rc)
-		time.Sleep(10 * time.Millisecond)
-		//}
-	}
-
-	// Send Message
-	if args[4] == "1" { //args[4] sender
-		//time.Sleep(1 * time.Second)
-		fmt.Println("Sender : ", cl.GetLogicalName())
-		message := msg.NewSimpleMessage(args[5], "test_payload "+cl.GetLogicalName())
-		fmt.Println("Message sent : ", message)
-		cl.Send(message)
-	}
-
-	fmt.Println("DONE !!")
-
-	time.Sleep(5 * time.Second)
 }
 
 func testForwardMessageMultiProcess2(args []string) {
@@ -346,13 +316,14 @@ func testForwardMessageMultiProcess2(args []string) {
 	//panic(nil)
 }
 
+// Not working
 func testRelaunch(args []string) {
 	fmt.Println("args : ", args)
 
-	f, _ := os.Create("./profiler/trace_" + args[0] + ".out")
-	defer f.Close()
-	trace.Start(f)
-	defer trace.Stop()
+	// f, _ := os.Create("./profiler/trace_" + args[0] + ".out")
+	// defer f.Close()
+	// trace.Start(f)
+	// defer trace.Stop()
 
 	// Create Shoset
 	cl := utilsForTest.CreateShosetOnlyBindFromTopology(args[0], utilsForTest.StraightLine)
@@ -456,8 +427,8 @@ func main() {
 		// testPresentationENIB(ctx, done)
 		// testJoin3(ctx, done)
 		//testRouteTable(ctx, done)
-		testForwardMessage(ctx, done)
-		//testSendEvent()
+		//testForwardMessage(ctx, done)
+		testSendEvent()
 	} else if arg == "5" {
 		//testForwardMessageMultiProcess((os.Args)[2:])
 		testForwardMessageMultiProcess2((os.Args)[2:])

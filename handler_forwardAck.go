@@ -5,20 +5,21 @@ import (
 	"time"
 
 	"github.com/ditrit/shoset/msg"
+	"github.com/rs/zerolog/log"
 )
 
-// forwardAcknownledgeHandler implements MessageHandlers interface.
-type forwardAcknownledgeHandler struct{}
+// ForwardAcknownledgeHandler implements MessageHandlers interface.
+type ForwardAcknownledgeHandler struct{}
 
 // Get returns the message for a given ShosetConn.
-func (fah *forwardAcknownledgeHandler) Get(c *ShosetConn) (msg.Message, error) {
+func (fah *ForwardAcknownledgeHandler) Get(c *ShosetConn) (msg.Message, error) {
 	var m msg.ForwardAck
 	err := c.GetReader().ReadMessage(&m)
 	return m, err
 }
 
 // HandleDoubleWay handles message for a ShosetConn accordingly.
-func (fah *forwardAcknownledgeHandler) HandleDoubleWay(c *ShosetConn, message msg.Message) error {
+func (fah *ForwardAcknownledgeHandler) HandleDoubleWay(c *ShosetConn, message msg.Message) error {
 	//fmt.Println("((fah *forwardAcknownledgeHandler) HandleDoubleWay) Lname : ", c.GetLocalLogicalName(), " message : ", message)
 
 	m := message.(msg.ForwardAck)
@@ -32,12 +33,13 @@ func (fah *forwardAcknownledgeHandler) HandleDoubleWay(c *ShosetConn, message ms
 }
 
 // Send sends the message through the given Shoset network.
-func (fah *forwardAcknownledgeHandler) Send(s *Shoset, m msg.Message) {
-	//s.forwardMessage(m)
+func (fah *ForwardAcknownledgeHandler) Send(s *Shoset, m msg.Message) {
+	// no-op
+	log.Warn().Msg("ForwardAcknownledgeHandler.Send not implemented")
 }
 
 // Wait returns the message received for a given Shoset.
-func (fah *forwardAcknownledgeHandler) Wait(s *Shoset, replies *msg.Iterator, args map[string]string, timeout int) *msg.Message {
+func (fah *ForwardAcknownledgeHandler) Wait(s *Shoset, replies *msg.Iterator, args map[string]string, timeout int) *msg.Message {
 	timer := time.NewTimer(time.Duration(timeout) * time.Second)
 
 	// Check every message in the queue before waiting for a new message
