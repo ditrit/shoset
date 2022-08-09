@@ -226,17 +226,13 @@ func testSendEvent() {
 
 	time.Sleep(3 * time.Second)
 
-	//s[1].Protocol("localhost:8002", "localhost:8001", "bye")
+	s[1].Protocol("localhost:8002", "localhost:8001", "bye")
 
-	message := msg.NewConfigProtocol(s[1].GetBindAddress(), s[1].GetLogicalName(), s[1].GetShosetType(), "bye")
-	fmt.Println("Message sent : ", message)
-	s[1].Handlers["config"].Send(s[1],message)
-
-	time.Sleep(5 * time.Second)
+	time.Sleep(2 * time.Second)
 
 	utilsForTest.PrintManyShosets(s)
 
-	select{}
+	select {}
 
 	//wg.Wait()
 }
@@ -371,12 +367,18 @@ func testRelaunch(args []string) {
 }
 
 func main() {
+	// Clear the content of the profiler folder
+	os.RemoveAll("./profiler/")
+	os.MkdirAll("./profiler/", 0777)
+
+	// tracer
+	// f, _ := os.Create("./profiler/trace.out")
+	// defer f.Close()
+	// trace.Start(f)
+	// defer trace.Stop()
+
+	// CPU profiler
 	// var cpuprofile = flag.String("cpuprofile", "./profiler/cpu.prof", "write cpu profile to `file`")
-	// // var memprofile = flag.String("memprofile", "mem.prof", "write memory profile to `file`")
-
-	// os.RemoveAll("./profiler/")
-	// os.MkdirAll("./profiler/", 0777)
-
 	// flag.Parse()
 	// if *cpuprofile != "" {
 	// 	f, err := os.Create(*cpuprofile)
@@ -391,11 +393,12 @@ func main() {
 	// }
 
 	shoset.InitPrettyLogger(true)
-	shoset.SetLogLevel("debug")
+	shoset.SetLogLevel(shoset.TRACE)
 
 	ctx, done := context.WithTimeout(context.Background(), 1*time.Minute)
 
 	//terminal
+	// Choose the test to run, only decomment one for each case.
 	arg := os.Args[1]
 	if arg == "1" {
 		shoset.Log("testPkiServer")
@@ -428,14 +431,23 @@ func main() {
 		// testJoin3(ctx, done)
 		//testRouteTable(ctx, done)
 		//testForwardMessage(ctx, done)
-		testSendEvent()
+		//testSendEvent()
 	} else if arg == "5" {
 		//testForwardMessageMultiProcess((os.Args)[2:])
 		testForwardMessageMultiProcess2((os.Args)[2:])
 
 	} else if arg == "6" {
 		testRelaunch((os.Args)[2:])
+	} else if arg == "7" {
+		simpleExample()
+		//testEventContinuousSend()
+		//testSimpleForwarding()
+		//testForwardingTopology()
 	}
+
+	// Memory profiler
+	// var memprofile = flag.String("memprofile", "./profiler/mem.prof", "write memory profile to `file`")
+
 	// if *memprofile != "" {
 	// 	f, err := os.Create(*memprofile)
 	// 	if err != nil {

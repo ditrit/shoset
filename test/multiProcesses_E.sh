@@ -4,7 +4,7 @@
 
 sleep 8
 
-./shoset_build 5 E 0 1 A &
+./bin/shoset_build 5 E 0 1 A &
 #P4=$!
 
 wait

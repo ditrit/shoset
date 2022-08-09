@@ -41,7 +41,7 @@ type Shoset struct {
 
 	//NewRouteEvent   chan string // Notify of the discovery of a new route
 	RoutingEventBus eventBus.EventBus // When a route to a Lname is discovered, sends an event to everyone waiting for a route to this Lname
-	// topic : discovveredLname
+	// topic : discovered Lname
 
 	bindAddress string       // address on which the Shoset is bound
 	logicalName string       // logical name of the Shoset
@@ -184,7 +184,7 @@ func NewShoset(logicalName, shosetType string) *Shoset {
 		LaunchedProtocol: concurentData.NewConcurentSlice(),
 	}
 
-	s.ConnsByLname.SetConfig(NewConfig(s.logicalName)) // Add baseDir parameter
+	s.ConnsByLname.SetConfig(NewConfig(s.logicalName)) // Added baseDir parameter
 
 	s.Queue["cfglink"] = msg.NewQueue()
 	s.Handlers["cfglink"] = new(ConfigLinkHandler)
@@ -388,6 +388,8 @@ func (s *Shoset) Protocol(bindAddress, remoteAddress, protocolType string) {
 		cfg := msg.NewConfigProtocol(s.GetBindAddress(), s.GetLogicalName(), s.GetShosetType(), protocolType)
 
 		//s.waitGroupProtocol.Add(1)
+
+		//Cas du bye ?
 		s.LaunchedProtocol.AppendToConcurentSlice(protocolConn.GetRemoteAddress()) // Adds remote adress to the list of initiated but not ready connexion adresses
 		go protocolConn.HandleConfig(cfg)
 
@@ -516,10 +518,10 @@ func (s *Shoset) SaveRoute(c *ShosetConn, routingEvt *msg.RoutingEvent) {
 
 // Find the correct send function for the type of message using the handler and call it
 func (s *Shoset) Send(msg msg.Message) { //Use pointer for msg ?
-	if msgType := msg.GetMessageType(); contains(MESSAGE_TYPES, msgType) {
+	if msgType := msg.GetMessageType(); contains(SENDABLE_TYPES, msgType) {
 		s.Handlers[msgType].Send(s, msg)
 	} else {
-		s.Logger.Error().Msg("Trying to send an invalid message type or message of a type without a send function.")
+		s.Logger.Error().Msg("Trying to send an invalid message type or message of a type without a send function. Message type : " + msgType)
 	}
 
 }

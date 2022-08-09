@@ -10,6 +10,12 @@
             "problemMatcher": []
         },
         {
+            "label": "DeleteFolder",
+            "type": "shell",
+            "command": "rm -rf ~/.shoset",
+            "problemMatcher": []
+        },
+        {
             "label": "RunMultiProcesses",
             "runOptions": {},
             "dependsOrder": "sequence",

@@ -22,7 +22,7 @@ func (cbh *ConfigByeHandler) Get(c *ShosetConn) (msg.Message, error) {
 // HandleDoubleWay handles message for a ShosetConn accordingly.
 func (cbh *ConfigByeHandler) HandleDoubleWay(c *ShosetConn, message msg.Message) error {
 	fmt.Println("Handling bye")
-	
+
 	cfg := message.(msg.ConfigProtocol)
 
 	// Finds and deletes Routes going through the Lname initiating bye/delete (not tested)
@@ -42,9 +42,10 @@ func (cbh *ConfigByeHandler) HandleDoubleWay(c *ShosetConn, message msg.Message)
 		// send delete signal to all connected shosets from our list of known shosets.
 		cfgNewDelete := msg.NewConfigProtocol(cfg.GetAddress(), c.GetShoset().GetLogicalName(), c.GetShoset().GetShosetType(), DELETE)
 		c.GetShoset().ConnsByLname.Iterate(
-			func(address string, bro interface{}) {
+			func(address string, bro interface{}) { // Enovoyé à tous, pas seulement les brothers ?
 				if address != cfg.GetAddress() {
-					if err := bro.(*ShosetConn).GetWriter().SendMessage(*cfgNewDelete); err != nil {
+					err := bro.(*ShosetConn).GetWriter().SendMessage(*cfgNewDelete)
+					if err != nil {
 						bro.(*ShosetConn).Logger.Warn().Msg("couldn't send cfgNewDelete : " + err.Error())
 					}
 				}

@@ -10,7 +10,7 @@ import (
 )
 
 // Simplest example :
-func testEvent() {
+func simpleExample() {
 	cl1 := shoset.NewShoset("A", "TypeOfA")
 	cl1.InitPKI("localhost:8001") // Is the CA of the network
 
@@ -21,7 +21,6 @@ func testEvent() {
 	cl2.WaitForProtocols(5)
 
 	//Sender :
-	time.Sleep(1 * time.Second)
 	event := msg.NewEventClassic("test_topic", "test_event", "test_payload")
 	cl2.Send(event)
 
@@ -152,5 +151,7 @@ func testForwardingTopology() {
 
 	// Do someting else while it is sending and receiving messages.
 
-	select {} //Never return
+	time.Sleep(10*time.Second)
+
+	//select {} //Never return
 }

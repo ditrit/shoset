@@ -62,7 +62,7 @@ func (m *MapSyncMap) StoreConfig(lName, key, protocol string, value interface{})
 	// OUT is because we only handle the IPaddresses we had to protocol on at some point.
 	// They are the one we need to manually reconnect if a problem happens.
 	syncMap, _ = m.Load(lName)
-	keys := Keys(syncMap.(*sync.Map), ALL) //OUT
+	keys := Keys(syncMap.(*sync.Map), OUT) //ALL ??
 	fmt.Println("(StoreConfig) keys : ", keys)
 	if len(keys) != 0 {
 		m.updateFile(protocol, keys)

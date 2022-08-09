@@ -9,19 +9,17 @@
             "type": "go",
             "request": "attach",
             "mode": "local",
-            "debugAdapter": "dlv-dap",
-            //"preLaunchTask": "RunMultiProcesses",
             "processId": "${command:pickGoProcess}"
         },
         {
             "name": "Launch Package",
             "type": "go",
-            "preLaunchTask": "MultiProcesses_prep",
+            "preLaunchTask": "DeleteFolder",
             "request": "launch",
             "mode": "auto",
             "program": "./test",
             "args": [
-                "4"
+                "7",
             ]
         }
     ]

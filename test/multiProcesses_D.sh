@@ -4,7 +4,7 @@
 
 sleep 6
 
-./shoset_build 5 D 0 0 rien &
+./bin/shoset_build 5 D 0 0 rien &
 P=$!
 
 #Kill and restart

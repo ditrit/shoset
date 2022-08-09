@@ -9,6 +9,8 @@ import (
 	eventBus "github.com/ditrit/shoset/event_bus"
 )
 
+//Explication : c'est quoi et comment ça marche
+
 type ConcurentSlice struct {
 	sliceValues []string
 	eventBus    eventBus.EventBus // topics : change, empty
