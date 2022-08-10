@@ -126,13 +126,64 @@ func (s *Shoset) SetIsPki(state bool) { s.isPki = state }
 func (s *Shoset) SetListener(listener net.Listener) { s.listener = listener }
 
 // deleteConn deletes a ShosetConn from ConnsByLname map from a Shoset
-func (s *Shoset) deleteConn(connAddr, connLname string) {
-	if connsByLname, _ := s.ConnsByLname.Load(connLname); connsByLname != nil {
-		if conn, _ := connsByLname.(*sync.Map).Load(connAddr); conn != nil {
-			//fmt.Println("ConnsByLname : ", s.ConnsByLname)
-			s.ConnsByLname.DeleteConfig(connLname, connAddr)
-		}
+func (s *Shoset) deleteConn(remoteAddress, Lname string) {
+	// Lock shoset for the operation
+	
+	// Check if the ShosetCon exists
+	conn, ok := s.ConnsByLname.LoadValueFromKeys(Lname, remoteAddress)
+	if !ok {
+		s.Logger.Error().Msg("No Existing connection to Lname : " + Lname + "IP : " + remoteAddress + ", no connection to end.")
+		return
 	}
+
+	c := conn.(*ShosetConn)
+
+	s.ConnsByLname.DeleteValueFromKeys(Lname, remoteAddress)
+
+	mapSyncLname := new(sync.Map)
+	mapSyncLname.Store(Lname, true)
+	s.LnamesByProtocol.Store(PROTOCOL_EXIT, mapSyncLname) //Bye ou delete ?
+	//s.LnamesByType.Store(s.shosetType, mapSync) ??
+
+	// Assume qu'il n'y a jamais plus d'une connection vers un lname, on ne peut pas être sur si c'est join ou link
+	// Noter le protocol dans le conn quand on sait, sinon laisser ""
+	// Que des link ou ques des join avec un Lname
+
+	// Delete from LnamesByProtocol
+	s.LnamesByProtocol.DeleteValueFromKeys(c.GetProtocol(), Lname)
+	//Delete key if it is empty ??
+
+	// Delete from LnamesByType
+	s.LnamesByType.DeleteValueFromKeys(c.GetRemoteShosetType(), Lname)
+	//Delete key if it is empty ??
+
+	// Delete from ConnsByLname
+	s.ConnsByLname.DeleteValueFromKeys(Lname, remoteAddress)
+
+	// Delete from the config file
+	s.ConnsByLname.cfg.DeleteFromKey(c.GetProtocol(),[]string{c.GetRemoteAddress()})
+
+	// Update config folder
+	// Redo to avoid saving for every conn (saving once per protocol)
+	// s.ConnsByLname.Iterate(
+	// 	func(key string, conn interface{}) {
+	// 		c:=conn.(*ShosetConn)
+	// 		s.ConnsByLname.updateFile(c.GetProtocol(),[]string{c.GetRemoteAddress()})
+	// 	},
+	// )
+
+	// Delete from route
+	// Finds and deletes Routes going through the Lname initiating bye/delete (not tested)
+	// Chercher le Lname ou juste la Conn ?
+	// deleteLname := c.GetRemoteLogicalName()
+	s.RouteTable.Range(
+		func(key, val interface{}) bool {
+			if val.(Route).neighborConn == c {
+				fmt.Println("Deleting Route.")
+				c.GetShoset().RouteTable.Delete(key)
+			}
+			return true
+		})
 }
 
 // Wait for every Conn initialised to be ready for use
@@ -397,6 +448,33 @@ func (s *Shoset) Protocol(bindAddress, remoteAddress, protocolType string) {
 		//fmt.Println("Certificates doubleWay : ", s.tlsConfigDoubleWay)
 	}
 }
+
+func (s *Shoset) EndProtocol(Lname, remoteAddress string) {
+	// find the con in the list
+	conn, ok := s.ConnsByLname.LoadValueFromKeys(Lname, remoteAddress)
+	var c *ShosetConn
+	if !ok {
+		s.Logger.Error().Msg("No Existing connection to Lname : " + Lname + "IP : " + remoteAddress + ", no connection to end.")
+		return
+	} else {
+		c = conn.(*ShosetConn)
+	}
+
+	fmt.Println("(EndProtocol) conn", conn)
+
+	cfg := msg.NewConfigProtocol(s.GetBindAddress(), s.GetLogicalName(), s.GetShosetType(), DELETE)
+
+	err := c.GetWriter().SendMessage(*cfg)
+	if err != nil {
+		c.Logger.Error().Msg("couldn't send cfg: " + err.Error())
+		return
+		//Retry ?
+	}
+
+	s.deleteConn(remoteAddress, Lname) // Check order of arguments
+}
+
+// ######## Route and forwarding : ########
 
 // Forward messages destined to another Lname to the next step on the Route
 func (s *Shoset) forwardMessage(m msg.Message) {

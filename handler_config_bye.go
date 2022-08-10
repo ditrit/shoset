@@ -2,7 +2,6 @@ package shoset
 
 import (
 	"fmt"
-	"sync"
 
 	"github.com/ditrit/shoset/msg"
 	"github.com/rs/zerolog/log"
@@ -25,17 +24,6 @@ func (cbh *ConfigByeHandler) HandleDoubleWay(c *ShosetConn, message msg.Message)
 
 	cfg := message.(msg.ConfigProtocol)
 
-	// Finds and deletes Routes going through the Lname initiating bye/delete (not tested)
-	// Chercher le Lname ou juste la Conn ?
-	// deleteLname := c.GetRemoteLogicalName()
-	// c.GetShoset().RouteTable.Range(
-	// 	func(key, val interface{}) bool {
-	// 		if val.(Route).neighbour == deleteLname {
-	// 			c.GetShoset().RouteTable.Delete(key)
-	// 		}
-	// 		return true
-	// 	})
-
 	switch cfg.GetCommandName() {
 	case PROTOCOL_EXIT:
 		// incoming bye request.
@@ -55,10 +43,7 @@ func (cbh *ConfigByeHandler) HandleDoubleWay(c *ShosetConn, message msg.Message)
 	case DELETE:
 		// incoming delete signal.
 		// forget the concerned shoset from our list of known shosets and close connection.
-		mapSync := new(sync.Map)
-		mapSync.Store(cfg.GetLogicalName(), true)
-		c.GetShoset().LnamesByProtocol.Store(PROTOCOL_EXIT, mapSync)
-		c.GetShoset().LnamesByType.Store(cfg.GetShosetType(), mapSync)
+
 		c.GetShoset().deleteConn(cfg.GetAddress(), cfg.GetLogicalName())
 	}
 	return nil

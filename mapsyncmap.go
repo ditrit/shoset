@@ -24,21 +24,6 @@ func (m *MapSyncMap) SetConfig(cfg *Config) {
 	m.cfg = cfg
 }
 
-func (m *MapSyncMap) prepareUpdateFile(protocol string, ipAddresses []string) {
-	var protocols []string
-
-	if contains(m.cfg.GetSlice(PROTOCOL_JOIN), protocol) {
-		protocols = append(protocols, PROTOCOL_JOIN)
-	}
-	if contains(m.cfg.GetSlice(PROTOCOL_LINK), protocol) {
-		protocols = append(protocols, PROTOCOL_LINK)
-	}
-
-	for _, protocol := range protocols {
-		m.updateFile(protocol, ipAddresses)
-	}
-}
-
 // updateFile updates config after being set
 func (m *MapSyncMap) updateFile(protocol string, keys []string) {
 	m.cfg.AppendToKey(protocol, keys)
@@ -69,55 +54,24 @@ func (m *MapSyncMap) StoreConfig(lName, key, protocol string, value interface{})
 	}
 }
 
-// DeleteConfig deletes the value for a key.
-// It also updates the viper config file to keep new changes up to date by saving some data to handle before deleting the value.
-// Overrides Delete from sync.Map
-func (m *MapSyncMap) DeleteConfig(lName, connIpAddress string) {
-	//fmt.Println("lname : ", lName, "connIpAddress : ", connIpAddress)
-
-	//fmt.Println("MapSyncMap : ",m)
-
-	syncMap, _ := m.Load(lName)
-	conn, _ := syncMap.(*sync.Map).Load(connIpAddress)
-
-	//fmt.Println("syncMap : ", syncMap.(*sync.Map)) //.Load(lName)
-	//fmt.Println("conn : ", conn.(*ShosetConn))
-
-	// OUT is because we only handle the IPaddresses we had to protocol on at some point.
-	// They are the one we need to manually reconnect if a problem happens.
-	ipAddresses := Keys(syncMap.(*sync.Map), OUT)
-
-	//fmt.Println("LnamesByProtocol : ", conn.(*ShosetConn).GetShoset().LnamesByProtocol)
-
-	conn.(*ShosetConn).GetShoset().LnamesByProtocol.Range(func(protocol, syncMap interface{}) bool {
-		// LnamesByProtocol[protocol][lName]false || protocol != "bye"
-		//fmt.Println("(func) syncMap : ", syncMap.(*sync.Map))
-		if lnameInLnamesByProtocol, _ := syncMap.(*sync.Map).Load(lName); !lnameInLnamesByProtocol.(bool) || protocol != PROTOCOL_EXIT {
-			return false
-		}
-		m.prepareUpdateFile(protocol.(string), ipAddresses)
-		return true
-	})
-
-	syncMap.(*sync.Map).Delete(connIpAddress)
-}
-
 // Iterate calls *MapSync.Range(iter) sequentially for each key and *MapSync present in the map.
 func (m *MapSyncMap) Iterate(iter func(string, interface{})) {
-	for _, key := range m.Keys(ALL) {
-		syncMap, _ := m.Load(key)
-		if syncMap != nil {
-			//fmt.Println("(Iterate) syncMap : ",syncMap.(*sync.Map))
-			syncMap.(*sync.Map).Range(func(key, value interface{}) bool {
-				iter(key.(string), value)
-				return true
-			})
-		}
+	if m != nil {
+		m.Range(func(key, syncMap interface{}) bool {
+			if syncMap != nil {
+				syncMap.(*sync.Map).Range(func(key2, val2 interface{}) bool {
+					iter(key2.(string), val2)
+					return true
+				})
+			}
+			return true
+		})
 	}
 }
 
 // Keys returns a []string corresponding to the keys from the map[string]*sync.Map object.
 // sType set the specific keys depending on the desired shoset type.
+//Duplicate from utils
 func (m *MapSyncMap) Keys(sType string) []string {
 	var keys []string
 	if sType == ALL {
@@ -139,8 +93,8 @@ func (m *MapSyncMap) Keys(sType string) []string {
 	return removeDuplicateStr(keys)
 }
 
-// Apppend a valye to a MapSyncMap : m[key1][key2]=value
-func (m *MapSyncMap) AppendToKey(key1 string, key2 string, value interface{}) {
+// Apppend a value to a MapSyncMap : m[key1][key2]=value
+func (m *MapSyncMap) AppendToKeys(key1 string, key2 string, value interface{}) {
 	if mapSync, ok := m.Load(key1); ok {
 		mapSync.(*sync.Map).Store(key2, true)
 		m.Store(key1, mapSync)
@@ -167,4 +121,23 @@ func (m *MapSyncMap) String() string {
 		})
 	}
 	return description
+}
+
+// Retrieve a value from a MapSyncMap : m[key1][key2]=value
+func (m *MapSyncMap) LoadValueFromKeys(key1_in string, key2_in string) (interface{}, bool) {
+	//fmt.Println("key1_in : ",key1_in,"key2_in : ",key2_in)
+	//fmt.Println("MapSyncMap : ",m)
+
+	if syncMap, ok := m.Load(key1_in); ok {
+		return syncMap.(*sync.Map).Load(key2_in)
+	} else {
+		return nil, ok
+	}
+}
+
+// Retrieve a value from a MapSyncMap : m[key1][key2]=value
+func (m *MapSyncMap) DeleteValueFromKeys(key1_in string, key2_in string) {
+	if syncMap, ok := m.Load(key1_in); ok {
+		syncMap.(*sync.Map).Delete(key2_in)
+	}
 }

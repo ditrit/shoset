@@ -98,12 +98,35 @@ func (cfg *Config) AppendToKey(key string, value []string) {
 
 	// Avoid duplicate
 	valueSlice := cfg.GetSlice(key)
-	for _,a := range value {
-		if ! contains(valueSlice, a) {
+	for _, a := range value {
+		if !contains(valueSlice, a) {
 			valueSlice = append(valueSlice, a)
 		}
-	}	
+	}
 	cfg.viper.Set(key, valueSlice)
+	cfg.viper.WriteConfig()
+}
+
+// DeleteFromKey deletes the vales from the list from the key.
+func (cfg *Config) DeleteFromKey(key string, value []string) {
+	cfg.mu.Lock()
+	defer cfg.mu.Unlock()
+
+	fmt.Println("(DeleteFromKey) To be deleted : ", value)
+
+	valueCfg := cfg.GetSlice(key)
+	valueCfgOut := []string{}
+	for _, a := range valueCfg {
+		if !contains(value, a) {
+			fmt.Println("(DeleteFromKey) Adding back :", a)
+			valueCfgOut = append(valueCfgOut, a)
+		} else {
+			fmt.Println("(DeleteFromKey) Deleting : ", a)
+		}
+	}
+	fmt.Println("(DeleteFromKey) valueCfgOut : ", valueCfgOut)
+	cfg.viper.Set(key, valueCfgOut)
+	cfg.viper.WriteConfig()
 }
 
 // GetSlice returns the viper config for a specific protocol.

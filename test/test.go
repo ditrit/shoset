@@ -366,6 +366,61 @@ func testRelaunch(args []string) {
 	select {}
 }
 
+// Send an event every second forever :
+func testEndConnection() {
+	cl1 := shoset.NewShoset("A", "cl")
+	cl1.InitPKI("localhost:8001") // Is the CA of the network
+
+	cl2 := shoset.NewShoset("B", "cl")
+	cl2.Protocol("localhost:8002", "localhost:8001", "link") // we link it to our first socket
+
+	cl3 := shoset.NewShoset("C", "cl")
+	cl3.Protocol("localhost:8003", "localhost:8002", "link")
+
+	cl1.WaitForProtocols(5) // Wait for cl1 to be ready
+	cl2.WaitForProtocols(5)
+	cl3.WaitForProtocols(5)
+
+	//Sender :
+	go func() {
+		i := 0
+		for {
+			time.Sleep(1 * time.Second)
+			event := msg.NewSimpleMessage("A", "test_payload"+fmt.Sprint(i))
+			cl3.Send(event)
+			i++
+		}
+	}()
+
+	//Receiver :
+	iterator := msg.NewIterator(cl1.Queue["simpleMessage"])
+	go func() {
+		for {
+			event_rc := cl1.Wait("simpleMessage", map[string]string{}, 5, iterator)
+			fmt.Println("message received : ", event_rc)
+			if event_rc != nil {
+				shoset.Log("message received (Payload) : " + event_rc.GetPayload())
+			}
+		}
+	}()
+
+	time.Sleep(5 * time.Second)
+
+	fmt.Println(cl1)
+	fmt.Println(cl2)
+	fmt.Println(cl3)
+
+	cl3.EndProtocol("B", "127.0.0.1:8002")
+
+	time.Sleep(1 * time.Second)
+
+	fmt.Println(cl1)
+	fmt.Println(cl2)
+	fmt.Println(cl3)
+
+	time.Sleep(10 * time.Second)
+}
+
 func main() {
 	// Clear the content of the profiler folder
 	os.RemoveAll("./profiler/")
@@ -432,6 +487,7 @@ func main() {
 		//testRouteTable(ctx, done)
 		//testForwardMessage(ctx, done)
 		//testSendEvent()
+		testEndConnection()
 	} else if arg == "5" {
 		//testForwardMessageMultiProcess((os.Args)[2:])
 		testForwardMessageMultiProcess2((os.Args)[2:])

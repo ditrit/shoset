@@ -35,7 +35,7 @@ const (
 const (
 	OUT string = "out"
 	IN  string = "in"
-	ME  string = "me" // create conn without real direction - see it as a fake connection between 2 shosets from the same type in order to get them know each other.
+	ME  string = "me" // create conn without real direction - see it as a fake connection between 2 shosets from the same type in order to get them to know each other.
 )
 
 // IP

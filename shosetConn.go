@@ -38,6 +38,8 @@ type ShosetConn struct {
 	dir              string
 	remoteAddress    string // address of the socket in front of this one
 
+	protocol string // protocol type used by the shoset (join, link, ...) (Usualy is not known at the time of creation of the ShosetConn.)
+
 	isValid ProtectedStatus // state of the conn
 
 	StatusChange chan bool // Send a message on the channel to notifie waiting GoRoutines that the state of the connexion Changed (Actual value sent is not used)
@@ -72,6 +74,9 @@ func (c *ShosetConn) GetDir() string { return c.dir }
 
 // GetRemoteAddress returns remoteAddress from ShosetConn.
 func (c *ShosetConn) GetRemoteAddress() string { return c.remoteAddress }
+
+// GetProtocol returns protocol from ShosetConn.
+func (c *ShosetConn) GetProtocol() string { return c.protocol }
 
 // GetLocalAddress returns shoset.GetBindAddress() from ShosetConn.
 func (c *ShosetConn) GetLocalAddress() string { return c.GetShoset().GetBindAddress() }
@@ -118,6 +123,9 @@ func (c *ShosetConn) SetLocalAddress(bindAddress string) { c.GetShoset().SetBind
 // SetRemoteShosetType sets the ShosetType for a ShosetConn.
 func (c *ShosetConn) SetRemoteShosetType(ShosetType string) { c.remoteShosetType = ShosetType }
 
+// SetProtocol sets the protocol for a ShosetConn.
+func (c *ShosetConn) SetProtocol(protocol string) { c.protocol= protocol }
+
 // SetIsValid sets the state for a ShosetConn.
 func (c *ShosetConn) SetIsValid(state bool) {
 	//c.isValid.m.Lock()
@@ -144,13 +152,15 @@ func (c *ShosetConn) Store(protocol, lName, address, shosetType string) {
 
 	//fmt.Println("Storing ShoseConn : ", c)
 
+	c.SetProtocol(protocol)
+
 	c.SetRemoteLogicalName(lName)
 	c.SetRemoteShosetType(shosetType)
 
 	mapSync := new(sync.Map)
 	mapSync.Store(lName, true)
-	c.GetShoset().LnamesByProtocol.AppendToKey(protocol, lName, true)
-	c.GetShoset().LnamesByType.AppendToKey(shosetType, lName, true)
+	c.GetShoset().LnamesByProtocol.AppendToKeys(protocol, lName, true)
+	c.GetShoset().LnamesByType.AppendToKeys(shosetType, lName, true)
 	c.GetShoset().ConnsByLname.StoreConfig(lName, address, protocol, c)
 
 	fmt.Println("Storing ShoseConn : ", c)
@@ -181,7 +191,7 @@ func NewShosetConn(s *Shoset, address, dir string) (*ShosetConn, error) {
 
 // String returns the formatted string of ShosetConn object in a pretty way.
 func (c *ShosetConn) String() string {
-	return fmt.Sprintf("ShosetConn{name: %s, type: %s, way: %s, remoteAddress: %s, isValid: %v}", c.GetRemoteLogicalName(), c.GetRemoteShosetType(), c.GetDir(), c.GetRemoteAddress(), c.GetIsValid())
+	return fmt.Sprintf("ShosetConn{name: %s, type: %s, protocol : %s, way: %s, remoteAddress: %s, isValid: %v}", c.GetRemoteLogicalName(), c.GetRemoteShosetType(),c.GetProtocol(), c.GetDir(), c.GetRemoteAddress(), c.GetIsValid())
 }
 
 // HandleConfig handles ConfigProtocol message.
