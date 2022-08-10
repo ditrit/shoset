@@ -8,12 +8,12 @@ sleep 6
 P=$!
 
 #Kill and restart
-# sleep 11
+sleep 11
 
-# kill $P
+kill $P
 
-# sleep 1
+sleep 1
 
-# ./shoset_build 6 D 0 0 rien &
+./bin/shoset_build 6 D 0 0 rien &
 
 wait

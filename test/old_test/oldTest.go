@@ -1,4 +1,6 @@
-package main // tests run in the main package
+package oldTest
+
+// This file haven't been touched in a while, there no garanty that it still works with the current version o the code.
 
 import (
 	"context"
@@ -9,6 +11,7 @@ import (
 	// "log"
 
 	"github.com/ditrit/shoset"
+	utilsForTest "github.com/ditrit/shoset/test/utils_for_test"
 )
 
 // func shosetClient(logicalName, ShosetType, address string) {
@@ -303,51 +306,51 @@ import (
 // 	*/<-done
 // }
 
-func simpleCluster() {
+func SimpleCluster() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	cl1 := shoset.NewShoset("cl", "cl")
 	cl1.Bind("localhost:8001") //we take the port 8001 for our first socket
 
-	loopUntilDone(1*time.Second, ctx, func() {
+	utilsForTest.LoopUntilDone(1*time.Second, ctx, func() {
 		fmt.Println("\ncl : ", cl1)
 	})
 }
 
-func simpleAgregator() {
+func SimpleAgregator() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	aga1 := shoset.NewShoset("aga", "a") // agregateur
 	aga1.Protocol("localhost:8111", "localhost:8001", "link")
 
-	loopUntilDone(1*time.Second, ctx, func() {
+	utilsForTest.LoopUntilDone(1*time.Second, ctx, func() {
 		fmt.Println("\ncl : ", aga1)
 	})
 }
 
-func simpleConnector() {
+func SimpleConnector() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	Ca1 := shoset.NewShoset("Ca", "c") // agregateur
 	Ca1.Protocol("localhost:8211", "localhost:8111", "link")
 
-	loopUntilDone(1*time.Second, ctx, func() {
+	utilsForTest.LoopUntilDone(1*time.Second, ctx, func() {
 		fmt.Println("\ncl : ", Ca1)
 	})
 }
 
-func simplesimpleConnector() {
+func SimplesimpleConnector() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	Ca1 := shoset.NewShoset("Ca", "c") // agregateur
 	Ca1.Bind("localhost:8211")
 
-	loopUntilDone(1*time.Second, ctx, func() {
+	utilsForTest.LoopUntilDone(1*time.Second, ctx, func() {
 		fmt.Println("\ncl : ", Ca1)
 	})
 }
 
-func testJoin1() {
+func TestJoin1() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -360,14 +363,14 @@ func testJoin1() {
 	cl3 := shoset.NewShoset("cl", "cl")
 	cl3.Protocol("localhost:8003", "localhost:8001", "join")
 
-	loopUntilDone(1*time.Second, ctx, func() {
+	utilsForTest.LoopUntilDone(1*time.Second, ctx, func() {
 		fmt.Println("\ncl : ", cl1)
 		fmt.Println("\ncl : ", cl2)
 		fmt.Println("\ncl : ", cl3)
 	})
 }
 
-func testJoin2() {
+func TestJoin2() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -378,13 +381,13 @@ func testJoin2() {
 	cl3.Protocol("localhost:8003", "localhost:8001", "join")
 	// cl3.Protocol("localhost:8002", "join")
 
-	loopUntilDone(1*time.Second, ctx, func() {
+	utilsForTest.LoopUntilDone(1*time.Second, ctx, func() {
 		fmt.Println("\ncl : ", cl2)
 		fmt.Println("\ncl : ", cl3)
 	})
 }
 
-func testJoin3(ctx context.Context, done context.CancelFunc) {
+func TestJoin3(ctx context.Context, done context.CancelFunc) {
 	cl1 := shoset.NewShoset("cl", "cl") // cluster
 	cl1.InitPKI("localhost:8001")
 
@@ -406,7 +409,7 @@ func testJoin3(ctx context.Context, done context.CancelFunc) {
 	time.Sleep(time.Second * time.Duration(2))
 	cl2.Protocol("localhost:8002", "localhost:8003", "bye")
 
-	loopUntilDone(1*time.Second, ctx, func() {
+	utilsForTest.LoopUntilDone(1*time.Second, ctx, func() {
 		fmt.Printf("%s: %v", cl1.GetLogicalName(), cl1)
 		fmt.Printf("%s: %v", cl2.GetLogicalName(), cl2)
 		fmt.Printf("%s: %v", cl3.GetLogicalName(), cl3)
@@ -417,7 +420,7 @@ func testJoin3(ctx context.Context, done context.CancelFunc) {
 	})
 }
 
-func testJoin4() {
+func TestJoin4() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -433,7 +436,7 @@ func testJoin4() {
 	cl5 := shoset.NewShoset("cl", "cl")
 	cl5.Protocol("localhost:8005", "localhost:8004", "join")
 
-	loopUntilDone(1*time.Second, ctx, func() {
+	utilsForTest.LoopUntilDone(1*time.Second, ctx, func() {
 		fmt.Println("\ncl : ", cl2)
 		fmt.Println("\ncl : ", cl3)
 		fmt.Println("\ncl : ", cl4)
@@ -521,7 +524,7 @@ func testJoin4() {
 // 	<-done
 // }
 
-func testLink1() {
+func TestLink1() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -543,7 +546,7 @@ func testLink1() {
 	aga2 := shoset.NewShoset("aga", "a") // agregateur
 	aga2.Protocol("localhost:8112", "localhost:8001", "link")
 
-	loopUntilDone(1*time.Second, ctx, func() {
+	utilsForTest.LoopUntilDone(1*time.Second, ctx, func() {
 		fmt.Println("\ncl : ", cl1)
 		fmt.Println("\ncl : ", cl2)
 		fmt.Println("\ncl : ", cl3)
@@ -553,7 +556,7 @@ func testLink1() {
 	})
 }
 
-func testLink2() {
+func TestLink2() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -572,7 +575,7 @@ func testLink2() {
 	aga2 := shoset.NewShoset("aga", "a") // agregateur
 	aga2.Protocol("localhost:8112", "localhost:8001", "link")
 
-	loopUntilDone(1*time.Second, ctx, func() {
+	utilsForTest.LoopUntilDone(1*time.Second, ctx, func() {
 		fmt.Println("\ncl : ", cl2)
 		fmt.Println("\ncl : ", cl3)
 		fmt.Println("\ncl : ", cl4)
@@ -581,7 +584,7 @@ func testLink2() {
 	})
 }
 
-func testLink3() {
+func TestLink3() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -603,7 +606,7 @@ func testLink3() {
 	aga2 := shoset.NewShoset("aga", "a") // agregateur
 	aga2.Protocol("localhost:8112", "localhost:8002", "link")
 
-	loopUntilDone(1*time.Second, ctx, func() {
+	utilsForTest.LoopUntilDone(1*time.Second, ctx, func() {
 		fmt.Println("\ncl : ", cl1)
 		fmt.Println("\ncl : ", cl2)
 		fmt.Println("\ncl : ", cl3)
@@ -613,7 +616,7 @@ func testLink3() {
 	})
 }
 
-func testLink4() {
+func TestLink4() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -632,7 +635,7 @@ func testLink4() {
 	aga2 := shoset.NewShoset("aga", "a") // agregateur
 	aga2.Protocol("localhost:8112", "localhost:8002", "link")
 
-	loopUntilDone(1*time.Second, ctx, func() {
+	utilsForTest.LoopUntilDone(1*time.Second, ctx, func() {
 		fmt.Println("\ncl : ", cl2)
 		fmt.Println("\ncl : ", cl3)
 		fmt.Println("\ncl : ", cl4)
@@ -641,7 +644,7 @@ func testLink4() {
 	})
 }
 
-func testLink5() {
+func TestLink5() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -669,7 +672,7 @@ func testLink5() {
 	Ca2 := shoset.NewShoset("Ca", "c") //connecteur
 	Ca2.Protocol("localhost:8212", "localhost:8112", "link")
 
-	loopUntilDone(1*time.Second, ctx, func() {
+	utilsForTest.LoopUntilDone(1*time.Second, ctx, func() {
 		fmt.Println("\ncl : ", cl1)
 		fmt.Println("\ncl : ", cl2)
 		fmt.Println("\ncl : ", cl3)
@@ -681,7 +684,7 @@ func testLink5() {
 	})
 }
 
-func testLink6() {
+func TestLink6() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -706,7 +709,7 @@ func testLink6() {
 	Ca2 := shoset.NewShoset("Ca", "c") //connecteur
 	Ca2.Protocol("localhost:8212", "localhost:8112", "link")
 
-	loopUntilDone(1*time.Second, ctx, func() {
+	utilsForTest.LoopUntilDone(1*time.Second, ctx, func() {
 		fmt.Println("\ncl : ", cl2)
 		fmt.Println("\ncl : ", cl3)
 		fmt.Println("\ncl : ", cl4)
@@ -717,7 +720,7 @@ func testLink6() {
 	})
 }
 
-func testLink7() {
+func TestLink7() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -742,7 +745,7 @@ func testLink7() {
 	Ca2 := shoset.NewShoset("Ca", "c") //connecteur
 	Ca2.Protocol("localhost:8212", "localhost:8112", "link")
 
-	loopUntilDone(1*time.Second, ctx, func() {
+	utilsForTest.LoopUntilDone(1*time.Second, ctx, func() {
 		fmt.Println("\ncl : ", cl1)
 		fmt.Println("\ncl : ", cl2)
 		fmt.Println("\ncl : ", cl3)
@@ -753,7 +756,7 @@ func testLink7() {
 	})
 }
 
-func testLink8() {
+func TestLink8() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -802,7 +805,7 @@ func testLink8() {
 	// fmt.Println("\nag : ", aga2)
 	// fmt.Println("\nca : ", Ca2)
 
-	loopUntilDone(2*time.Second, ctx, func() {
+	utilsForTest.LoopUntilDone(2*time.Second, ctx, func() {
 		// fmt.Println("\ncl : ", cl1)
 		// fmt.Println("\ncl : ", cl2)
 		// fmt.Println("\ncl : ", cl3)

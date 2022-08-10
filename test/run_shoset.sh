@@ -6,5 +6,5 @@
 
 
 rm -rf ~/.shoset 
-go run -race test/*.go $1 #* to get every files int ./test
+go run -race test/test.go $1 #* to get every files int ./test
 wait

@@ -12,22 +12,10 @@ import (
 
 	"github.com/ditrit/shoset"
 	"github.com/ditrit/shoset/msg"
+	oldTest "github.com/ditrit/shoset/test/old_test"
 	utilsForTest "github.com/ditrit/shoset/test/utils_for_test"
+	example "github.com/ditrit/shoset/test/example"
 )
-
-func loopUntilDone(tick time.Duration, ctx context.Context, callback func()) {
-	ticker := time.NewTicker(tick)
-	for {
-		select {
-		case <-ctx.Done():
-			fmt.Println("leaving...")
-			return
-		case t := <-ticker.C:
-			fmt.Println("Tick at", t)
-			callback()
-		}
-	}
-}
 
 func testPki(ctx context.Context, done context.CancelFunc) {
 	tt := []struct {
@@ -60,7 +48,7 @@ func testPki(ctx context.Context, done context.CancelFunc) {
 	// time.Sleep(time.Second * time.Duration(2))
 	// s[2].Protocol("localhost:8003", "localhost:8002", "bye")
 
-	loopUntilDone(1*time.Second, ctx, func() {
+	utilsForTest.LoopUntilDone(1*time.Second, ctx, func() {
 		fmt.Println("in_callback")
 		for _, conn := range s {
 			fmt.Printf("%s: %v", conn.GetLogicalName(), conn)
@@ -73,7 +61,7 @@ func testPkiServer(ctx context.Context, done context.CancelFunc) {
 	cl1 := shoset.NewShoset("cl", "cl") // cluster
 	cl1.InitPKI("localhost:8001")
 
-	loopUntilDone(2*time.Second, ctx, func() {
+	utilsForTest.LoopUntilDone(2*time.Second, ctx, func() {
 		// fmt.Println("\ncl : ", cl1)
 		done()
 		return
@@ -90,7 +78,7 @@ func testPkiClient(ctx context.Context, done context.CancelFunc) {
 	cl4 := shoset.NewShoset("y", "y")
 	cl4.Protocol("localhost:8004", "localhost:8003", "link")
 
-	loopUntilDone(2*time.Second, ctx, func() {
+	utilsForTest.LoopUntilDone(2*time.Second, ctx, func() {
 		// fmt.Println("\ncl : ", cl2)
 		done()
 	})
@@ -109,7 +97,7 @@ func testPresentationENIB(ctx context.Context, done context.CancelFunc) {
 	cl4 := shoset.NewShoset("cl", "cl")
 	cl4.Protocol("localhost:8004", "localhost:8001", "join")
 
-	loopUntilDone(1*time.Second, ctx, func() {
+	utilsForTest.LoopUntilDone(1*time.Second, ctx, func() {
 		fmt.Printf("%s: %v", cl1.GetLogicalName(), cl1)
 		fmt.Printf("%s: %v", cl2.GetLogicalName(), cl2)
 		fmt.Printf("%s: %v", cl3.GetLogicalName(), cl3)
@@ -450,55 +438,53 @@ func main() {
 	shoset.InitPrettyLogger(true)
 	shoset.SetLogLevel(shoset.TRACE)
 
-	ctx, done := context.WithTimeout(context.Background(), 1*time.Minute)
+	// ctx, done := context.WithTimeout(context.Background(), 1*time.Minute)
 
 	//terminal
 	// Choose the test to run, only decomment one for each case.
 	arg := os.Args[1]
 	if arg == "1" {
 		shoset.Log("testPkiServer")
-		testPkiServer(ctx, done)
-		// testJoin1()
-		// testJoin2()
-		// testJoin3()
-		// testJoin4()
-		// testLink1()
-		// testLink2()
-		// testLink3()
-		// testLink4()
-		// testLink5()
-		// testLink6()
-		// testLink7()
-		// testLink8()
+		// testPkiServer(ctx, done)
+		oldTest.TestJoin1()
+		// oldTest.TestJoin2()
+		// oldTest.TestJoin3()
+		// oldTest.TestJoin4()
+		// oldTest.TestLink1()
+		// oldTest.TestLink2()
+		// oldTest.TestLink3()
+		// oldTest.TestLink4()
+		// oldTest.TestLink5()
+		// oldTest.TestLink6()
+		// oldTest.TestLink7()
+		// oldTest.TestLink8()
 		// testPki()
 	} else if arg == "2" {
 		shoset.Log("testPkiClient")
-		testPkiClient(ctx, done)
-		// simpleCluster()
-		// simpleAgregator()
-		// simpleConnector()
+		// testPkiClient(ctx, done)
+		// oldTest.SimpleCluster()
+		// oldTest.SimpleAgregator()
+		// oldTest.SimpleConnector()
 	} else if arg == "3" {
 		shoset.Log("simplesimpleConnector")
-		// simplesimpleConnector()
+		//oldTest.SimplesimpleConnector()
 	} else if arg == "4" {
 		// testPki(ctx, done)
 		// testPresentationENIB(ctx, done)
-		// testJoin3(ctx, done)
-		//testRouteTable(ctx, done)
-		//testForwardMessage(ctx, done)
-		//testSendEvent()
-		testEndConnection()
+		// oldTest.TestJoin3(ctx, done)
+		// testRouteTable(ctx, done)
+		// testForwardMessage(ctx, done)
+		// testSendEvent()
+		// testEndConnection()
 	} else if arg == "5" {
-		//testForwardMessageMultiProcess((os.Args)[2:])
 		testForwardMessageMultiProcess2((os.Args)[2:])
-
 	} else if arg == "6" {
 		testRelaunch((os.Args)[2:])
 	} else if arg == "7" {
-		simpleExample()
-		//testEventContinuousSend()
-		//testSimpleForwarding()
-		//testForwardingTopology()
+		example.SimpleExample()
+		example.TestEventContinuousSend()
+		example.TestSimpleForwarding()
+		example.TestForwardingTopology()
 	}
 
 	// Memory profiler

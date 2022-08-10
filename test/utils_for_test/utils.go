@@ -1,12 +1,27 @@
 package utilsForTest
 
 import (
+	"context"
 	"fmt"
 	"time"
 
 	"github.com/ditrit/shoset"
 	"github.com/ditrit/shoset/msg"
 )
+
+func LoopUntilDone(tick time.Duration, ctx context.Context, callback func()) {
+	ticker := time.NewTicker(tick)
+	for {
+		select {
+		case <-ctx.Done():
+			fmt.Println("leaving...")
+			return
+		case t := <-ticker.C:
+			fmt.Println("Tick at", t)
+			callback()
+		}
+	}
+}
 
 func CreateManyShosets(tt []*ShosetCreation, s []*shoset.Shoset, wait bool) []*shoset.Shoset {
 	for i, t := range tt {
@@ -48,7 +63,7 @@ func CreateShosetFromTopology(Lname string, tt []*ShosetCreation) *shoset.Shoset
 	return nil
 }
 
-func AddConnToShosetFromTopology(s *shoset.Shoset,Lname string, tt []*ShosetCreation) *shoset.Shoset {
+func AddConnToShosetFromTopology(s *shoset.Shoset, Lname string, tt []*ShosetCreation) *shoset.Shoset {
 	for _, t := range tt {
 		if t.Lname == Lname {
 			if t.Ptype == "pki" {

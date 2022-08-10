@@ -1,4 +1,4 @@
-package main // tests run in the main package
+package example
 
 import (
 	"fmt"
@@ -10,7 +10,7 @@ import (
 )
 
 // Simplest example :
-func simpleExample() {
+func SimpleExample() {
 	cl1 := shoset.NewShoset("A", "TypeOfA")
 	cl1.InitPKI("localhost:8001") // Is the CA of the network
 
@@ -31,7 +31,7 @@ func simpleExample() {
 }
 
 // Send an event every second forever :
-func testEventContinuousSend() {
+func TestEventContinuousSend() {
 	cl1 := shoset.NewShoset("A", "cl")
 	cl1.InitPKI("localhost:8001") // Is the CA of the network
 
@@ -69,7 +69,7 @@ func testEventContinuousSend() {
 }
 
 // Forwarding : Send a message every second from C to A forever.
-func testSimpleForwarding() {
+func TestSimpleForwarding() {
 	cl1 := shoset.NewShoset("A", "cl")
 	cl1.InitPKI("localhost:8001") // Is the CA of the network
 
@@ -112,7 +112,7 @@ func testSimpleForwarding() {
 }
 
 // Forwarding using topology : Same as before but using the topology sytem to symplify setup.
-func testForwardingTopology() {
+func TestForwardingTopology() {
 	tt := utilsForTest.Circle // Choose the network topology for the test
 
 	s := []*shoset.Shoset{} // Create the empty list of shosets

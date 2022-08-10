@@ -7,7 +7,7 @@
 
 #-gcflags=all="-N -l" Disable optimizations for debugging
 
-go build -v -o ./bin/ -race -gcflags=all="-N -l" ./test/*.go
+go build -v -o ./bin/shoset_build -race -gcflags=all="-N -l" ./test/test.go
 
 rm -rf ~/.shoset
 
