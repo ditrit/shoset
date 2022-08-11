@@ -12,9 +12,9 @@ import (
 
 	"github.com/ditrit/shoset"
 	"github.com/ditrit/shoset/msg"
+	example "github.com/ditrit/shoset/test/example"
 	oldTest "github.com/ditrit/shoset/test/old_test"
 	utilsForTest "github.com/ditrit/shoset/test/utils_for_test"
-	example "github.com/ditrit/shoset/test/example"
 )
 
 func testPki(ctx context.Context, done context.CancelFunc) {
@@ -134,7 +134,7 @@ func testRouteTable(ctx context.Context, done context.CancelFunc) {
 
 func testForwardMessage(ctx context.Context, done context.CancelFunc) {
 
-	tt := utilsForTest.Circle // Choose the network topology for the test
+	tt := utilsForTest.LinkedCircles // Choose the network topology for the test
 
 	s := []*shoset.Shoset{}
 
@@ -278,7 +278,7 @@ func testForwardMessageMultiProcess2(args []string) {
 				message := msg.NewSimpleMessage(args[3], "test_payload "+cl.GetLogicalName()) //args[3] destination
 				fmt.Println("Message sent : ", message)
 				cl.Send(message)
-				time.Sleep(5 * time.Second)
+				time.Sleep(1 * time.Second)
 			}
 		}()
 	}
@@ -293,9 +293,13 @@ func testForwardMessageMultiProcess2(args []string) {
 	time.Sleep(10 * time.Second)
 	fmt.Println("Shoset : ", cl)
 
-	time.Sleep(20 * time.Second)
+	for {
+		time.Sleep(10 * time.Second)
 
-	select {}
+		fmt.Println("Shoset : ", cl)
+	}
+
+	//select {}
 
 	//panic(nil)
 }
@@ -308,6 +312,10 @@ func testRelaunch(args []string) {
 	// defer f.Close()
 	// trace.Start(f)
 	// defer trace.Stop()
+
+	fmt.Println("Waiting for debugger.")
+
+	time.Sleep(5 * time.Second)
 
 	// Create Shoset
 	cl := utilsForTest.CreateShosetOnlyBindFromTopology(args[0], utilsForTest.StraightLine)
@@ -349,9 +357,13 @@ func testRelaunch(args []string) {
 	time.Sleep(15 * time.Second)
 	fmt.Println("Shoset : ", cl)
 
-	time.Sleep(20 * time.Second)
+	for {
+		time.Sleep(10 * time.Second)
 
-	select {}
+		fmt.Println("Shoset : ", cl)
+	}
+
+	//select {}
 }
 
 // Send an event every second forever :
@@ -438,7 +450,7 @@ func main() {
 	shoset.InitPrettyLogger(true)
 	shoset.SetLogLevel(shoset.TRACE)
 
-	// ctx, done := context.WithTimeout(context.Background(), 1*time.Minute)
+	ctx, done := context.WithTimeout(context.Background(), 1*time.Minute)
 
 	//terminal
 	// Choose the test to run, only decomment one for each case.
@@ -473,7 +485,7 @@ func main() {
 		// testPresentationENIB(ctx, done)
 		// oldTest.TestJoin3(ctx, done)
 		// testRouteTable(ctx, done)
-		// testForwardMessage(ctx, done)
+		testForwardMessage(ctx, done)
 		// testSendEvent()
 		// testEndConnection()
 	} else if arg == "5" {
@@ -482,9 +494,9 @@ func main() {
 		testRelaunch((os.Args)[2:])
 	} else if arg == "7" {
 		example.SimpleExample()
-		example.TestEventContinuousSend()
-		example.TestSimpleForwarding()
-		example.TestForwardingTopology()
+		// example.TestEventContinuousSend()
+		// example.TestSimpleForwarding()
+		// example.TestForwardingTopology()
 	}
 
 	// Memory profiler

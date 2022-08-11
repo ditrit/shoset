@@ -38,6 +38,8 @@ func (m *MapSyncMap) updateFile(protocol string, keys []string) {
 // It also updates the viper config file to keep new changes up to date.
 // Overrides Store from sync.Map
 func (m *MapSyncMap) StoreConfig(lName, key, protocol string, value interface{}) {
+	//fmt.Println("Before StoreConfig : ", m)
+	//defer fmt.Println("After StoreConfig : ", m)
 	if syncMap, _ := m.Load(lName); syncMap == nil {
 		m.Store(lName, new(sync.Map))
 	}
@@ -47,7 +49,7 @@ func (m *MapSyncMap) StoreConfig(lName, key, protocol string, value interface{})
 	// OUT is because we only handle the IPaddresses we had to protocol on at some point.
 	// They are the one we need to manually reconnect if a problem happens.
 	syncMap, _ = m.Load(lName)
-	keys := Keys(syncMap.(*sync.Map), OUT) //ALL ??
+	keys := Keys(syncMap.(*sync.Map), ALL) //OUT
 	fmt.Println("(StoreConfig) keys : ", keys)
 	if len(keys) != 0 {
 		m.updateFile(protocol, keys)
@@ -137,7 +139,26 @@ func (m *MapSyncMap) LoadValueFromKeys(key1_in string, key2_in string) (interfac
 
 // Retrieve a value from a MapSyncMap : m[key1][key2]=value
 func (m *MapSyncMap) DeleteValueFromKeys(key1_in string, key2_in string) {
+	// Supprimer les clé sans value
 	if syncMap, ok := m.Load(key1_in); ok {
 		syncMap.(*sync.Map).Delete(key2_in)
+
+		// syncMap2, _ :=m.Load(key1_in)
+		// if syncMap2==nil{
+		// 	m.Delete(key1_in)
+		// }
+		
+		//Supprimer les clés vides
+		var i int
+		syncMap2, ok := m.Load(key1_in)
+		if ok {
+			syncMap2.(*sync.Map).Range(func(k, v interface{}) bool {
+				i++
+				return true
+			})
+			if i == 0 {
+				m.Delete(key1_in)
+			}
+		}
 	}
 }

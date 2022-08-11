@@ -61,7 +61,7 @@ func (reh *RoutingEventHandler) HandleDoubleWay(c *ShosetConn, message msg.Messa
 	// reRouting := msg.NewRoutingEvent(c.GetLocalLogicalName(), routingEvt.GetUUID())
 	// reh.Send(c.GetShoset(), reRouting)
 
-	fmt.Println("Reroute : ", c.GetLocalLogicalName())
+	//fmt.Println("Reroute : ", c.GetLocalLogicalName())
 
 	return nil
 }

@@ -1,7 +1,6 @@
 package shoset
 
 import (
-	"fmt"
 	"os"
 	"sync"
 
@@ -94,7 +93,7 @@ func (cfg *Config) AppendToKey(key string, value []string) {
 	cfg.mu.Lock()
 	defer cfg.mu.Unlock()
 
-	fmt.Println("value : ", value)
+	//fmt.Println("value : ", value)
 
 	// Avoid duplicate
 	valueSlice := cfg.GetSlice(key)
@@ -112,19 +111,19 @@ func (cfg *Config) DeleteFromKey(key string, value []string) {
 	cfg.mu.Lock()
 	defer cfg.mu.Unlock()
 
-	fmt.Println("(DeleteFromKey) To be deleted : ", value)
+	//fmt.Println("(DeleteFromKey) To be deleted : ", value)
 
 	valueCfg := cfg.GetSlice(key)
 	valueCfgOut := []string{}
 	for _, a := range valueCfg {
 		if !contains(value, a) {
-			fmt.Println("(DeleteFromKey) Adding back :", a)
+			//fmt.Println("(DeleteFromKey) Adding back :", a)
 			valueCfgOut = append(valueCfgOut, a)
 		} else {
-			fmt.Println("(DeleteFromKey) Deleting : ", a)
+			//fmt.Println("(DeleteFromKey) Deleting : ", a)
 		}
 	}
-	fmt.Println("(DeleteFromKey) valueCfgOut : ", valueCfgOut)
+	//fmt.Println("(DeleteFromKey) valueCfgOut : ", valueCfgOut)
 	cfg.viper.Set(key, valueCfgOut)
 	cfg.viper.WriteConfig()
 }

@@ -1,8 +1,6 @@
 package shoset
 
 import (
-	"fmt"
-
 	"github.com/ditrit/shoset/msg"
 	"github.com/rs/zerolog/log"
 )
@@ -20,7 +18,7 @@ func (cbh *ConfigByeHandler) Get(c *ShosetConn) (msg.Message, error) {
 
 // HandleDoubleWay handles message for a ShosetConn accordingly.
 func (cbh *ConfigByeHandler) HandleDoubleWay(c *ShosetConn, message msg.Message) error {
-	fmt.Println("Handling bye or delete")
+	//fmt.Println("Handling bye or delete")
 
 	cfg := message.(msg.ConfigProtocol)
 

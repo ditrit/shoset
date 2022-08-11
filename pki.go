@@ -229,7 +229,8 @@ func (s *Shoset) SetUpDoubleWay() error {
 		Certificates:       []tls.Certificate{loadedCAkeys},
 		ClientCAs:          caCertPool,
 		ClientAuth:         tls.RequireAndVerifyClientCert,
-		InsecureSkipVerify: false, //
+		InsecureSkipVerify: true, // true for reconnection to work (but not as secure)
+		//Renegotiation: tls.RenegotiateOnceAsClient,
 	}
 
 	s.tlsConfigSingleWay = &tls.Config{

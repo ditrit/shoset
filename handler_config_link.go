@@ -3,6 +3,7 @@ package shoset
 import (
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/ditrit/shoset/msg"
 	"github.com/rs/zerolog/log"
@@ -27,10 +28,28 @@ func (clh *ConfigLinkHandler) HandleDoubleWay(c *ShosetConn, message msg.Message
 		// incoming link request, a socket wants to link to this one.
 		// save info and retrieve brothers to inform network.
 
-		fmt.Println("PROTOCOL_LINK")
+		fmt.Println("PROTOCOL_LINK to : ", cfg.GetLogicalName(), cfg.GetAddress())
+
+		fmt.Println("Before delete : ", c.GetShoset())
+
+		// Delete any existing conn
+		c.GetShoset().deleteConn(cfg.GetAddress(), cfg.GetLogicalName())
+
+		fmt.Println("After delete : ", c.GetShoset())
+
+		fmt.Println("c : ",c)
+
+		//time.Sleep(100*time.Millisecond)
+
+		//fmt.Println("Before store : ", c.GetShoset())
 
 		c.SetRemoteAddress(cfg.GetAddress())
 		c.Store(PROTOCOL_LINK, cfg.GetLogicalName(), cfg.GetAddress(), cfg.GetShosetType())
+
+		fmt.Println("c : ",c)
+		
+
+		fmt.Println("After store : ", c.GetShoset())
 
 		configOk := msg.NewConfigProtocol(cfg.GetAddress(), c.GetShoset().GetLogicalName(), c.GetShoset().GetShosetType(), ACKNOWLEDGE_LINK)
 		if err := c.GetWriter().SendMessage(*configOk); err != nil {
@@ -43,6 +62,7 @@ func (clh *ConfigLinkHandler) HandleDoubleWay(c *ShosetConn, message msg.Message
 		}
 
 		remoteBrothers, _ := c.GetShoset().ConnsByLname.Load(c.GetRemoteLogicalName())
+		fmt.Println("remote brothers : ",remoteBrothers)
 		remoteBrothersArray := []string{}
 		if remoteBrothers != nil {
 			remoteBrothersArray = Keys(remoteBrothers.(*sync.Map), ALL)
@@ -72,7 +92,16 @@ func (clh *ConfigLinkHandler) HandleDoubleWay(c *ShosetConn, message msg.Message
 		//c.SetIsValid(true) // Send statusChange Event change status
 		//c.GetShoset().waitGroupProtocol.Done()
 
-		c.Store(PROTOCOL_LINK, cfg.GetLogicalName(), c.GetRemoteAddress(), cfg.GetShosetType()) // Move from brother case
+		fmt.Println("Before delete : ", c.GetShoset())
+
+		// Delete any existing conn
+		c.GetShoset().deleteConn(cfg.GetAddress(), cfg.GetLogicalName())
+
+		fmt.Println("After delete : ", c.GetShoset())
+
+		time.Sleep(100 * time.Millisecond)
+
+		c.Store(PROTOCOL_LINK, cfg.GetLogicalName(), c.GetRemoteAddress(), cfg.GetShosetType())
 		// D'ou sort le BROTHER quand on lance un link ?
 
 		c.GetShoset().LaunchedProtocol.DeleteFromConcurentSlice(c.GetRemoteAddress())
@@ -81,7 +110,9 @@ func (clh *ConfigLinkHandler) HandleDoubleWay(c *ShosetConn, message msg.Message
 		// incoming brother information, new shoset in the network.
 		// save info and call sendToBrothers to handle message.
 
-		fmt.Println("BROTHERS")
+		//fmt.Println("BROTHERS")
+
+		c.Store(PROTOCOL_LINK, cfg.GetLogicalName(), c.GetRemoteAddress(), cfg.GetShosetType())
 
 		sendToBrothers(c, message)
 

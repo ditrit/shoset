@@ -163,7 +163,10 @@ func (c *ShosetConn) Store(protocol, lName, address, shosetType string) {
 	c.GetShoset().LnamesByType.AppendToKeys(shosetType, lName, true)
 	c.GetShoset().ConnsByLname.StoreConfig(lName, address, protocol, c)
 
-	fmt.Println("Storing ShoseConn : ", c)
+	routing := msg.NewRoutingEvent(c.GetLocalLogicalName(), "")
+	c.GetShoset().Send(routing)
+
+	//fmt.Println("Storing ShoseConn : ", c)
 }
 
 // NewShosetConn creates a new ShosetConn object for a specific address.
@@ -228,7 +231,7 @@ func (c *ShosetConn) HandleConfig(cfg *msg.ConfigProtocol) {
 			}
 		}
 
-		time.Sleep(200 * time.Millisecond) //
+		//time.Sleep(200 * time.Millisecond) //
 	}
 }
 
@@ -276,10 +279,11 @@ func (c *ShosetConn) ReceiveMessage() error {
 	messageType, err := c.GetReader().ReadString()
 	switch {
 	case err == io.EOF:
-		if c.GetDir() == IN {
-			c.GetShoset().deleteConn(c.GetRemoteAddress(), c.GetRemoteLogicalName())
-		}
-		return nil
+		// if c.GetDir() == IN {
+		// 	c.GetShoset().deleteConn(c.GetRemoteAddress(), c.GetRemoteLogicalName())
+		// }
+		fmt.Println("EOF in reiceive message for conn : ",c)
+		return err
 	case errors.Is(err, syscall.ECONNRESET):
 		return nil
 	case errors.Is(err, syscall.EPIPE):
@@ -289,7 +293,7 @@ func (c *ShosetConn) ReceiveMessage() error {
 		if c.GetDir() == IN {
 			c.GetShoset().deleteConn(c.GetRemoteAddress(), c.GetRemoteLogicalName())
 		}
-		return errors.New(err.Error())
+		return err//errors.New(err.Error())
 	}
 	messageType = strings.Trim(messageType, "\n")
 
@@ -331,7 +335,7 @@ func (c *ShosetConn) handleMessageType(messageType string) error {
 		// Send message
 		err := c.GetWriter().SendMessage(forwardAck)
 
-		fmt.Println("(ForwardAck) Message sent to ", c.GetRemoteLogicalName(), ": ", forwardAck)
+		//fmt.Println("(ForwardAck) Message sent to ", c.GetRemoteLogicalName(), ": ", forwardAck)
 
 		if err != nil {
 			c.Logger.Error().Msg("Couldn't send FowarkAck message : " + err.Error())

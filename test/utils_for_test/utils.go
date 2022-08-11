@@ -87,7 +87,8 @@ func CreateShosetOnlyBindFromTopology(Lname string, tt []*ShosetCreation) *shose
 			s.Protocol(t.Src, "", "")
 			//s.Bind(t.Src)
 			t.Launched = true
-			return s
+			time.Sleep(1*time.Second)
+			return s			
 		}
 	}
 	return nil
