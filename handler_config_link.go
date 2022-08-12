@@ -30,14 +30,14 @@ func (clh *ConfigLinkHandler) HandleDoubleWay(c *ShosetConn, message msg.Message
 
 		fmt.Println("PROTOCOL_LINK to : ", cfg.GetLogicalName(), cfg.GetAddress())
 
-		fmt.Println("Before delete : ", c.GetShoset())
+		//fmt.Println("Before delete : ", c.GetShoset())
 
 		// Delete any existing conn
-		c.GetShoset().deleteConn(cfg.GetAddress(), cfg.GetLogicalName())
+		c.GetShoset().deleteConn(cfg.GetLogicalName(), cfg.GetAddress())
 
-		fmt.Println("After delete : ", c.GetShoset())
+		//fmt.Println("After delete : ", c.GetShoset())
 
-		fmt.Println("c : ",c)
+		//fmt.Println("c : ",c)
 
 		//time.Sleep(100*time.Millisecond)
 
@@ -46,10 +46,10 @@ func (clh *ConfigLinkHandler) HandleDoubleWay(c *ShosetConn, message msg.Message
 		c.SetRemoteAddress(cfg.GetAddress())
 		c.Store(PROTOCOL_LINK, cfg.GetLogicalName(), cfg.GetAddress(), cfg.GetShosetType())
 
-		fmt.Println("c : ",c)
+		//fmt.Println("c : ",c)
 		
 
-		fmt.Println("After store : ", c.GetShoset())
+		//fmt.Println("After store : ", c.GetShoset())
 
 		configOk := msg.NewConfigProtocol(cfg.GetAddress(), c.GetShoset().GetLogicalName(), c.GetShoset().GetShosetType(), ACKNOWLEDGE_LINK)
 		if err := c.GetWriter().SendMessage(*configOk); err != nil {
@@ -92,12 +92,12 @@ func (clh *ConfigLinkHandler) HandleDoubleWay(c *ShosetConn, message msg.Message
 		//c.SetIsValid(true) // Send statusChange Event change status
 		//c.GetShoset().waitGroupProtocol.Done()
 
-		fmt.Println("Before delete : ", c.GetShoset())
+		//fmt.Println("Before delete : ", c.GetShoset())
 
 		// Delete any existing conn
-		c.GetShoset().deleteConn(cfg.GetAddress(), cfg.GetLogicalName())
+		c.GetShoset().deleteConn(cfg.GetLogicalName(), cfg.GetAddress())
 
-		fmt.Println("After delete : ", c.GetShoset())
+		//fmt.Println("After delete : ", c.GetShoset())
 
 		time.Sleep(100 * time.Millisecond)
 

@@ -19,6 +19,11 @@ func (reh *RoutingEventHandler) Get(c *ShosetConn) (msg.Message, error) {
 
 // HandleDoubleWay handles message for a ShosetConn accordingly.
 func (reh *RoutingEventHandler) HandleDoubleWay(c *ShosetConn, message msg.Message) error {
+	// Avoid storing conns that are not yet stored and have missing informations
+	if ! c.GetIsValid(){
+		return nil
+	}
+	
 	routingEvt := message.(msg.RoutingEvent)
 
 	originLogicalName := routingEvt.GetOrigin()

@@ -29,7 +29,7 @@ func (cjh *ConfigJoinHandler) HandleDoubleWay(c *ShosetConn, message msg.Message
 		//fmt.Println("PROTOCOL_JOIN")
 
 		// Delete any existing conn
-		c.GetShoset().deleteConn(cfg.GetAddress(), cfg.GetLogicalName())
+		c.GetShoset().deleteConn(cfg.GetLogicalName(), cfg.GetAddress())
 
 		c.SetRemoteAddress(cfg.GetAddress())
 		c.Store(PROTOCOL_JOIN, c.GetShoset().GetLogicalName(), cfg.GetAddress(), c.GetShoset().GetShosetType())
@@ -63,7 +63,7 @@ func (cjh *ConfigJoinHandler) HandleDoubleWay(c *ShosetConn, message msg.Message
 		//fmt.Println("ACKNOWLEDGE_JOIN")
 
 		// Delete any existing conn
-		c.GetShoset().deleteConn(cfg.GetAddress(), cfg.GetLogicalName())
+		c.GetShoset().deleteConn(cfg.GetLogicalName(), cfg.GetAddress())
 
 		c.Store(PROTOCOL_JOIN, c.GetShoset().GetLogicalName(), c.GetRemoteAddress(), c.GetShoset().GetShosetType())
 

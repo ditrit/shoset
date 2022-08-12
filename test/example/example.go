@@ -131,8 +131,8 @@ func TestForwardingTopology() {
 		i := 0
 		for {
 			time.Sleep(1 * time.Second)
-			event := msg.NewSimpleMessage(destination.GetLogicalName(), "test_payload"+fmt.Sprint(i))
-			sender.Send(event)
+			message := msg.NewSimpleMessage(destination.GetLogicalName(), "test_payload"+fmt.Sprint(i))
+			sender.Send(message)
 			i++
 		}
 	}()

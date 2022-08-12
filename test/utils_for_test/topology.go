@@ -9,9 +9,15 @@ type ShosetCreation struct {
 	Launched bool
 }
 
-var Simple = []*ShosetCreation{
+var Line2 = []*ShosetCreation{
 	{Lname: "A", Stype: "cl", Src: "localhost:8001", Dst: []string{""}, Ptype: "pki", Launched: false},
-	{Lname: "B", Stype: "cl", Src: "localhost:8002", Dst: []string{"localhost:8001"}, Ptype: "join", Launched: false},
+	{Lname: "B", Stype: "cl", Src: "localhost:8002", Dst: []string{"localhost:8001"}, Ptype: "link", Launched: false},
+}
+
+var Line3 = []*ShosetCreation{
+	{Lname: "A", Stype: "cl", Src: "localhost:8001", Dst: []string{""}, Ptype: "pki", Launched: false},
+	{Lname: "B", Stype: "cl", Src: "localhost:8002", Dst: []string{"localhost:8001"}, Ptype: "link", Launched: false},
+	{Lname: "C", Stype: "cl", Src: "localhost:8003", Dst: []string{"localhost:8002"}, Ptype: "link", Launched: false},
 }
 
 //Configuration  1 : (straight line)

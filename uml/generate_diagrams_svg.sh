@@ -12,6 +12,7 @@
 # Download the jar file from : https://plantuml.com/en/download (Don't forget to change the path to it in the command.)
 
 goplantuml -recursive -aggregate-private-members -show-aggregations -show-aliases -show-compositions -show-connection-labels -show-implementations -title "Shoset class diagram"  ./.. > ./uml/class_diagram_shoset.puml
+
 java -jar '/media/partagé/DitRit/GoPlantUML/plantuml-1.2022.6.jar' -svg -v ./uml/class_diagram_shoset.puml
 
 

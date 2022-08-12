@@ -19,7 +19,7 @@
             "mode": "auto",
             "program": "./test",
             "args": [
-                "7",
+                "4",
             ]
         }
     ]

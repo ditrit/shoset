@@ -124,7 +124,7 @@ func (c *ShosetConn) SetLocalAddress(bindAddress string) { c.GetShoset().SetBind
 func (c *ShosetConn) SetRemoteShosetType(ShosetType string) { c.remoteShosetType = ShosetType }
 
 // SetProtocol sets the protocol for a ShosetConn.
-func (c *ShosetConn) SetProtocol(protocol string) { c.protocol= protocol }
+func (c *ShosetConn) SetProtocol(protocol string) { c.protocol = protocol }
 
 // SetIsValid sets the state for a ShosetConn.
 func (c *ShosetConn) SetIsValid(state bool) {
@@ -166,6 +166,8 @@ func (c *ShosetConn) Store(protocol, lName, address, shosetType string) {
 	routing := msg.NewRoutingEvent(c.GetLocalLogicalName(), "")
 	c.GetShoset().Send(routing)
 
+	c.SetIsValid(true)
+
 	//fmt.Println("Storing ShoseConn : ", c)
 }
 
@@ -194,7 +196,7 @@ func NewShosetConn(s *Shoset, address, dir string) (*ShosetConn, error) {
 
 // String returns the formatted string of ShosetConn object in a pretty way.
 func (c *ShosetConn) String() string {
-	return fmt.Sprintf("ShosetConn{name: %s, type: %s, protocol : %s, way: %s, remoteAddress: %s, isValid: %v}", c.GetRemoteLogicalName(), c.GetRemoteShosetType(),c.GetProtocol(), c.GetDir(), c.GetRemoteAddress(), c.GetIsValid())
+	return fmt.Sprintf("ShosetConn{name: %s, type: %s, protocol : %s, way: %s, remoteAddress: %s, isValid: %v}", c.GetRemoteLogicalName(), c.GetRemoteShosetType(), c.GetProtocol(), c.GetDir(), c.GetRemoteAddress(), c.GetIsValid())
 }
 
 // HandleConfig handles ConfigProtocol message.
@@ -280,9 +282,9 @@ func (c *ShosetConn) ReceiveMessage() error {
 	switch {
 	case err == io.EOF:
 		// if c.GetDir() == IN {
-		// 	c.GetShoset().deleteConn(c.GetRemoteAddress(), c.GetRemoteLogicalName())
+		// 	c.GetShoset().deleteConn(c.GetRemoteLogicalName(), c.GetRemoteAddress())
 		// }
-		fmt.Println("EOF in reiceive message for conn : ",c)
+		//fmt.Println("EOF in reiceive message for conn : ", c)
 		return err
 	case errors.Is(err, syscall.ECONNRESET):
 		return nil
@@ -291,9 +293,9 @@ func (c *ShosetConn) ReceiveMessage() error {
 	case err != nil:
 		fmt.Println("ReceiveMessage error : ", err)
 		if c.GetDir() == IN {
-			c.GetShoset().deleteConn(c.GetRemoteAddress(), c.GetRemoteLogicalName())
+			c.GetShoset().deleteConn(c.GetRemoteLogicalName(), c.GetRemoteAddress())
 		}
-		return err//errors.New(err.Error())
+		return err //errors.New(err.Error())
 	}
 	messageType = strings.Trim(messageType, "\n")
 
@@ -313,7 +315,7 @@ func (c *ShosetConn) handleMessageType(messageType string) error {
 	handler, ok := c.GetShoset().Handlers[messageType]
 	if !ok {
 		if c.GetDir() == IN {
-			c.GetShoset().deleteConn(c.GetRemoteAddress(), c.GetRemoteLogicalName())
+			c.GetShoset().deleteConn(c.GetRemoteLogicalName(), c.GetRemoteAddress())
 		}
 		return errors.New("ReceiveMessage : non implemented type of message " + messageType)
 	}
@@ -321,7 +323,7 @@ func (c *ShosetConn) handleMessageType(messageType string) error {
 	messageValue, err := handler.Get(c)
 	if err != nil {
 		if c.GetDir() == IN {
-			c.GetShoset().deleteConn(c.GetRemoteAddress(), c.GetRemoteLogicalName())
+			c.GetShoset().deleteConn(c.GetRemoteLogicalName(), c.GetRemoteAddress())
 		}
 		return errors.New("ReceiveMessage : can not read value of " + messageType + " : " + err.Error())
 	}

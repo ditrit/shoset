@@ -9,16 +9,18 @@ import (
 	"sync"
 	"time"
 
-	concurentData "github.com/ditrit/shoset/concurent_data"
-	eventBus "github.com/ditrit/shoset/event_bus"
-	"github.com/ditrit/shoset/msg"
 	uuid "github.com/kjk/betterguid"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+
+	"github.com/ditrit/shoset/msg"
+
+	concurentData "github.com/ditrit/shoset/concurent_data"
+	eventBus "github.com/ditrit/shoset/event_bus"
 )
 
 // MessageHandlers interface.
-// Each handler must implement this interface
+// Every handler must implement this interface
 type MessageHandlers interface {
 	Get(c *ShosetConn) (msg.Message, error)
 	HandleDoubleWay(c *ShosetConn, message msg.Message) error
@@ -39,7 +41,6 @@ type Shoset struct {
 	ConnsSingleConn  *sync.Map   // map[ipAddress]*ShosetConn ShosetConns waiting in singleWay to be handled for TLS double way
 	RouteTable       *sync.Map   // map[lName]*Route Route to another logical name
 
-	//NewRouteEvent   chan string // Notify of the discovery of a new route
 	RoutingEventBus eventBus.EventBus // When a route to a Lname is discovered, sends an event to everyone waiting for a route to this Lname
 	// topic : discovered Lname
 
@@ -105,7 +106,7 @@ func (s *Shoset) GetConnsByTypeArray(shosetType string) []*ShosetConn {
 	return connsByType
 }
 
-// IsCertified returns true if path corresponds to an existing repertory which means that the Shoset has created its repertory and is certified .
+// IsCertified returns true if path corresponds to an existing repertory which means that the Shoset has created its repertory and is certified.
 func (s *Shoset) IsCertified(path string) bool {
 	if fileExists(PATH_CA_PRIVATE_KEY) {
 		s.SetIsPki(true)
@@ -126,21 +127,15 @@ func (s *Shoset) SetIsPki(state bool) { s.isPki = state }
 func (s *Shoset) SetListener(listener net.Listener) { s.listener = listener }
 
 // deleteConn deletes a ShosetConn from ConnsByLname map from a Shoset
-func (s *Shoset) deleteConn(remoteAddress, Lname string) {
+func (s *Shoset) deleteConn(Lname, remoteAddress string) {
 	// Lock shoset for the operation
-
-	//fmt.Println("s.ConnsByLname before :", s.ConnsByLname)
-	//defer fmt.Println("s.ConnsByLname After :", s.ConnsByLname)
 
 	// Check if the ShosetCon exists
 	conn, ok := s.ConnsByLname.LoadValueFromKeys(Lname, remoteAddress)
-	//fmt.Println("conn : ", conn)
 	if !ok {
-		//s.Logger.Debug().Msg("No Existing connection to Lname : " + Lname + "IP : " + remoteAddress + ", no connection to end.")
 		return
 	}
-
-	fmt.Println("Deleting conn Lname : ",Lname," IP : ", remoteAddress)
+	s.Logger.Debug().Msg("Deleting conn Lname : " + Lname + " IP : " + remoteAddress)
 
 	c := conn.(*ShosetConn)
 
@@ -149,29 +144,19 @@ func (s *Shoset) deleteConn(remoteAddress, Lname string) {
 	mapSyncLname := new(sync.Map)
 	mapSyncLname.Store(Lname, true)
 
-	
 	//s.LnamesByType.Store(s.shosetType, mapSync) ??
 
-	// Assume qu'il n'y a jamais plus d'une connection vers un lname, on ne peut pas être sur si c'est join ou link
-	// Noter le protocol dans le conn quand on sait, sinon laisser ""
+	// Assume qu'il n'y a jamais plus d'une connection vers un lname, on ne peut pas être sure si c'est join ou link
 	// Que des link ou ques des join avec un Lname
 
-	// Delete from LnamesByProtocol
 	s.LnamesByProtocol.DeleteValueFromKeys(c.GetProtocol(), Lname)
-	//Delete key if it is empty ??
-
-	// Delete from LnamesByType
 	s.LnamesByType.DeleteValueFromKeys(c.GetRemoteShosetType(), Lname)
-	//Delete key if it is empty ??
-
-	// Delete from ConnsByLname
 	s.ConnsByLname.DeleteValueFromKeys(Lname, remoteAddress)
 
-	// Delete from the config file
+	// Deletes from the config file
 	s.ConnsByLname.cfg.DeleteFromKey(c.GetProtocol(), []string{c.GetRemoteAddress()})
 
-	// Delete from route
-	// Finds and deletes Routes going through the Lname initiating bye/delete
+	// Finds and deletes Routes using the deleted ShosetConn
 	s.RouteTable.Range(
 		func(key, val interface{}) bool {
 			if val.(Route).neighborConn == c {
@@ -180,21 +165,16 @@ func (s *Shoset) deleteConn(remoteAddress, Lname string) {
 			}
 			return true
 		})
-
 }
 
-// Wait for every Conn initialised to be ready for use
-// Add timeout
+// Waits for every Conn initialised to be ready for use
 func (s *Shoset) WaitForProtocols(timeout int) {
-	//fmt.Println("Waiting for all Protocol to complete on shoset", s.GetLogicalName())
-	//s.waitGroupProtocol.Wait()
-	//fmt.Println("s.LaunchedProtocol : ", s.LaunchedProtocol.String())
+	s.Logger.Debug().Str("lname", s.GetLogicalName()).Msg("Waiting for all Protocol to complete on shoset.")
 	err := s.LaunchedProtocol.WaitForEmpty(timeout)
 	if err != nil {
 		s.Logger.Error().Msg("Failed to establish connection to some adresses (timeout) : " + s.LaunchedProtocol.String())
-		//fmt.Println("Shoset after Protocol : ",s)
 	} else {
-		fmt.Println("All Protocols done for ", s.GetLogicalName())
+		s.Logger.Debug().Str("lname", s.GetLogicalName()).Msg("All Protocols done on shoset.")
 	}
 }
 
@@ -213,7 +193,6 @@ func NewShoset(logicalName, shosetType string) *Shoset {
 		ConnsSingleConn:  new(sync.Map),
 		RouteTable:       new(sync.Map),
 
-		//NewRouteEvent: make(chan string),
 		RoutingEventBus: eventBus.NewEventBus(),
 
 		logicalName: logicalName,
@@ -232,7 +211,7 @@ func NewShoset(logicalName, shosetType string) *Shoset {
 		LaunchedProtocol: concurentData.NewConcurentSlice(),
 	}
 
-	s.ConnsByLname.SetConfig(NewConfig(s.logicalName)) // Added baseDir parameter
+	s.ConnsByLname.SetConfig(NewConfig(s.logicalName))
 
 	s.Queue["cfglink"] = msg.NewQueue()
 	s.Handlers["cfglink"] = new(ConfigLinkHandler)
@@ -274,8 +253,11 @@ func NewShoset(logicalName, shosetType string) *Shoset {
 
 // String returns the formatted string of Shoset object in a pretty indented way.
 func (s *Shoset) String() string {
-	description := fmt.Sprintf("Shoset{\n\t- lName: %s,\n\t- bindAddr : %s,\n\t- type : %s, \n\t- isPki : %t, \n\t- ConnsByLname:", s.GetLogicalName(), s.GetBindAddress(), s.GetShosetType(), s.GetIsPki())
+	description := fmt.Sprintf("Shoset{\n\t- lName: %s,\n\t- bindAddr : %s,\n\t- type : %s, \n\t- isPki : %t", s.GetLogicalName(), s.GetBindAddress(), s.GetShosetType(), s.GetIsPki())
 
+	description += ", \n\t- LaunchedProtocol : " + s.LaunchedProtocol.String()
+
+	description += ", \n\t- ConnsByLname : "
 	connsByName := []*ShosetConn{}
 	s.ConnsByLname.Iterate(
 		func(key string, val interface{}) {
@@ -285,7 +267,7 @@ func (s *Shoset) String() string {
 		return connsByName[i].GetRemoteAddress() < connsByName[j].GetRemoteAddress()
 	})
 	for _, connByName := range connsByName {
-		description += fmt.Sprintf("\n\t\t* %s", connByName)
+		description += fmt.Sprintf("\n\t\t&%s", connByName)
 	}
 
 	description += "\n\t- LnamesByProtocol:\n\t"
@@ -294,11 +276,18 @@ func (s *Shoset) String() string {
 	description += s.LnamesByType.String()
 
 	description += "\n\t- RouteTable (destination : {neighbor, Conn to Neighbor, distance, uuid, timestamp}):\n\t\t"
+	routeTable := map[string]Route{}
+	routeTableKey := []string{}
 	s.RouteTable.Range(
 		func(key, val interface{}) bool {
-			description += fmt.Sprintf("%v : %v \n\t\t", key, val)
+			routeTable[key.(string)] = val.(Route)
+			routeTableKey = append(routeTableKey, key.(string))
 			return true
 		})
+	sort.Strings(routeTableKey)
+	for _, routeKey := range routeTableKey {
+		description += fmt.Sprintf("\n\t\t%v : %v", routeKey, routeTable[routeKey])
+	}
 
 	description += "\n}\n"
 	return description
@@ -307,20 +296,14 @@ func (s *Shoset) String() string {
 // Bind assigns a local protocol address to the Shoset.
 // Runs protocol on other Shosets if needed.
 func (s *Shoset) Bind(address string) error {
-	//fmt.Println("Bind")
-
 	ipAddress, err := GetIP(address)
 	if err != nil {
 		s.Logger.Error().Msg("couldn't set bindAddress : " + err.Error())
 		return err
 	}
 	s.SetBindAddress(ipAddress)
-	//fmt.Println("(Bind) BindAdress : ", s.GetBindAddress())
-
-	//fmt.Println("FileName : ", s.ConnsByLname.GetConfig().GetFileName())
 
 	err = s.ConnsByLname.GetConfig().ReadConfig(s.ConnsByLname.GetConfig().GetFileName())
-
 	if err == nil {
 		fmt.Println("Sclice JOIN : ", s.ConnsByLname.cfg.GetSlice(PROTOCOL_JOIN))
 		for _, remote := range s.ConnsByLname.cfg.GetSlice(PROTOCOL_JOIN) {
@@ -364,16 +347,13 @@ func (s *Shoset) handleBind() {
 			doubleWayConn, _ := NewShosetConn(s, acceptedConn.RemoteAddr().String(), IN)
 			doubleWayConn.UpdateConn(tlsConnDoubleWay)
 
-			//fmt.Println("(handleBind) doubleWayConn.GetConn() : ",doubleWayConn.GetConn())
-
-			_, err = doubleWayConn.GetConn().Write([]byte(TLS_DOUBLE_WAY_TEST_WRITE + "\n")) // Crash
+			_, err = doubleWayConn.GetConn().Write([]byte(TLS_DOUBLE_WAY_TEST_WRITE + "\n")) // Crashes when launching 2 shosets at the same time
 			if err == nil {
 				go doubleWayConn.RunInConnDouble()
 			} else {
 				s.ConnsSingleBool.Store(strings.Split(acceptedConn.RemoteAddr().String(), ":")[0], true)
 			}
 		}
-		time.Sleep(100 * time.Millisecond) //
 	}
 }
 
@@ -381,7 +361,6 @@ func (s *Shoset) handleBind() {
 // Inits certification if Shoset is not certified yet.
 // Binds Shoset to the bindAddress if not bound yet.
 func (s *Shoset) Protocol(bindAddress, remoteAddress, protocolType string) {
-	//fmt.Println("PROTOCOL !!!!")
 	s.Logger.Debug().Strs("params", []string{bindAddress, remoteAddress, protocolType}).Msg("protocol init")
 
 	ipAddress, err := GetIP(bindAddress)
@@ -391,8 +370,6 @@ func (s *Shoset) Protocol(bindAddress, remoteAddress, protocolType string) {
 	}
 	formattedIpAddress := strings.Replace(ipAddress, ":", "_", -1)
 	formattedIpAddress = strings.Replace(formattedIpAddress, ".", "-", -1) // formats for filesystem to 127-0-0-1_8001 instead of 127.0.0.1:8001
-
-	//fmt.Println("File Path : ", s.ConnsByLname.GetConfig().baseDir+formattedIpAddress, "Certified : ", s.IsCertified(s.ConnsByLname.GetConfig().baseDir+formattedIpAddress))
 
 	s.ConnsByLname.GetConfig().SetFileName(formattedIpAddress)
 
@@ -409,6 +386,7 @@ func (s *Shoset) Protocol(bindAddress, remoteAddress, protocolType string) {
 			return
 		}
 	} else {
+		// Loads certificats from the folder
 		err = s.SetUpDoubleWay()
 		if err != nil {
 			s.Logger.Error().Msg(err.Error())
@@ -416,49 +394,37 @@ func (s *Shoset) Protocol(bindAddress, remoteAddress, protocolType string) {
 		}
 	}
 
-	//fmt.Println("(Protocol) BindAdress : ", s.GetBindAddress())
 	if s.GetBindAddress() == VOID {
 		err := s.Bind(bindAddress)
-
 		if err != nil {
 			s.Logger.Error().Msg("couldn't set bindAddress : " + err.Error())
 			return
 		}
 	}
 
-	if remoteAddress == s.GetBindAddress() {
-		s.Logger.Error().Msg("can't protocol on itself")
+	if IP, _ := GetIP(remoteAddress); IP == s.GetBindAddress() {
+		s.Logger.Error().Msg("can't protocol on itself : " + IP)
 		return
 	}
 
-	if remoteAddress != "" {
-		//fmt.Println("PROTOCOL ON  REMOTE !!!!")
+	if remoteAddress != VOID {
 		protocolConn, _ := NewShosetConn(s, remoteAddress, OUT)
 		cfg := msg.NewConfigProtocol(s.GetBindAddress(), s.GetLogicalName(), s.GetShosetType(), protocolType)
 
-		//s.waitGroupProtocol.Add(1)
-
-		//Cas du bye ?
 		s.LaunchedProtocol.AppendToConcurentSlice(protocolConn.GetRemoteAddress()) // Adds remote adress to the list of initiated but not ready connexion adresses
 		go protocolConn.HandleConfig(cfg)
-
-		//fmt.Println("Certificates singleWay : ", s.tlsConfigSingleWay)
-		//fmt.Println("Certificates doubleWay : ", s.tlsConfigDoubleWay)
 	}
 }
 
 func (s *Shoset) EndProtocol(Lname, remoteAddress string) {
-	// find the con in the list
-	conn, ok := s.ConnsByLname.LoadValueFromKeys(Lname, remoteAddress)
+	// find the ShosetConn in the list
 	var c *ShosetConn
-	if !ok {
+	if conn, ok := s.ConnsByLname.LoadValueFromKeys(Lname, remoteAddress); !ok {
 		s.Logger.Error().Msg("No Existing connection to Lname : " + Lname + " IP : " + remoteAddress + ", no connection to end.")
 		return
 	} else {
 		c = conn.(*ShosetConn)
 	}
-
-	//fmt.Println("(EndProtocol) conn", conn)
 
 	cfg := msg.NewConfigProtocol(s.GetBindAddress(), s.GetLogicalName(), s.GetShosetType(), DELETE)
 
@@ -466,12 +432,11 @@ func (s *Shoset) EndProtocol(Lname, remoteAddress string) {
 	if err != nil {
 		c.Logger.Error().Msg("couldn't send cfg: " + err.Error())
 		return
-		//Retry ?
+		//Retry ? Acknowledge ?
 	}
 
-	s.LnamesByProtocol.Store(PROTOCOL_EXIT, Lname) //Bye ou delete ?
-
-	s.deleteConn(remoteAddress, Lname) // Check order of arguments
+	s.LnamesByProtocol.AppendToKeys(PROTOCOL_EXIT, Lname, true) //Bye ou delete ?
+	s.deleteConn(Lname, remoteAddress)
 }
 
 // ######## Route and forwarding : ########
@@ -503,6 +468,7 @@ func (s *Shoset) forwardMessage(m msg.Message) {
 				// Invalidate route
 				s.RouteTable.Delete(m.GetDestinationLname())
 				// Reroute network
+
 				routing := msg.NewRoutingEvent(s.GetLogicalName(), "")
 				s.Send(routing)
 
@@ -574,6 +540,7 @@ func (s *Shoset) forwardMessage(m msg.Message) {
 }
 
 func (s *Shoset) SaveRoute(c *ShosetConn, routingEvt *msg.RoutingEvent) {
+	fmt.Println("(SaveRoute) remote lname : ", c.GetRemoteLogicalName())
 	s.RouteTable.Store(routingEvt.GetOrigin(), NewRoute(c.GetRemoteLogicalName(), c, routingEvt.GetNbSteps(), routingEvt.GetUUID(), routingEvt.Timestamp))
 
 	// Send NewRouteEvent

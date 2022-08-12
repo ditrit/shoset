@@ -106,134 +106,76 @@ func testPresentationENIB(ctx context.Context, done context.CancelFunc) {
 	})
 }
 
+// #### Routing test
+
 func testRouteTable(ctx context.Context, done context.CancelFunc) {
 
-	tt := utilsForTest.StraightLine
-
+	tt := utilsForTest.StraightLine // Choose the network topology for the test
 	s := []*shoset.Shoset{}
-
-	s = utilsForTest.CreateManyShosets(tt, s, true)
-
-	utilsForTest.RouteManyShosets(s, true)
-
-	// routing := msg.NewRoutingEvent("A", "")
-	// s[0].Send(routing)
-
-	//time.Sleep(5 * time.Second)
+	s = utilsForTest.CreateManyShosets(tt, s, false)
+	utilsForTest.WaitForManyShosets(s)
 
 	utilsForTest.PrintManyShosets(s)
 
 	tt = append(tt, &(utilsForTest.ShosetCreation{Lname: "F", Stype: "cl", Src: "localhost:8006", Dst: []string{"localhost:8001", "localhost:8005"}, Ptype: "link", Launched: false}))
 
-	s = utilsForTest.CreateManyShosets(tt, s, true)
+	s = utilsForTest.CreateManyShosets(tt, s, false)
+	utilsForTest.WaitForManyShosets(s)
 
-	utilsForTest.RouteManyShosets(s, true)
+	time.Sleep(6 * time.Second)
 
 	utilsForTest.PrintManyShosets(s)
+
+	// time.Sleep(2 * time.Second)
+
+	// utilsForTest.PrintManyShosets(s)
 }
 
 func testForwardMessage(ctx context.Context, done context.CancelFunc) {
-
-	tt := utilsForTest.LinkedCircles // Choose the network topology for the test
-
+	tt := utilsForTest.LinkedCircles
 	s := []*shoset.Shoset{}
-
 	s = utilsForTest.CreateManyShosets(tt, s, false)
-
-	//time.Sleep(20*time.Second)
-
 	utilsForTest.WaitForManyShosets(s)
 
 	utilsForTest.PrintManyShosets(s)
 
 	var wg sync.WaitGroup
 
-	destination := s[len(s)-1] //.GetLogicalName()
+	destination := s[len(s)-1]
 
 	// Receive Message
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		//time.Sleep(1 * time.Second)
 		event_rc := destination.Wait("simpleMessage", map[string]string{}, 30, nil)
 		fmt.Println("(Main) Message received : ", event_rc)
 	}()
 
 	// Send Message
-	//time.Sleep(1 * time.Second)
 	message := msg.NewSimpleMessage(destination.GetLogicalName(), "test_payload")
-	message.Timeout = 10000
 	fmt.Println("Message sent : ", message)
 	s[0].Send(message)
 
 	wg.Wait()
-
-	//PrintManyShosets(s)
-}
-
-func testSendEvent() {
-	tt := utilsForTest.Simple
-
-	s := []*shoset.Shoset{}
-
-	s = utilsForTest.CreateManyShosets(tt, s, false)
-
-	//fmt.Println("TEST !!")
-
-	s[0].WaitForProtocols(10)
-	s[1].WaitForProtocols(10)
-
-	utilsForTest.PrintManyShosets(s)
-
-	//var wg sync.WaitGroup
-
-	// Receive Message
-
-	iterator := msg.NewIterator(s[1].Queue["evt"])
-
-	go func() {
-		for { //i := 0; i < 10; i++
-			//wg.Add(1)
-			//defer wg.Done()
-
-			event_rc := s[1].Wait("evt", map[string]string{"topic": "test_topic", "event": "test_event"}, 10, iterator)
-			fmt.Println("(main) Message received : ", event_rc)
-		}
-	}()
-
-	// Send Message
-	go func() {
-		for {
-			message := msg.NewEventClassic("test_topic", "test_event", "test_payload")
-			fmt.Println("Message sent : ", message)
-			s[0].Send(message)
-			// Timing minimal pour que la gestion de la réception puisse s'éxécuter
-			time.Sleep(1 * time.Second)
-		}
-	}()
-
-	time.Sleep(3 * time.Second)
-
-	s[1].Protocol("localhost:8002", "localhost:8001", "bye")
-
-	time.Sleep(2 * time.Second)
-
-	utilsForTest.PrintManyShosets(s)
-
-	select {}
-
-	//wg.Wait()
 }
 
 func testForwardMessageMultiProcess2(args []string) {
+	// args[0] is not the nama of the execuatable, it is the first argument after test number
+	// ./bin/shoset_build 5 D 0 0 rien 0 (args[0] is D)
 	fmt.Println("args : ", args)
 
+	// To generate profiles and traces about only one shoset
 	// if args[0] != "D" {
+
+	// 	//Disable tracer and profiles in the main.
+
+	// 	// Tracer
 	// 	f, _ := os.Create("./profiler/trace_" + args[0] + ".out")
 	// 	defer f.Close()
 	// 	trace.Start(f)
 	// 	defer trace.Stop()
 
+	// 	// CPU profiler
 	// 	var cpuprofile = flag.String("cpuprofile", "./profiler/cpu_"+args[0]+".prof", "write cpu profile to `file`")
 
 	// 	flag.Parse()
@@ -250,9 +192,17 @@ func testForwardMessageMultiProcess2(args []string) {
 	// 	}
 	// }
 
-	cl := utilsForTest.CreateShosetFromTopology(args[0], utilsForTest.StraightLine)
+	var cl *shoset.Shoset
+	if args[4] == "1" {
+		fmt.Println("#### Relaunch")
+		time.Sleep(2 * time.Second)
+		cl = utilsForTest.CreateShosetOnlyBindFromTopology(args[0], utilsForTest.StraightLine)
+	} else {
+		fmt.Println("#### Launch")
+		cl = utilsForTest.CreateShosetFromTopology(args[0], utilsForTest.StraightLine)
+	}
 
-	fmt.Println("Waiting for protocols to complete !!")
+	fmt.Println("Waiting for protocols to complete.")
 	cl.WaitForProtocols(10)
 	fmt.Println("Shoset : ", cl)
 
@@ -264,7 +214,6 @@ func testForwardMessageMultiProcess2(args []string) {
 			for {
 				event_rc := cl.Wait("simpleMessage", map[string]string{}, 10, iterator)
 				fmt.Println("(main) Message received : ", event_rc)
-				//time.Sleep(10 * time.Millisecond)
 			}
 		}()
 
@@ -283,120 +232,53 @@ func testForwardMessageMultiProcess2(args []string) {
 		}()
 	}
 
-	fmt.Println("DONE !!")
-
-	// go func() {
-	// 	time.Sleep(6 * time.Second)
-	// 	panic(nil)
-	// }()
-
-	time.Sleep(10 * time.Second)
-	fmt.Println("Shoset : ", cl)
+	fmt.Println("#### Shoset ", cl.GetLogicalName(), "is ready.")
 
 	for {
 		time.Sleep(10 * time.Second)
 
-		fmt.Println("Shoset : ", cl)
-	}
-
-	//select {}
-
-	//panic(nil)
-}
-
-// Not working
-func testRelaunch(args []string) {
-	fmt.Println("args : ", args)
-
-	// f, _ := os.Create("./profiler/trace_" + args[0] + ".out")
-	// defer f.Close()
-	// trace.Start(f)
-	// defer trace.Stop()
-
-	fmt.Println("Waiting for debugger.")
-
-	time.Sleep(5 * time.Second)
-
-	// Create Shoset
-	cl := utilsForTest.CreateShosetOnlyBindFromTopology(args[0], utilsForTest.StraightLine)
-
-	fmt.Println("Waiting for protocols to complete !!")
-	cl.WaitForProtocols(10)
-
-	fmt.Println("Shoset : ", cl)
-
-	// Receive Message
-	if args[1] == "1" { //args[1] receiver
-		fmt.Println("Receiver : ", cl.GetLogicalName())
-		iterator := msg.NewIterator(cl.Queue["simpleMessage"])
-		go func() {
-			for {
-				event_rc := cl.Wait("simpleMessage", map[string]string{}, 10, iterator)
-				fmt.Println("(main) Message received : ", event_rc)
-				//time.Sleep(10 * time.Millisecond)
-			}
-		}()
-
-	}
-
-	// Send Message
-	if args[2] == "1" { //args[2] sender
-		go func() {
-			for {
-				fmt.Println("Sender : ", cl.GetLogicalName())
-				message := msg.NewSimpleMessage(args[3], "test_payload "+cl.GetLogicalName()) //args[3] destination
-				fmt.Println("Message sent : ", message)
-				cl.Send(message)
-				time.Sleep(5 * time.Second)
-			}
-		}()
-	}
-
-	fmt.Println("DONE !!")
-
-	time.Sleep(15 * time.Second)
-	fmt.Println("Shoset : ", cl)
-
-	for {
-		time.Sleep(10 * time.Second)
-
-		fmt.Println("Shoset : ", cl)
+		fmt.Println("Shoset ", cl.GetLogicalName(), " : ", cl)
 	}
 
 	//select {}
 }
 
 // Send an event every second forever :
-func testEndConnection() {
-	cl1 := shoset.NewShoset("A", "cl")
-	cl1.InitPKI("localhost:8001") // Is the CA of the network
+func testEndConnection(ctx context.Context, done context.CancelFunc) {
+	tt := utilsForTest.Line3 // Choose the network topology for the test
 
-	cl2 := shoset.NewShoset("B", "cl")
-	cl2.Protocol("localhost:8002", "localhost:8001", "link") // we link it to our first socket
+	s := []*shoset.Shoset{} // Create the empty list of shosets
 
-	cl3 := shoset.NewShoset("C", "cl")
-	cl3.Protocol("localhost:8003", "localhost:8002", "link")
+	s = utilsForTest.CreateManyShosets(tt, s, false) // Populate the list with the shosets as specified in the selected topology and estavlish connection among them
 
-	cl1.WaitForProtocols(5) // Wait for cl1 to be ready
-	cl2.WaitForProtocols(5)
-	cl3.WaitForProtocols(5)
+	//utilsForTest.PrintManyShosets(s) // Display the info of every shosets in the list
+
+	//time.Sleep(3 * time.Second)
+
+	utilsForTest.WaitForManyShosets(s) // Wait for every shosets in the list to be ready
+
+	utilsForTest.PrintManyShosets(s) // Display the info of every shosets in the list
+
+	destination := s[len(s)-1]
+	sender := s[0]
 
 	//Sender :
 	go func() {
 		i := 0
 		for {
 			time.Sleep(1 * time.Second)
-			event := msg.NewSimpleMessage("A", "test_payload"+fmt.Sprint(i))
-			cl3.Send(event)
+			message := msg.NewSimpleMessage(destination.GetLogicalName(), "test_payload"+fmt.Sprint(i))
+			fmt.Println("Message sent : ", message)
+			sender.Send(message)
 			i++
 		}
 	}()
 
 	//Receiver :
-	iterator := msg.NewIterator(cl1.Queue["simpleMessage"])
+	iterator := msg.NewIterator(destination.Queue["simpleMessage"])
 	go func() {
 		for {
-			event_rc := cl1.Wait("simpleMessage", map[string]string{}, 5, iterator)
+			event_rc := destination.Wait("simpleMessage", map[string]string{}, 5, iterator)
 			fmt.Println("message received : ", event_rc)
 			if event_rc != nil {
 				shoset.Log("message received (Payload) : " + event_rc.GetPayload())
@@ -404,27 +286,21 @@ func testEndConnection() {
 		}
 	}()
 
+	time.Sleep(10 * time.Second)
+
+	s[2].EndProtocol("B", "127.0.0.1:8002")
+
 	time.Sleep(5 * time.Second)
 
-	fmt.Println(cl1)
-	fmt.Println(cl2)
-	fmt.Println(cl3)
-
-	cl3.EndProtocol("B", "127.0.0.1:8002")
-
-	time.Sleep(1 * time.Second)
-
-	fmt.Println(cl1)
-	fmt.Println(cl2)
-	fmt.Println(cl3)
+	utilsForTest.PrintManyShosets(s)
 
 	time.Sleep(10 * time.Second)
 }
 
 func main() {
 	// Clear the content of the profiler folder
-	os.RemoveAll("./profiler/")
-	os.MkdirAll("./profiler/", 0777)
+	// os.RemoveAll("./profiler/")
+	// os.MkdirAll("./profiler/", 0777)
 
 	// tracer
 	// f, _ := os.Create("./profiler/trace.out")
@@ -484,15 +360,13 @@ func main() {
 		// testPki(ctx, done)
 		// testPresentationENIB(ctx, done)
 		// oldTest.TestJoin3(ctx, done)
+
 		// testRouteTable(ctx, done)
-		testForwardMessage(ctx, done)
-		// testSendEvent()
-		// testEndConnection()
+		// testForwardMessage(ctx, done)
+		testEndConnection(ctx, done)
 	} else if arg == "5" {
 		testForwardMessageMultiProcess2((os.Args)[2:])
 	} else if arg == "6" {
-		testRelaunch((os.Args)[2:])
-	} else if arg == "7" {
 		example.SimpleExample()
 		// example.TestEventContinuousSend()
 		// example.TestSimpleForwarding()

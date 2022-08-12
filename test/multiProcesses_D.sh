@@ -1,19 +1,19 @@
 #!/bin/sh
 
-#alias shosetRun='go run -race test/*.go 5'
-
 sleep 6
 
-./bin/shoset_build 5 D 0 0 rien &
+#binary testNumber Lname receiver sender destination relaunch
+
+./bin/shoset_build 5 D 0 0 rien 0 &
 P=$!
 
 #Kill and restart
-sleep 11
+sleep 15
 
 kill $P
 
 sleep 1
 
-./bin/shoset_build 6 D 0 0 rien &
+./bin/shoset_build 5 D 0 0 rien 1 &
 
 wait

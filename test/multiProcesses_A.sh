@@ -1,10 +1,6 @@
 #!/bin/sh
 
-#go build -v -race -gcflags=all="-N -l" test/*.go
-
-#alias shosetRun='go run -race -gcflags=all="-N -l" test/*.go 5'
-
-./bin/shoset_build 5 A 1 0 rien &
+./bin/shoset_build 5 A 1 0 rien 0 &
 P=$!
 
 # sleep 20
