@@ -14,7 +14,7 @@ type MapSyncMap struct {
 	cfg      *Config // config file handler
 }
 
-// SetConfig sets the config with new one.
+// GetConfig returns the config.
 func (m *MapSyncMap) GetConfig() *Config {
 	return m.cfg
 }
@@ -38,11 +38,11 @@ func (m *MapSyncMap) updateFile(protocol string, keys []string) {
 // It also updates the viper config file to keep new changes up to date.
 // Overrides Store from sync.Map
 func (m *MapSyncMap) StoreConfig(lName, key, protocol string, value interface{}) {
-	//fmt.Println("Before StoreConfig : ", m)
-	//defer fmt.Println("After StoreConfig : ", m)
+	// Create a new key1 if it doesn't exists
 	if syncMap, _ := m.Load(lName); syncMap == nil {
 		m.Store(lName, new(sync.Map))
 	}
+
 	syncMap, _ := m.Load(lName)
 	syncMap.(*sync.Map).Store(key, value)
 
@@ -50,7 +50,7 @@ func (m *MapSyncMap) StoreConfig(lName, key, protocol string, value interface{})
 	// They are the one we need to manually reconnect if a problem happens.
 	syncMap, _ = m.Load(lName)
 	keys := Keys(syncMap.(*sync.Map), ALL) //OUT
-	fmt.Println("(StoreConfig) keys : ", keys)
+	log.Trace().Msg("Storing in config : " + protocol + " keys : " + fmt.Sprint(keys))
 	if len(keys) != 0 {
 		m.updateFile(protocol, keys)
 	}
@@ -73,7 +73,6 @@ func (m *MapSyncMap) Iterate(iter func(string, interface{})) {
 
 // Keys returns a []string corresponding to the keys from the map[string]*sync.Map object.
 // sType set the specific keys depending on the desired shoset type.
-//Duplicate from utils
 func (m *MapSyncMap) Keys(sType string) []string {
 	var keys []string
 	if sType == ALL {
@@ -98,11 +97,11 @@ func (m *MapSyncMap) Keys(sType string) []string {
 // Apppend a value to a MapSyncMap : m[key1][key2]=value
 func (m *MapSyncMap) AppendToKeys(key1 string, key2 string, value interface{}) {
 	if mapSync, ok := m.Load(key1); ok {
-		mapSync.(*sync.Map).Store(key2, true)
+		mapSync.(*sync.Map).Store(key2, value)
 		m.Store(key1, mapSync)
 	} else {
 		mapSync := new(sync.Map)
-		mapSync.Store(key2, true)
+		mapSync.Store(key2, value)
 		m.Store(key1, mapSync)
 	}
 }
@@ -126,38 +125,29 @@ func (m *MapSyncMap) String() string {
 }
 
 // Retrieve a value from a MapSyncMap : m[key1][key2]=value
-func (m *MapSyncMap) LoadValueFromKeys(key1_in string, key2_in string) (interface{}, bool) {
-	//fmt.Println("key1_in : ",key1_in,"key2_in : ",key2_in)
-	//fmt.Println("MapSyncMap : ",m)
-
-	if syncMap, ok := m.Load(key1_in); ok {
-		return syncMap.(*sync.Map).Load(key2_in)
+func (m *MapSyncMap) LoadValueFromKeys(key1 string, key2 string) (interface{}, bool) {
+	if syncMap, ok := m.Load(key1); ok {
+		return syncMap.(*sync.Map).Load(key2)
 	} else {
-		return nil, ok
+		return nil, false
 	}
 }
 
 // Retrieve a value from a MapSyncMap : m[key1][key2]=value
-func (m *MapSyncMap) DeleteValueFromKeys(key1_in string, key2_in string) {
-	// Supprimer les clé sans value
-	if syncMap, ok := m.Load(key1_in); ok {
-		syncMap.(*sync.Map).Delete(key2_in)
+func (m *MapSyncMap) DeleteValueFromKeys(key1 string, key2 string) {
+	if syncMap, ok := m.Load(key1); ok {
+		syncMap.(*sync.Map).Delete(key2)
 
-		// syncMap2, _ :=m.Load(key1_in)
-		// if syncMap2==nil{
-		// 	m.Delete(key1_in)
-		// }
-		
-		//Supprimer les clés vides
+		// Delete empty key1
 		var i int
-		syncMap2, ok := m.Load(key1_in)
+		syncMap2, ok := m.Load(key1)
 		if ok {
 			syncMap2.(*sync.Map).Range(func(k, v interface{}) bool {
 				i++
-				return true
+				return i <= 0 // If i is no longer 0 there is no need to continue
 			})
 			if i == 0 {
-				m.Delete(key1_in)
+				m.Delete(key1)
 			}
 		}
 	}

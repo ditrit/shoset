@@ -17,10 +17,11 @@ import (
 	"github.com/rs/zerolog"
 )
 
+// status of the conn
 type ProtectedStatus struct {
 	value bool
-	m     sync.Mutex
-} // state of the conn
+	m     sync.RWMutex
+}
 
 // ShosetConn : secured connection based on tls.Conn but with upgraded features
 type ShosetConn struct {
@@ -38,11 +39,9 @@ type ShosetConn struct {
 	dir              string
 	remoteAddress    string // address of the socket in front of this one
 
-	protocol string // protocol type used by the shoset (join, link, ...) (Usualy is not known at the time of creation of the ShosetConn.)
+	protocol string // protocol type used by the ShosetConn (join, link, ...) (Usualy is not known ("") at the time of creation of the ShosetConn.)
 
-	isValid ProtectedStatus // state of the conn
-
-	StatusChange chan bool // Send a message on the channel to notifie waiting GoRoutines that the state of the connexion Changed (Actual value sent is not used)
+	isValid ProtectedStatus // status of the ShosetConn
 }
 
 // GetConn returns conn from ShosetConn.
@@ -83,25 +82,9 @@ func (c *ShosetConn) GetLocalAddress() string { return c.GetShoset().GetBindAddr
 
 // GetIsValid returns isValid from ShosetConn.
 func (c *ShosetConn) GetIsValid() bool {
-	//c.isValid.m.Lock()
-	//defer c.isValid.m.Unlock() // Create lockup
+	c.isValid.m.RLock()
+	defer c.isValid.m.RUnlock()
 	return c.isValid.value
-
-}
-
-// Wait for ShosetConn to be ready for use
-// Work only for a single waiter
-func (c *ShosetConn) WaitForValid() {
-	for {
-		c.isValid.m.Lock()
-		value := c.isValid.value
-		c.isValid.m.Unlock()
-		if !value {
-			<-c.StatusChange
-		} else {
-			return
-		}
-	}
 }
 
 // SetConn sets the lName for a ShosetConn.
@@ -128,47 +111,30 @@ func (c *ShosetConn) SetProtocol(protocol string) { c.protocol = protocol }
 
 // SetIsValid sets the state for a ShosetConn.
 func (c *ShosetConn) SetIsValid(state bool) {
-	//c.isValid.m.Lock()
-	//defer c.isValid.m.Unlock()
-
 	c.isValid.m.Lock()
+	defer c.isValid.m.Unlock()
 	c.isValid.value = state
-	c.isValid.m.Unlock()
-	if state {
-		fmt.Println(c, "Is ready.")
-	}
-	select {
-	case c.StatusChange <- true:
-	default:
-		fmt.Println("Nobody is waiting for StateChnage")
-	}
 }
 
 // SetRemoteAddress sets the address for a ShosetConn.
 func (c *ShosetConn) SetRemoteAddress(address string) { c.remoteAddress = address }
 
-// Store stores info concerning ShosetConn and Shoset for protocols
+// Stores stores info about ShosetConn and Shoset for protocols
 func (c *ShosetConn) Store(protocol, lName, address, shosetType string) {
-
-	//fmt.Println("Storing ShoseConn : ", c)
-
 	c.SetProtocol(protocol)
 
 	c.SetRemoteLogicalName(lName)
 	c.SetRemoteShosetType(shosetType)
 
-	mapSync := new(sync.Map)
-	mapSync.Store(lName, true)
 	c.GetShoset().LnamesByProtocol.AppendToKeys(protocol, lName, true)
 	c.GetShoset().LnamesByType.AppendToKeys(shosetType, lName, true)
 	c.GetShoset().ConnsByLname.StoreConfig(lName, address, protocol, c)
 
+	// Reroute the network
 	routing := msg.NewRoutingEvent(c.GetLocalLogicalName(), "")
 	c.GetShoset().Send(routing)
 
 	c.SetIsValid(true)
-
-	//fmt.Println("Storing ShoseConn : ", c)
 }
 
 // NewShosetConn creates a new ShosetConn object for a specific address.
@@ -196,7 +162,7 @@ func NewShosetConn(s *Shoset, address, dir string) (*ShosetConn, error) {
 
 // String returns the formatted string of ShosetConn object in a pretty way.
 func (c *ShosetConn) String() string {
-	return fmt.Sprintf("ShosetConn{name: %s, type: %s, protocol : %s, way: %s, remoteAddress: %s, isValid: %v}", c.GetRemoteLogicalName(), c.GetRemoteShosetType(), c.GetProtocol(), c.GetDir(), c.GetRemoteAddress(), c.GetIsValid())
+	return fmt.Sprintf("ShosetConn{RemoteLogicalName : %s, remoteAddress : %s, type : %s, protocol : %s, way : %s, isValid : %v}", c.GetRemoteLogicalName(), c.GetRemoteAddress(), c.GetRemoteShosetType(), c.GetProtocol(), c.GetDir(), c.GetIsValid())
 }
 
 // HandleConfig handles ConfigProtocol message.
@@ -207,12 +173,9 @@ func (c *ShosetConn) HandleConfig(cfg *msg.ConfigProtocol) {
 		c.GetConn().Close()
 	}()
 	for {
-		//fmt.Println("(HandleConfig) ConfigDoubleWay : ", c.GetShoset().GetTlsConfigDoubleWay())
-		//fmt.Println("ConfigDoubleWay Certificates : ",c.GetShoset().GetTlsConfigDoubleWay().Certificates)
-
 		protocolConn, err := tls.Dial(CONNECTION_TYPE, c.GetRemoteAddress(), c.GetShoset().GetTlsConfigDoubleWay())
 		if err != nil {
-			time.Sleep(time.Millisecond * time.Duration(200)) //10
+			time.Sleep(time.Millisecond * time.Duration(100)) //10
 			c.Logger.Error().Msg("HandleConfig err: " + err.Error())
 			continue
 		}
@@ -232,8 +195,6 @@ func (c *ShosetConn) HandleConfig(cfg *msg.ConfigProtocol) {
 				break
 			}
 		}
-
-		//time.Sleep(200 * time.Millisecond) //
 	}
 }
 
@@ -281,21 +242,16 @@ func (c *ShosetConn) ReceiveMessage() error {
 	messageType, err := c.GetReader().ReadString()
 	switch {
 	case err == io.EOF:
-		// if c.GetDir() == IN {
-		// 	c.GetShoset().deleteConn(c.GetRemoteLogicalName(), c.GetRemoteAddress())
-		// }
-		//fmt.Println("EOF in reiceive message for conn : ", c)
 		return err
 	case errors.Is(err, syscall.ECONNRESET):
 		return nil
 	case errors.Is(err, syscall.EPIPE):
 		return nil
 	case err != nil:
-		fmt.Println("ReceiveMessage error : ", err)
 		if c.GetDir() == IN {
 			c.GetShoset().deleteConn(c.GetRemoteLogicalName(), c.GetRemoteAddress())
 		}
-		return err //errors.New(err.Error())
+		return err
 	}
 	messageType = strings.Trim(messageType, "\n")
 
@@ -331,13 +287,8 @@ func (c *ShosetConn) handleMessageType(messageType string) error {
 	// If the message is of a forwardable type, an Acknowledge is expected by the sender
 	if contains(FORWARDABLE_TYPES, messageType) {
 		// Send back FowarkAck
-
-		// Create message
 		forwardAck := msg.NewForwardAck(messageValue.GetUUID(), messageValue.GetTimestamp())
-		// Send message
 		err := c.GetWriter().SendMessage(forwardAck)
-
-		//fmt.Println("(ForwardAck) Message sent to ", c.GetRemoteLogicalName(), ": ", forwardAck)
 
 		if err != nil {
 			c.Logger.Error().Msg("Couldn't send FowarkAck message : " + err.Error())
@@ -350,7 +301,6 @@ func (c *ShosetConn) handleMessageType(messageType string) error {
 		return nil
 	}
 
-	//fmt.Println("(handleMessageType) messageType : ",messageType)
 	switch {
 	case messageType == TLS_SINGLE_WAY_PKI_EVT:
 		err := c.HandleSingleWay(messageValue)

@@ -6,6 +6,10 @@ import (
 	"time"
 )
 
+func printDataEvent(ch string, data interface{}) {
+	fmt.Printf("Channel: %s; DataEvent: %v\n", ch, data)
+}
+
 func TestFeed_simple(t *testing.T) {
 	var eb = NewEventBus()
 
@@ -49,9 +53,28 @@ func TestFeed_UnSubscribe(t *testing.T) {
 	}
 	printDataEvent("ch1", d)
 
-	eb.UnSubscribe("topic1", ch1)
-
+	err := eb.UnSubscribe("false_topic", ch1)
+	fmt.Println(err)
 	fmt.Println(eb.subscribers["topic1"])
+	if err == nil {
+		t.Errorf("This should have produced an error.")
+	}
+
+	err = nil
+	err = eb.UnSubscribe("topic1", ch1)
+	fmt.Println(err)
+	fmt.Println(eb.subscribers["topic1"])
+	if err != nil {
+		t.Errorf("This should not have produced an error.")
+	}
+
+	err = nil
+	err = eb.UnSubscribe("topic1", ch1)
+	fmt.Println(err)
+	fmt.Println(eb.subscribers["topic1"])
+	if err == nil {
+		t.Errorf("This should have produced an error.")
+	}
 }
 
 func TestFeed_ManyMessages(t *testing.T) {
@@ -71,14 +94,12 @@ func TestFeed_ManyMessages(t *testing.T) {
 			eb.Publish("topic1", "topic 1")
 			eb.Publish("topic2", "topic 2")
 			eb.Publish("topic3", "topic 3")
-			//time.Sleep(5 * time.Millisecond)
 		}
 	}()
 
-	timer := time.NewTimer(2 * time.Second)
+	timer := time.NewTimer(5 * time.Second)
 
-	received :=0
-
+	received := 0
 receive:
 	for {
 		select {
@@ -88,9 +109,9 @@ receive:
 		case <-timer.C:
 			break receive
 		}
+		// fmt.Println(runtime.NumGoroutine())
 		received++
-
 	}
 
-	fmt.Println("Number of message received : ",received)
+	fmt.Println("Number of message received : ", received)
 }

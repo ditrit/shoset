@@ -1,6 +1,6 @@
 package msg
 
-// SimpleMessage : gandalf commands
+// SimpleMessage : MassageBase with forwardable features (handler)
 type SimpleMessage struct {
 	MessageBase
 }

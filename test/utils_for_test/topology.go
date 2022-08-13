@@ -1,36 +1,38 @@
 package utilsForTest
 
+// List of instruction for launching a shoset.
 type ShosetCreation struct {
-	Lname    string
-	Stype    string
-	Src      string
-	Dst      []string
-	Ptype    string
-	Launched bool
+	Lname           string
+	ShosetType      string
+	LocalAddress    string
+	RemoteAddresses []string
+	ProtocolType    string // type of connection (pki (master), link, join, ...)
+	Launched        bool   // true when the shoset has been launched
+	//Used to extend the list after the first launch by calling again CreateManyShosets or CreateShosetFromTopology.
 }
 
+// #### List of topologies
+
 var Line2 = []*ShosetCreation{
-	{Lname: "A", Stype: "cl", Src: "localhost:8001", Dst: []string{""}, Ptype: "pki", Launched: false},
-	{Lname: "B", Stype: "cl", Src: "localhost:8002", Dst: []string{"localhost:8001"}, Ptype: "link", Launched: false},
+	{Lname: "A", ShosetType: "cl", LocalAddress: "localhost:8001", RemoteAddresses: []string{""}, ProtocolType: "pki", Launched: false},
+	{Lname: "B", ShosetType: "cl", LocalAddress: "localhost:8002", RemoteAddresses: []string{"localhost:8001"}, ProtocolType: "link", Launched: false},
 }
 
 var Line3 = []*ShosetCreation{
-	{Lname: "A", Stype: "cl", Src: "localhost:8001", Dst: []string{""}, Ptype: "pki", Launched: false},
-	{Lname: "B", Stype: "cl", Src: "localhost:8002", Dst: []string{"localhost:8001"}, Ptype: "link", Launched: false},
-	{Lname: "C", Stype: "cl", Src: "localhost:8003", Dst: []string{"localhost:8002"}, Ptype: "link", Launched: false},
+	{Lname: "A", ShosetType: "cl", LocalAddress: "localhost:8001", RemoteAddresses: []string{""}, ProtocolType: "pki", Launched: false},
+	{Lname: "B", ShosetType: "cl", LocalAddress: "localhost:8002", RemoteAddresses: []string{"localhost:8001"}, ProtocolType: "link", Launched: false},
+	{Lname: "C", ShosetType: "cl", LocalAddress: "localhost:8003", RemoteAddresses: []string{"localhost:8002"}, ProtocolType: "link", Launched: false},
 }
-
-//Configuration  1 : (straight line)
 
 var StraightLine = []*ShosetCreation{
-	{Lname: "A", Stype: "cl", Src: "localhost:8001", Dst: []string{""}, Ptype: "pki", Launched: false},
-	{Lname: "B", Stype: "cl", Src: "localhost:8002", Dst: []string{"localhost:8001"}, Ptype: "link", Launched: false},
-	{Lname: "C", Stype: "cl", Src: "localhost:8003", Dst: []string{"localhost:8002"}, Ptype: "link", Launched: false},
-	{Lname: "D", Stype: "cl", Src: "localhost:8004", Dst: []string{"localhost:8003"}, Ptype: "link", Launched: false},
-	{Lname: "E", Stype: "cl", Src: "localhost:8005", Dst: []string{"localhost:8004"}, Ptype: "link", Launched: false},
+	{Lname: "A", ShosetType: "cl", LocalAddress: "localhost:8001", RemoteAddresses: []string{""}, ProtocolType: "pki", Launched: false},
+	{Lname: "B", ShosetType: "cl", LocalAddress: "localhost:8002", RemoteAddresses: []string{"localhost:8001"}, ProtocolType: "link", Launched: false},
+	{Lname: "C", ShosetType: "cl", LocalAddress: "localhost:8003", RemoteAddresses: []string{"localhost:8002"}, ProtocolType: "link", Launched: false},
+	{Lname: "D", ShosetType: "cl", LocalAddress: "localhost:8004", RemoteAddresses: []string{"localhost:8003"}, ProtocolType: "link", Launched: false},
+	{Lname: "E", ShosetType: "cl", LocalAddress: "localhost:8005", RemoteAddresses: []string{"localhost:8004"}, ProtocolType: "link", Launched: false},
 }
 
-var LnameiIP = map[string]string{
+var IPbyLname = map[string]string{
 	"A": "localhost:8001",
 	"B": "localhost:8002",
 	"C": "localhost:8003",
@@ -42,26 +44,22 @@ var LnameiIP = map[string]string{
 	"I": "localhost:8009",
 }
 
-//Configuration  2 : (two-linked cricles)
-
 var LinkedCircles = []*ShosetCreation{
-	{Lname: "A", Stype: "cl", Src: LnameiIP["A"], Dst: []string{LnameiIP["D"]}, Ptype: "pki", Launched: false},
-	{Lname: "B", Stype: "cl", Src: LnameiIP["B"], Dst: []string{LnameiIP["A"]}, Ptype: "link", Launched: false},
-	{Lname: "C", Stype: "cl", Src: LnameiIP["C"], Dst: []string{LnameiIP["A"]}, Ptype: "link", Launched: false},
-	{Lname: "D", Stype: "cl", Src: LnameiIP["D"], Dst: []string{LnameiIP["B"], LnameiIP["C"]}, Ptype: "link", Launched: false},
-	{Lname: "E", Stype: "cl", Src: LnameiIP["E"], Dst: []string{LnameiIP["D"], LnameiIP["F"]}, Ptype: "link", Launched: false},
-	{Lname: "F", Stype: "cl", Src: LnameiIP["F"], Dst: []string{LnameiIP["E"]}, Ptype: "link", Launched: false},
-	{Lname: "G", Stype: "cl", Src: LnameiIP["G"], Dst: []string{LnameiIP["F"]}, Ptype: "link", Launched: false},
-	{Lname: "H", Stype: "cl", Src: LnameiIP["H"], Dst: []string{LnameiIP["F"]}, Ptype: "link", Launched: false},
-	{Lname: "I", Stype: "cl", Src: LnameiIP["I"], Dst: []string{LnameiIP["G"], LnameiIP["H"]}, Ptype: "link", Launched: false},
+	{Lname: "A", ShosetType: "cl", LocalAddress: IPbyLname["A"], RemoteAddresses: []string{IPbyLname["D"]}, ProtocolType: "pki", Launched: false},
+	{Lname: "B", ShosetType: "cl", LocalAddress: IPbyLname["B"], RemoteAddresses: []string{IPbyLname["A"]}, ProtocolType: "link", Launched: false},
+	{Lname: "C", ShosetType: "cl", LocalAddress: IPbyLname["C"], RemoteAddresses: []string{IPbyLname["A"]}, ProtocolType: "link", Launched: false},
+	{Lname: "D", ShosetType: "cl", LocalAddress: IPbyLname["D"], RemoteAddresses: []string{IPbyLname["B"], IPbyLname["C"]}, ProtocolType: "link", Launched: false},
+	{Lname: "E", ShosetType: "cl", LocalAddress: IPbyLname["E"], RemoteAddresses: []string{IPbyLname["D"], IPbyLname["F"]}, ProtocolType: "link", Launched: false},
+	{Lname: "F", ShosetType: "cl", LocalAddress: IPbyLname["F"], RemoteAddresses: []string{IPbyLname["E"]}, ProtocolType: "link", Launched: false},
+	{Lname: "G", ShosetType: "cl", LocalAddress: IPbyLname["G"], RemoteAddresses: []string{IPbyLname["F"]}, ProtocolType: "link", Launched: false},
+	{Lname: "H", ShosetType: "cl", LocalAddress: IPbyLname["H"], RemoteAddresses: []string{IPbyLname["F"]}, ProtocolType: "link", Launched: false},
+	{Lname: "I", ShosetType: "cl", LocalAddress: IPbyLname["I"], RemoteAddresses: []string{IPbyLname["G"], IPbyLname["H"]}, ProtocolType: "link", Launched: false},
 }
 
-//Configuration  3 : (circle)
-
 var Circle = []*ShosetCreation{
-	{Lname: "A", Stype: "cl", Src: LnameiIP["A"], Dst: []string{}, Ptype: "pki", Launched: false},
-	{Lname: "B", Stype: "cl", Src: LnameiIP["B"], Dst: []string{LnameiIP["A"]}, Ptype: "link", Launched: false},
-	{Lname: "C", Stype: "cl", Src: LnameiIP["C"], Dst: []string{LnameiIP["A"]}, Ptype: "link", Launched: false},
-	{Lname: "D", Stype: "cl", Src: LnameiIP["D"], Dst: []string{LnameiIP["C"]}, Ptype: "link", Launched: false},
-	{Lname: "E", Stype: "cl", Src: LnameiIP["E"], Dst: []string{LnameiIP["D"], LnameiIP["B"]}, Ptype: "link", Launched: false},
+	{Lname: "A", ShosetType: "cl", LocalAddress: IPbyLname["A"], RemoteAddresses: []string{}, ProtocolType: "pki", Launched: false},
+	{Lname: "B", ShosetType: "cl", LocalAddress: IPbyLname["B"], RemoteAddresses: []string{IPbyLname["A"]}, ProtocolType: "link", Launched: false},
+	{Lname: "C", ShosetType: "cl", LocalAddress: IPbyLname["C"], RemoteAddresses: []string{IPbyLname["A"]}, ProtocolType: "link", Launched: false},
+	{Lname: "D", ShosetType: "cl", LocalAddress: IPbyLname["D"], RemoteAddresses: []string{IPbyLname["C"]}, ProtocolType: "link", Launched: false},
+	{Lname: "E", ShosetType: "cl", LocalAddress: IPbyLname["E"], RemoteAddresses: []string{IPbyLname["D"], IPbyLname["B"]}, ProtocolType: "link", Launched: false},
 }

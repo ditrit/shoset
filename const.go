@@ -3,7 +3,11 @@ package shoset
 // Supported message type
 var MESSAGE_TYPES = []string{"cfgjoin", "cfglink", "cfgbye", "pkievt_TLSdoubleWay", "routingEvent", "evt", "cmd", "simpleMessage", "forwardAck"} //added "routingEvent", "evt", "cmd", "simpleMessage", "forwardAck"
 
-var SENDABLE_TYPES = []string{"routingEvent", "evt", "cmd", "simpleMessage", "forwardAck"}
+// Has a Send function in the handler
+var SENDABLE_TYPES = []string{"routingEvent", "evt", "cmd", "simpleMessage", "forwardAck"}// "config"
+
+// Has a Wait function in the handler
+var RECEIVABLE_TYPES = []string{"evt", "cmd", "simpleMessage", "forwardAck"} // "config"
 
 var FORWARDABLE_TYPES = []string{"simpleMessage"}
 
@@ -101,6 +105,6 @@ const (
 // Forward message
 const (
 	MASTER_SEND_TIMEOUT int = 30 //s
-	TIMEOUT_ACK     int = 5 //s
-	MAX_FORWARD_TRY int = 3
+	TIMEOUT_ACK         int = 5  //s
+	MAX_FORWARD_TRY     int = 3
 )

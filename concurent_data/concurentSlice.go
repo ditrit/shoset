@@ -9,108 +9,88 @@ import (
 	eventBus "github.com/ditrit/shoset/event_bus"
 )
 
-//Explication : c'est quoi et comment ça marche
-
+// This is a thread safe slice that allows you to wait for the next change or for it to be empty.
 type ConcurentSlice struct {
 	sliceValues []string
-	eventBus    eventBus.EventBus // topics : change, empty
-	m           sync.Mutex
+	eventBus    eventBus.EventBus // topics : change, empty (value not used)
+	m           sync.RWMutex
 }
-
-// const (
-// 	TIMEOUT int = 5
-// )
 
 func NewConcurentSlice() ConcurentSlice {
 	return ConcurentSlice{eventBus: eventBus.NewEventBus()}
 }
+
+// Appends data to the slice and publishes the change event.
 func (cSlice *ConcurentSlice) AppendToConcurentSlice(data string) {
 	cSlice.m.Lock()
 	defer cSlice.m.Unlock()
 
 	cSlice.sliceValues = append(cSlice.sliceValues, data)
-
-	//fmt.Println("Sending change")
 	cSlice.eventBus.Publish("change", true)
-
-	//fmt.Println("cSlice Append : ", cSlice, "data : ", data)
 }
 
+// Deletes data from the slice and publishes the change (and empty) event.
 func (cSlice *ConcurentSlice) DeleteFromConcurentSlice(data string) {
 	cSlice.m.Lock()
 	defer cSlice.m.Unlock()
-	//defer fmt.Println("cSlice Delete : ", cSlice, "data", data)
 
 	for i, a := range cSlice.sliceValues {
 		if a == data {
+			// Deletes data from the slice in an efficient way (avoids moving remaining data).
 			cSlice.sliceValues[i] = cSlice.sliceValues[len(cSlice.sliceValues)-1]
 			cSlice.sliceValues = cSlice.sliceValues[:len(cSlice.sliceValues)-1]
 
-			//fmt.Println("Sending change")
 			cSlice.eventBus.Publish("change", true)
 
 			if len(cSlice.sliceValues) == 0 {
-				fmt.Println("Sending empty")
 				cSlice.eventBus.Publish("empty", true)
 			}
-
 			return
 		}
 	}
-	//fmt.Println("Failed to delete ", data)
 }
 
-// Wait for the Slice to be empty
-func (cSlice *ConcurentSlice) WaitForEmpty(timeout int) error {
-	// Subscribe a channel to the empty topic :
-	cSlice.m.Lock()
+// Waits for the Slice to be empty
+func (cSlice *ConcurentSlice) WaitForEmpty(timeout int) error {	
+	cSlice.m.RLock()
 	if len(cSlice.sliceValues) != 0 {
-
+		// Subscribes a channel to the empty topic :
 		chEmpty := make(chan interface{})
 		cSlice.eventBus.Subscribe("empty", chEmpty)
-
 		defer cSlice.eventBus.UnSubscribe("empty", chEmpty)
 
-		cSlice.m.Unlock()
+		cSlice.m.RUnlock()
 		select {
 		case <-chEmpty:
-			//fmt.Println("Received Empty")
 			return nil
-
 		case <-time.After(time.Duration(timeout) * time.Second):
-			fmt.Println("TIMEOUT !!")
 			return errors.New("the list is no empty (timeout)")
 		}
 	}
-	cSlice.m.Unlock()
+	cSlice.m.RUnlock()
 	return nil
 }
 
 // Wait for the Slice to change
 func (cSlice *ConcurentSlice) WaitForChange(timeout int) error {
-	// Subscribe a channel to the empty topic :
-	cSlice.m.Lock()
+	cSlice.m.RLock()
 
+	// Subscribes a channel to the change topic :
 	chChange := make(chan interface{})
 	cSlice.eventBus.Subscribe("change", chChange)
-
 	defer cSlice.eventBus.UnSubscribe("change", chChange)
 
-	cSlice.m.Unlock()
-
-	//fmt.Println("Subscribed to change")
+	cSlice.m.RUnlock()
 	select {
 	case <-chChange:
-		//fmt.Println("Received change")
-		//cSlice.eventBus.UnSubscribe("change", chChange)
 		return nil
-
 	case <-time.After(time.Duration(timeout) * time.Second):
-		//cSlice.eventBus.UnSubscribe("change", chChange)
 		return errors.New("the list did not change (timeout)")
 	}
 }
 
 func (cSlice *ConcurentSlice) String() string {
+	cSlice.m.RLock()
+	defer cSlice.m.RUnlock()
 	return fmt.Sprint(cSlice.sliceValues)
 }

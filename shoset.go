@@ -63,7 +63,7 @@ type Shoset struct {
 	Done chan bool // goroutines synchronization
 
 	LaunchedProtocol concurentData.ConcurentSlice // List of IP addesses a Protocol was initiated with (but not yet finished)
-	// The shoset is ready to use when the list is empty
+	// The shoset is ready for use when the list is empty
 	// Use WaitForProtocols() to wait for the shoset to be ready.
 }
 
@@ -159,7 +159,7 @@ func (s *Shoset) deleteConn(Lname, remoteAddress string) {
 	// Finds and deletes Routes using the deleted ShosetConn
 	s.RouteTable.Range(
 		func(key, val interface{}) bool {
-			if val.(Route).neighborConn == c {
+			if val.(Route).GetNeighborConn() == c {
 				//fmt.Println("Deleting Route.")
 				c.GetShoset().RouteTable.Delete(key)
 			}
@@ -444,15 +444,11 @@ func (s *Shoset) EndProtocol(Lname, remoteAddress string) {
 // Forward messages destined to another Lname to the next step on the Route
 func (s *Shoset) forwardMessage(m msg.Message) {
 	masterTimeout := time.NewTimer(time.Duration(MASTER_SEND_TIMEOUT) * time.Second)
-
-	fmt.Println("Forwarding a message.")
-
 	tryNumber := 0
 
 	for {
-		route, ok := s.RouteTable.Load(m.GetDestinationLname())
-		if ok { // There is a known Route to the destination Lname
-			//fmt.Println("((SimpleMessageHandler) Send) ", s.GetLogicalName(), " is sending a message to ", m.GetDestinationLname(), "through ", route.(Route).neighbour, ".")
+		if route, ok := s.RouteTable.Load(m.GetDestinationLname()); ok { // There is a known Route to the destination Lname
+			s.Logger.Debug().Msg(s.GetLogicalName() + " is sending a message to " + m.GetDestinationLname() + " through " + route.(Route).GetNeighbour() + " IP : " + route.(Route).GetNeighborConn().GetRemoteAddress() + " .")
 
 			// Forward message
 			err := route.(Route).GetNeighborConn().GetWriter().SendMessage(m)
@@ -467,91 +463,56 @@ func (s *Shoset) forwardMessage(m msg.Message) {
 
 				// Invalidate route
 				s.RouteTable.Delete(m.GetDestinationLname())
-				// Reroute network
 
+				// Reroute network
 				routing := msg.NewRoutingEvent(s.GetLogicalName(), "")
 				s.Send(routing)
 
 				tryNumber++
 				if tryNumber > MAX_FORWARD_TRY {
+					s.Logger.Warn().Msg("Forward message : Failed to forward message destined to " + m.GetDestinationLname() + ". Max number of attemp exceeded. (Giving up)")
 					return
 				} else {
 					continue
 				}
 			}
-			//fmt.Println("(ForwardAck) Message received : ", forwardAck)
-
 			return
 
 		} else { // There is no known Route to the destination Lname -> Wait for one to be available
-			s.Logger.Warn().Msg("Forward message : Failed to forward message destined to " + m.GetDestinationLname() + ". (no route) (waiting for correct route")
+			s.Logger.Warn().Msg("Forward message : Failed to forward message destined to " + m.GetDestinationLname() + ". (no route) (waiting for correct route)")
 
 			// Reroute network
 			routing := msg.NewRoutingEvent(s.GetLogicalName(), "")
 			s.Send(routing)
 
-			//retry: // Puts a label on the loop to break out of it from inside the select
-			// Wait for a route to the destination to be dicovered
-			// Timeout :
-			// - Since the last addition to the Routetable
-			// - Since the bigenning of the wait
-
-			//for {
-
 			// Creation channel
 			chRoute := make(chan interface{})
-
-			// defer un Unsub
-
-			// Inscription channel
 			s.RoutingEventBus.Subscribe(m.GetDestinationLname(), chRoute)
 
-			defer s.RoutingEventBus.UnSubscribe(m.GetDestinationLname(), chRoute) // ?
-
-			fmt.Println(s.GetLogicalName(), " is wating for a route to ", m.GetDestinationLname())
-
-			// Possibilité de trouver la bonne route avant d'être abonné ? (Refaire le load avant d'attendre ?)
+			// Check if the route did not become available while you were preparing the channel
 			_, ok := s.RouteTable.Load(m.GetDestinationLname())
 			if ok {
 				continue
 			}
 			select {
 			case <-chRoute:
-				//fmt.Println(s.GetLogicalName(), "Received NewRouteEvent for ", m.GetDestinationLname())
+				s.RoutingEventBus.UnSubscribe(m.GetDestinationLname(), chRoute)
 				break
-				// if Lname == m.GetDestinationLname() {
-				// 	break retry
-				// }
-			// case <-time.After(time.Duration(NO_MESSAGE_ROUTE_TIMEOUT) * time.Second):
-			// 	// When the message is sent when this is not receiving, it is not sent and never received
-			// 	// Retry anyway after some time, maybe the Event was missed
-
-			// 	s.Logger.Debug().Msg("Timed out before correct route discovery. (no recent NewRouteEvent) (retrying)")
-			// 	return
-
 			case <-masterTimeout.C:
 				s.Logger.Error().Msg("Couldn't send forwarded message : " + "Timed out before correct route discovery. (Waited to long for the route)")
 				return
 			}
-			//}
-			//fmt.Println("Retrying forward")
 		}
 	}
 }
 
 func (s *Shoset) SaveRoute(c *ShosetConn, routingEvt *msg.RoutingEvent) {
-	fmt.Println("(SaveRoute) remote lname : ", c.GetRemoteLogicalName())
+	s.Logger.Debug().Msg("Saving route to " + routingEvt.GetOrigin() + " through " + c.GetRemoteLogicalName() + " IP : " + c.GetRemoteAddress())
+
 	s.RouteTable.Store(routingEvt.GetOrigin(), NewRoute(c.GetRemoteLogicalName(), c, routingEvt.GetNbSteps(), routingEvt.GetUUID(), routingEvt.Timestamp))
 
 	// Send NewRouteEvent
-	s.RoutingEventBus.Publish(routingEvt.GetOrigin(), true) // Sent data is not used
-
-	// select {
-	// case s.NewRouteEvent <- routingEvt.GetOrigin():
-	// 	fmt.Println(c.GetLocalLogicalName(), " is Sending NewRouteEvent for ", routingEvt.GetOrigin())
-	// default:
-	// 	//fmt.Println("Nobody is waiting for NewRouteEvent")
-	// }
+	s.RoutingEventBus.Publish(routingEvt.GetOrigin(), true)
 
 	reRouting := msg.NewRoutingEvent(c.GetLocalLogicalName(), routingEvt.GetUUID())
 	s.Send(reRouting)
@@ -563,20 +524,24 @@ func (s *Shoset) SaveRoute(c *ShosetConn, routingEvt *msg.RoutingEvent) {
 
 // ######## Send and Receice Messages : ########
 
-// Find the correct send function for the type of message using the handler and call it
-func (s *Shoset) Send(msg msg.Message) { //Use pointer for msg ?
+// Finds the correct send function for the type of message using the handler and call it.
+func (s *Shoset) Send(msg msg.Message) {
 	if msgType := msg.GetMessageType(); contains(SENDABLE_TYPES, msgType) {
 		s.Handlers[msgType].Send(s, msg)
 	} else {
-		s.Logger.Error().Msg("Trying to send an invalid message type or message of a type without a send function. Message type : " + msgType)
+		s.Logger.Error().Msg("Trying to send an invalid message type or message of a type without a Send function. Message type : " + msgType)
 	}
-
 }
 
 //Wait for message
 //args for event("evt") type : map[string]string{"topic": "topic_name", "event": "event_name"}
-//Leave iterator at nil if you don't want to supply it yourself (avoid reading multiple time the same message)
+//Leave iterator at nil if you don't want to supply it yourself. (avoids reading multiple time the same message)
 func (s *Shoset) Wait(msgType string, args map[string]string, timeout int, iterator *msg.Iterator) msg.Message {
+	if !contains(RECEIVABLE_TYPES, msgType) {
+		s.Logger.Error().Msg("Trying to receive an invalid message type or message of a type without a Wait function. Message type : " + msgType)
+		return nil
+	}
+
 	if iterator == nil {
 		iterator = msg.NewIterator(s.Queue[msgType])
 	}

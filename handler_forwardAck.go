@@ -20,14 +20,12 @@ func (fah *ForwardAcknownledgeHandler) Get(c *ShosetConn) (msg.Message, error) {
 
 // HandleDoubleWay handles message for a ShosetConn accordingly.
 func (fah *ForwardAcknownledgeHandler) HandleDoubleWay(c *ShosetConn, message msg.Message) error {
-	//fmt.Println("((fah *forwardAcknownledgeHandler) HandleDoubleWay) Lname : ", c.GetLocalLogicalName(), " message : ", message)
-
 	m := message.(msg.ForwardAck)
 	if notInQueue := c.GetShoset().Queue["forwardAck"].Push(m, c.GetRemoteShosetType(), c.GetLocalAddress()); !notInQueue {
 		return errors.New("failed to handle forwardAck")
 	}
 
-	c.GetShoset().MessageEventBus.Publish("forwardAck", true) // Sent data is not used
+	c.GetShoset().MessageEventBus.Publish("forwardAck", true) // Notifies of the reception of a new message
 
 	return nil
 }
@@ -42,8 +40,8 @@ func (fah *ForwardAcknownledgeHandler) Send(s *Shoset, m msg.Message) {
 func (fah *ForwardAcknownledgeHandler) Wait(s *Shoset, replies *msg.Iterator, args map[string]string, timeout int) *msg.Message {
 	timer := time.NewTimer(time.Duration(timeout) * time.Second)
 
-	// Check every message in the queue before waiting for a new message
-	//Check message presence in two steps to avoid accessing attributs of <nil>
+	// Checks every message in the queue before waiting for a new message
+	//Checks message presence in two steps to avoid accessing attributs of <nil>
 	for {
 		cell := replies.Get()
 		if cell != nil {
@@ -52,15 +50,14 @@ func (fah *ForwardAcknownledgeHandler) Wait(s *Shoset, replies *msg.Iterator, ar
 				return &message
 			}
 		} else {
+			// Locking Queue to avoid missing a message while preparing the channel to receive events.
 			replies.GetQueue().LockQueue()
 			break
 		}
 	}
 
-	// Creation channel
+	// Creating channel
 	chNewMessage := make(chan interface{})
-
-	// Inscription channel
 	s.MessageEventBus.Subscribe("forwardAck", chNewMessage)
 	replies.GetQueue().UnlockQueue()
 	defer s.MessageEventBus.UnSubscribe("forwardAck", chNewMessage)
@@ -68,21 +65,20 @@ func (fah *ForwardAcknownledgeHandler) Wait(s *Shoset, replies *msg.Iterator, ar
 	for {
 		select {
 		case <-timer.C:
-			s.Logger.Warn().Msg("No message received in Wait forwardAck (timeout)")
+			s.Logger.Warn().Msg("No message received in Wait ForwardAck (timeout).")
 			return nil
 		case <-chNewMessage:
-			//Check message presence in two steps to avoid accessing attributs of <nil>
+			//Checks message presence in two steps to avoid accessing attributs of <nil>
 			cell := replies.Get()
 			if cell == nil {
-				//time.Sleep(time.Duration(10) * time.Millisecond)
 				break
 			}
 			message := cell.GetMessage()
 			if message == nil {
-				//time.Sleep(time.Duration(10) * time.Millisecond)
 				break
 			}
 			forwardAck := message.(msg.ForwardAck)
+			// Checks that it is a forwardAck for the right message.
 			if forwardAck.OGMessageUUID == args["UUID"] {
 				return &message
 			}

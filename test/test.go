@@ -115,20 +115,18 @@ func testRouteTable(ctx context.Context, done context.CancelFunc) {
 	s = utilsForTest.CreateManyShosets(tt, s, false)
 	utilsForTest.WaitForManyShosets(s)
 
+	time.Sleep(3 * time.Second)
+
 	utilsForTest.PrintManyShosets(s)
 
-	tt = append(tt, &(utilsForTest.ShosetCreation{Lname: "F", Stype: "cl", Src: "localhost:8006", Dst: []string{"localhost:8001", "localhost:8005"}, Ptype: "link", Launched: false}))
+	tt = append(tt, &(utilsForTest.ShosetCreation{Lname: "F", ShosetType: "cl", LocalAddress: "localhost:8006", RemoteAddresses: []string{"localhost:8001", "localhost:8005"}, ProtocolType: "link", Launched: false}))
 
 	s = utilsForTest.CreateManyShosets(tt, s, false)
 	utilsForTest.WaitForManyShosets(s)
 
-	time.Sleep(6 * time.Second)
+	time.Sleep(3 * time.Second)
 
 	utilsForTest.PrintManyShosets(s)
-
-	// time.Sleep(2 * time.Second)
-
-	// utilsForTest.PrintManyShosets(s)
 }
 
 func testForwardMessage(ctx context.Context, done context.CancelFunc) {
@@ -251,10 +249,6 @@ func testEndConnection(ctx context.Context, done context.CancelFunc) {
 
 	s = utilsForTest.CreateManyShosets(tt, s, false) // Populate the list with the shosets as specified in the selected topology and estavlish connection among them
 
-	//utilsForTest.PrintManyShosets(s) // Display the info of every shosets in the list
-
-	//time.Sleep(3 * time.Second)
-
 	utilsForTest.WaitForManyShosets(s) // Wait for every shosets in the list to be ready
 
 	utilsForTest.PrintManyShosets(s) // Display the info of every shosets in the list
@@ -286,8 +280,9 @@ func testEndConnection(ctx context.Context, done context.CancelFunc) {
 		}
 	}()
 
-	time.Sleep(10 * time.Second)
+	time.Sleep(5 * time.Second)
 
+	fmt.Println("####",s[2].GetLogicalName(), " is ending connection to B")
 	s[2].EndProtocol("B", "127.0.0.1:8002")
 
 	time.Sleep(5 * time.Second)
@@ -361,9 +356,9 @@ func main() {
 		// testPresentationENIB(ctx, done)
 		// oldTest.TestJoin3(ctx, done)
 
-		// testRouteTable(ctx, done)
+		testRouteTable(ctx, done)
 		// testForwardMessage(ctx, done)
-		testEndConnection(ctx, done)
+		// testEndConnection(ctx, done)
 	} else if arg == "5" {
 		testForwardMessageMultiProcess2((os.Args)[2:])
 	} else if arg == "6" {

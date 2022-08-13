@@ -4,7 +4,6 @@
 # code -n ~/.bash_aliases
 # source ~/.bash_aliases
 
-
 rm -rf ~/.shoset 
-go run -race test/test.go $1 #* to get every files int ./test
+go run -race test/test.go $1
 wait

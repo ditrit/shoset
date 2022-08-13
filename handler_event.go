@@ -24,7 +24,7 @@ func (eh *EventHandler) HandleDoubleWay(c *ShosetConn, message msg.Message) erro
 		eh.Send(c.GetShoset(), evt)
 	}
 
-	c.GetShoset().MessageEventBus.Publish("evt", true) // Sent data is not use
+	c.GetShoset().MessageEventBus.Publish("evt", true) // Notifies of the reception of a new message
 
 	return nil
 }
@@ -33,7 +33,6 @@ func (eh *EventHandler) HandleDoubleWay(c *ShosetConn, message msg.Message) erro
 func (eh *EventHandler) Send(s *Shoset, evt msg.Message) {
 	s.ConnsByLname.Iterate(
 		func(key string, conn interface{}) {
-			//conn.(*ShosetConn).WaitForValid() //
 			err := conn.(*ShosetConn).GetWriter().SendMessage(evt)
 			if err != nil {
 				log.Warn().Msg("couldn't send evt : " + err.Error())
@@ -48,12 +47,12 @@ func (eh *EventHandler) Wait(s *Shoset, replies *msg.Iterator, args map[string]s
 
 	topicName, ok := args["topic"]
 	if !ok {
-		s.Logger.Warn().Msg("no topic provided for Wait evt")
+		s.Logger.Error().Msg("no topic provided for Wait evt")
 		return nil
 	}
 
-	// Check every message in the queue before waiting for a new message
-	//Check message presence in two steps to avoid accessing attributs of <nil>
+	// Checks every message in the queue before waiting for a new message
+	// Checks message presence in two steps to avoid accessing attributs of <nil>
 	for {
 		cell := replies.Get()
 		if cell != nil {
@@ -65,14 +64,13 @@ func (eh *EventHandler) Wait(s *Shoset, replies *msg.Iterator, args map[string]s
 				}
 			}
 		} else {
+			// Locking Queue to avoid missing a message while preparing the channel to receive events.
 			replies.GetQueue().LockQueue()
 			break
 		}
 	}
-	// Creation channel
+	// Creating channel
 	chNewMessage := make(chan interface{})
-
-	// Inscription channel
 	s.MessageEventBus.Subscribe("evt", chNewMessage)
 	replies.GetQueue().UnlockQueue()
 	defer s.MessageEventBus.UnSubscribe("evt", chNewMessage)
@@ -80,10 +78,10 @@ func (eh *EventHandler) Wait(s *Shoset, replies *msg.Iterator, args map[string]s
 	for {
 		select {
 		case <-timer.C:
-			s.Logger.Warn().Msg("No message received in Wait evt (timeout)")
+			s.Logger.Warn().Msg("No message received in Wait event (timeout).")
 			return nil
 		case <-chNewMessage:
-			//Check message presence in two steps to avoid accessing attributs of <nil>
+			//Checks message presence in two steps to avoid accessing fields of <nil>
 			cell := replies.Get()
 			if cell == nil {
 				break
@@ -97,6 +95,5 @@ func (eh *EventHandler) Wait(s *Shoset, replies *msg.Iterator, args map[string]s
 				return &message
 			}
 		}
-
 	}
 }

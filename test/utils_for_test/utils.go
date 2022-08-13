@@ -23,16 +23,16 @@ func LoopUntilDone(tick time.Duration, ctx context.Context, callback func()) {
 	}
 }
 
+// Launche shoset using the list of instructions provided and add them to the list (the modified list id returned)
 func CreateManyShosets(tt []*ShosetCreation, s []*shoset.Shoset, wait bool) []*shoset.Shoset {
 	for i, t := range tt {
 		if !t.Launched {
-			s = append(s, shoset.NewShoset(t.Lname, t.Stype))
-			//s[i] = shoset.NewShoset(t.lname, t.stype)
-			if t.Ptype == "pki" {
-				s[i].InitPKI(t.Src)
+			s = append(s, shoset.NewShoset(t.Lname, t.ShosetType))
+			if t.ProtocolType == "pki" {
+				s[i].InitPKI(t.LocalAddress)
 			} else {
-				for _, a := range t.Dst {
-					s[i].Protocol(t.Src, a, t.Ptype)
+				for _, a := range t.RemoteAddresses {
+					s[i].Protocol(t.LocalAddress, a, t.ProtocolType)
 				}
 			}
 			t.Launched = true
@@ -45,15 +45,16 @@ func CreateManyShosets(tt []*ShosetCreation, s []*shoset.Shoset, wait bool) []*s
 	return s
 }
 
+// Create a single Shoset from the topology (for multiProcesses tests)
 func CreateShosetFromTopology(Lname string, tt []*ShosetCreation) *shoset.Shoset {
 	for _, t := range tt {
 		if !t.Launched && t.Lname == Lname {
-			s := shoset.NewShoset(t.Lname, t.Stype)
-			if t.Ptype == "pki" {
-				s.InitPKI(t.Src)
+			s := shoset.NewShoset(t.Lname, t.ShosetType)
+			if t.ProtocolType == "pki" {
+				s.InitPKI(t.LocalAddress)
 			} else {
-				for _, a := range t.Dst {
-					s.Protocol(t.Src, a, t.Ptype)
+				for _, a := range t.RemoteAddresses {
+					s.Protocol(t.LocalAddress, a, t.ProtocolType)
 				}
 			}
 			t.Launched = true
@@ -63,32 +64,14 @@ func CreateShosetFromTopology(Lname string, tt []*ShosetCreation) *shoset.Shoset
 	return nil
 }
 
-func AddConnToShosetFromTopology(s *shoset.Shoset, Lname string, tt []*ShosetCreation) *shoset.Shoset {
-	for _, t := range tt {
-		if t.Lname == Lname {
-			if t.Ptype == "pki" {
-				s.InitPKI(t.Src)
-			} else {
-				for _, a := range t.Dst {
-					s.Protocol(t.Src, a, t.Ptype)
-				}
-			}
-			t.Launched = true
-			return s
-		}
-	}
-	return nil
-}
-
+// Same as CreateShosetFromTopology but only launches an empty protocol to relaunch the connections saved in the config file
 func CreateShosetOnlyBindFromTopology(Lname string, tt []*ShosetCreation) *shoset.Shoset {
 	for _, t := range tt {
 		if !t.Launched && t.Lname == Lname {
-			s := shoset.NewShoset(t.Lname, t.Stype)
-			s.Protocol(t.Src, "", "")
-			//s.Bind(t.Src)
+			s := shoset.NewShoset(t.Lname, t.ShosetType)
+			s.Protocol(t.LocalAddress, "", "")
 			t.Launched = true
-			time.Sleep(1*time.Second)
-			return s			
+			return s
 		}
 	}
 	return nil
@@ -100,13 +83,14 @@ func PrintManyShosets(s []*shoset.Shoset) {
 	}
 }
 
+// Waits for every shosets in the list to be ready
 func WaitForManyShosets(s []*shoset.Shoset) {
 	for _, t := range s {
 		t.WaitForProtocols(10)
 	}
 }
 
-// Not used
+// Forces reroute of every shosets in the list.
 func RouteManyShosets(s []*shoset.Shoset, wait bool) {
 	for _, t := range s {
 		routing := msg.NewRoutingEvent(t.GetLogicalName(), "")

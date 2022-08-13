@@ -29,5 +29,5 @@ func (r RoutingEvent) GetOrigin() string { return r.Origin }
 // GetNbSteps accessor
 func (r RoutingEvent) GetNbSteps() int { return r.NbSteps }
 
-// GetNb_steps accessor
+// GetNbSteps accessor
 func (r *RoutingEvent) SetNbSteps(i int) { r.NbSteps = i }

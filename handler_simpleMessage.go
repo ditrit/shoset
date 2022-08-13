@@ -19,14 +19,13 @@ func (smh *SimpleMessageHandler) Get(c *ShosetConn) (msg.Message, error) {
 
 // HandleDoubleWay handles message for a ShosetConn accordingly.
 func (smh *SimpleMessageHandler) HandleDoubleWay(c *ShosetConn, message msg.Message) error {
-	//fmt.Println("((smh *SimpleMessageHandler) HandleDoubleWay) Lname : ", c.GetLocalLogicalName(), " message : ", message)
 	m := message.(msg.SimpleMessage)
 
 	if notInQueue := c.GetShoset().Queue["simpleMessage"].Push(m, c.GetRemoteShosetType(), c.GetLocalAddress()); !notInQueue {
 		return errors.New("failed to handle simpleMessage")
 	}
 
-	c.GetShoset().MessageEventBus.Publish("simpleMessage", true) // Sent data is not used
+	c.GetShoset().MessageEventBus.Publish("simpleMessage", true) // Notifies of the reception of a new message
 
 	return nil
 }
@@ -40,8 +39,8 @@ func (smh *SimpleMessageHandler) Send(s *Shoset, m msg.Message) {
 func (smh *SimpleMessageHandler) Wait(s *Shoset, replies *msg.Iterator, args map[string]string, timeout int) *msg.Message {
 	timer := time.NewTimer(time.Duration(timeout) * time.Second)
 
-	// Check every message in the queue before waiting for a new message
-	//Check message presence in two steps to avoid accessing attributs of <nil>
+	// Checks every message in the queue before waiting for a new message
+	// Checks message presence in two steps to avoid accessing attributs of <nil>
 	for {
 		cell := replies.Get()
 		if cell != nil {
@@ -50,26 +49,24 @@ func (smh *SimpleMessageHandler) Wait(s *Shoset, replies *msg.Iterator, args map
 				return &message
 			}
 		} else {
+			// Locking Queue to avoid missing a message while preparing the channel to receive events.
 			replies.GetQueue().LockQueue()
 			break
 		}
 	}
-	// Creation channel
+	// Creating channel
 	chNewMessage := make(chan interface{})
-
-	// Inscription channel
 	s.MessageEventBus.Subscribe("simpleMessage", chNewMessage)
 	replies.GetQueue().UnlockQueue()
 	defer s.MessageEventBus.UnSubscribe("simpleMessage", chNewMessage)
 
 	for {
-		//fmt.Println("Waiting for SimpleMessage !!!")
 		select {
 		case <-timer.C:
-			s.Logger.Warn().Msg("No message received in Wait SimpleMessage (timeout)")
+			s.Logger.Warn().Msg("No message received in Wait SimpleMessage (timeout).")
 			return nil
 		case <-chNewMessage:
-			//Check message presence in two steps to avoid accessing attributs of <nil>
+			//Checks message presence in two steps to avoid accessing fields of <nil>
 			cell := replies.Get()
 			if cell == nil {
 				break

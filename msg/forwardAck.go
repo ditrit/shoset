@@ -1,6 +1,6 @@
 package msg
 
-// SimpleMessage : gandalf commands
+// ForwardAck : acknowledges that the next shoset in the route to the destination received the message.
 type ForwardAck struct {
 	MessageBase
 	OGMessageUUID      string // UUID of acknowledged message
