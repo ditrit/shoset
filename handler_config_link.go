@@ -1,7 +1,6 @@
 package shoset
 
 import (
-	"fmt"
 	"sync"
 
 	"github.com/ditrit/shoset/msg"
@@ -27,7 +26,7 @@ func (clh *ConfigLinkHandler) HandleDoubleWay(c *ShosetConn, message msg.Message
 		// incoming link request, a socket wants to link to this one.
 		// save info and retrieve brothers to inform network.
 
-		c.Logger.Trace().Str("lname", cfg.GetLogicalName()).Str("IP",cfg.GetAddress()).Msg("Incoming link request.")
+		c.Logger.Trace().Str("lname", cfg.GetLogicalName()).Str("IP", cfg.GetAddress()).Msg("Incoming link request : " + PROTOCOL_LINK)
 
 		c.GetShoset().deleteConn(cfg.GetLogicalName(), cfg.GetAddress())
 
@@ -46,7 +45,6 @@ func (clh *ConfigLinkHandler) HandleDoubleWay(c *ShosetConn, message msg.Message
 		}
 
 		remoteBrothers, _ := c.GetShoset().ConnsByLname.Load(c.GetRemoteLogicalName())
-		fmt.Println("remote brothers : ", remoteBrothers)
 		remoteBrothersArray := []string{}
 		if remoteBrothers != nil {
 			remoteBrothersArray = Keys(remoteBrothers.(*sync.Map), ALL)
@@ -65,19 +63,20 @@ func (clh *ConfigLinkHandler) HandleDoubleWay(c *ShosetConn, message msg.Message
 	case ACKNOWLEDGE_LINK:
 		// incoming acknowledge_link, link request accepted.
 
-		c.Logger.Trace().Str("lname", cfg.GetLogicalName()).Str("IP",cfg.GetAddress()).Msg("Incoming acknowledge_link.")
+		c.Logger.Trace().Str("lname", cfg.GetLogicalName()).Str("IP", cfg.GetAddress()).Msg("Incoming acknowledge link : " + ACKNOWLEDGE_LINK)
 
 		c.GetShoset().deleteConn(cfg.GetLogicalName(), cfg.GetAddress())
 
 		c.Store(PROTOCOL_LINK, cfg.GetLogicalName(), c.GetRemoteAddress(), cfg.GetShosetType())
 
+		// Deletes the IP from the list of started but not yet ready.
 		c.GetShoset().LaunchedProtocol.DeleteFromConcurentSlice(c.GetRemoteAddress())
 
 	case BROTHERS:
 		// incoming brother information, new shoset in the network.
 		// save info and call sendToBrothers to handle message.
 
-		c.Logger.Trace().Str("lname", cfg.GetLogicalName()).Str("IP",cfg.GetAddress()).Msg("Incoming brother information.")
+		c.Logger.Trace().Str("lname", cfg.GetLogicalName()).Str("IP", cfg.GetAddress()).Msg("Incoming brother information : " + BROTHERS)
 
 		c.Store(PROTOCOL_LINK, cfg.GetLogicalName(), c.GetRemoteAddress(), cfg.GetShosetType())
 

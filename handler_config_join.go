@@ -26,14 +26,14 @@ func (cjh *ConfigJoinHandler) HandleDoubleWay(c *ShosetConn, message msg.Message
 		// incoming join request, a socket wants to join to this one.
 		// save info and retrieve brothers to inform network.
 
-		//fmt.Println("PROTOCOL_JOIN")
+		c.Logger.Trace().Str("lname", cfg.GetLogicalName()).Str("IP", cfg.GetAddress()).Msg("Incoming join request : " + PROTOCOL_JOIN)
 
-		// Delete any existing conn
 		c.GetShoset().deleteConn(cfg.GetLogicalName(), cfg.GetAddress())
 
 		c.SetRemoteAddress(cfg.GetAddress())
 		c.Store(PROTOCOL_JOIN, c.GetShoset().GetLogicalName(), cfg.GetAddress(), c.GetShoset().GetShosetType())
 
+		// Send ACKNOWLEDGE_JOIN
 		configOk := msg.NewConfigProtocol(cfg.GetAddress(), c.GetShoset().GetLogicalName(), c.GetShoset().GetShosetType(), ACKNOWLEDGE_JOIN)
 		if err := c.GetWriter().SendMessage(*configOk); err != nil {
 			c.Logger.Warn().Msg("couldn't send configOk : " + err.Error())
@@ -53,29 +53,24 @@ func (cjh *ConfigJoinHandler) HandleDoubleWay(c *ShosetConn, message msg.Message
 			return true
 		})
 
-		//c.SetIsValid(true) // Send statusChange Event change status
-		//c.GetShoset().waitGroupProtocol.Done()
-
 	case ACKNOWLEDGE_JOIN:
 		// incoming acknowledge_join, join request validated.
 		// save info.
 
-		//fmt.Println("ACKNOWLEDGE_JOIN")
+		c.Logger.Trace().Str("lname", cfg.GetLogicalName()).Str("IP", cfg.GetAddress()).Msg("Incoming acknowledge join : " + ACKNOWLEDGE_JOIN)
 
-		// Delete any existing conn
 		c.GetShoset().deleteConn(cfg.GetLogicalName(), cfg.GetAddress())
 
 		c.Store(PROTOCOL_JOIN, c.GetShoset().GetLogicalName(), c.GetRemoteAddress(), c.GetShoset().GetShosetType())
 
-		//c.SetIsValid(true) // Send statusChange Event change status
-		//c.GetShoset().waitGroupProtocol.Done()
+		// Deletes the IP from the list of started but not yet ready.
 		c.GetShoset().LaunchedProtocol.DeleteFromConcurentSlice(c.GetRemoteAddress())
 
 	case MEMBER:
 		// incoming member information.
 		// need to link protocol on it if not already in the map of known conn.
 
-		//fmt.Println("MEMBER")
+		c.Logger.Trace().Str("lname", cfg.GetLogicalName()).Str("IP", cfg.GetAddress()).Msg("Incoming brother member : " + MEMBER)
 
 		mapConns, _ := c.GetShoset().ConnsByLname.Load(c.GetShoset().GetLogicalName())
 		if mapConns == nil {

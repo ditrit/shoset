@@ -159,7 +159,7 @@ func testForwardMessage(ctx context.Context, done context.CancelFunc) {
 	wg.Wait()
 }
 
-func testForwardMessageMultiProcess2(args []string) {
+func testForwardMessageMultiProcess(args []string) {
 	// args[0] is not the nama of the execuatable, it is the first argument after test number
 	// ./bin/shoset_build 5 D 0 0 rien 0 (args[0] is D)
 	fmt.Println("args : ", args)
@@ -359,10 +359,10 @@ func main() {
 		// oldTest.TestJoin3(ctx, done)
 
 		// testRouteTable(ctx, done)
-		testForwardMessage(ctx, done)
-		// testEndConnection(ctx, done)
+		// testForwardMessage(ctx, done)
+		testEndConnection(ctx, done)
 	} else if arg == "5" {
-		testForwardMessageMultiProcess2((os.Args)[2:])
+		testForwardMessageMultiProcess((os.Args)[2:])
 	} else if arg == "6" {
 		example.SimpleExample()
 		// example.TestEventContinuousSend()

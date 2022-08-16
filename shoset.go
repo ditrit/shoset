@@ -141,11 +141,6 @@ func (s *Shoset) deleteConn(Lname, remoteAddress string) {
 
 	s.ConnsByLname.DeleteValueFromKeys(Lname, remoteAddress)
 
-	mapSyncLname := new(sync.Map)
-	mapSyncLname.Store(Lname, true)
-
-	//s.LnamesByType.Store(s.shosetType, mapSync) ??
-
 	// Assume qu'il n'y a jamais plus d'une connection vers un lname, on ne peut pas être sure si c'est join ou link
 	// Que des link ou ques des join avec un Lname
 
@@ -160,7 +155,6 @@ func (s *Shoset) deleteConn(Lname, remoteAddress string) {
 	s.RouteTable.Range(
 		func(key, val interface{}) bool {
 			if val.(Route).GetNeighborConn() == c {
-				//fmt.Println("Deleting Route.")
 				c.GetShoset().RouteTable.Delete(key)
 			}
 			return true
@@ -305,11 +299,9 @@ func (s *Shoset) Bind(address string) error {
 
 	err = s.ConnsByLname.GetConfig().ReadConfig(s.ConnsByLname.GetConfig().GetFileName())
 	if err == nil {
-		fmt.Println("Sclice JOIN : ", s.ConnsByLname.cfg.GetSlice(PROTOCOL_JOIN))
 		for _, remote := range s.ConnsByLname.cfg.GetSlice(PROTOCOL_JOIN) {
 			s.Protocol(address, remote, PROTOCOL_JOIN)
 		}
-		fmt.Println("Sclice LINK : ", s.ConnsByLname.cfg.GetSlice(PROTOCOL_LINK))
 		for _, remote := range s.ConnsByLname.cfg.GetSlice(PROTOCOL_LINK) {
 			s.Protocol(address, remote, PROTOCOL_LINK)
 		}

@@ -1,6 +1,6 @@
 #!/bin/sh
 
-sleep 6
+sleep 12
 
 #binary testNumber Lname receiver sender destination relaunch
 
@@ -8,7 +8,7 @@ sleep 6
 P=$!
 
 #Kill and restart
-sleep 15
+sleep 30
 
 kill $P
 

@@ -22,7 +22,7 @@ func NewConfig(name string) *Config {
 	homeDir := "."
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
-		log.Error().Msg("couldn't home dir folder: " + err.Error())
+		log.Error().Msg("couldn't find home dir folder: " + err.Error())
 	}
 	cfg := &Config{
 		baseDir: homeDir + "/.shoset/" + name + "/",
@@ -61,21 +61,11 @@ func (cfg *Config) InitFolders(name string) (string, error) {
 // Initialize viper parameters before reading.
 func (cfg *Config) ReadConfig(fileName string) error {
 
-	//fmt.Println("(ReadConfig) filename : ", fileName)
-
-	//fmt.Println("(ReadConfig) path : ", cfg.baseDir+fileName+PATH_CONFIG_DIR)
-
-	//fmt.Println("(ReadConfig) fileExists : ", fileExists(cfg.baseDir+fileName+PATH_CONFIG_DIR+"/config.yaml"))
-
 	cfg.viper.AddConfigPath(cfg.baseDir + fileName + PATH_CONFIG_DIR)
-	//cfg.viper.SetConfigName(fileName) // ???
+	cfg.viper.SetConfigName(CONFIG_FILE)
 	cfg.viper.SetConfigType(CONFIG_TYPE)
 
-	//fmt.Println("(ReadConfig) config viper", cfg.viper.AllSettings())
-
 	err := cfg.viper.ReadInConfig()
-
-	//cfg.viper.Debug()
 
 	return err
 }
@@ -89,15 +79,13 @@ func (cfg *Config) WriteConfig(fileName string) error {
 }
 
 // AppendToKey sets the value for a key for viper config.
-func (cfg *Config) AppendToKey(key string, value []string) {
+func (cfg *Config) AppendToKey(key string, values []string) {
 	cfg.mu.Lock()
 	defer cfg.mu.Unlock()
 
-	//fmt.Println("value : ", value)
-
 	// Avoid duplicate
 	valueSlice := cfg.GetSlice(key)
-	for _, a := range value {
+	for _, a := range values {
 		if !contains(valueSlice, a) {
 			valueSlice = append(valueSlice, a)
 		}
@@ -111,19 +99,13 @@ func (cfg *Config) DeleteFromKey(key string, value []string) {
 	cfg.mu.Lock()
 	defer cfg.mu.Unlock()
 
-	//fmt.Println("(DeleteFromKey) To be deleted : ", value)
-
 	valueCfg := cfg.GetSlice(key)
 	valueCfgOut := []string{}
 	for _, a := range valueCfg {
 		if !contains(value, a) {
-			//fmt.Println("(DeleteFromKey) Adding back :", a)
 			valueCfgOut = append(valueCfgOut, a)
-		} else {
-			//fmt.Println("(DeleteFromKey) Deleting : ", a)
 		}
 	}
-	//fmt.Println("(DeleteFromKey) valueCfgOut : ", valueCfgOut)
 	cfg.viper.Set(key, valueCfgOut)
 	cfg.viper.WriteConfig()
 }

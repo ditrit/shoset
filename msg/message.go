@@ -17,7 +17,7 @@ type Message interface {
 	GetPayload() string
 	GetMajor() int8
 	GetMinor() int8
-	
+
 	GetDestinationLname() string
 }
 
@@ -26,19 +26,19 @@ type MessageBase struct {
 	UUID             string // automatically generated id for a single message
 	Tenant           string // ??
 	Token            string // ??
-	Timeout          int64 // time set to keep event in memory
-	Timestamp        int64 // time when message is created
+	Timeout          int64  // time set to keep event in memory
+	Timestamp        int64  // time when message is created (to the millesecond)
 	Payload          string
 	Next             string // ??
-	Major            int8 // ??
-	Minor            int8 // ??
-	DestinationLname string // LogicalName the message is destined to
+	Major            int8   // ??
+	Minor            int8   // ??
+	DestinationLname string // LogicalName the message is destined to (For forwarding)
 }
 
 // InitMessageBase constructor
 func (m *MessageBase) InitMessageBase() {
 	m.UUID = uuid.New()
-	m.Timestamp = time.Now().UnixMilli() //.Unix()
+	m.Timestamp = time.Now().UnixMilli()
 	m.Timeout = 10
 	m.Major = 1
 	m.Minor = 0
@@ -71,10 +71,8 @@ func (m MessageBase) GetMajor() int8 { return m.Major }
 // GetMinor returns Minor from MessageBase.
 func (m MessageBase) GetMinor() int8 { return m.Minor }
 
-
-
 // GetDestinationLname returns DestinationLname from MessageBase.
 func (m MessageBase) GetDestinationLname() string { return m.DestinationLname }
 
 // Set DestinationLname sets DestinationLname from MessageBase.
-func (m *MessageBase) SetDestinationLname(s string) { m.DestinationLname=s }
+func (m *MessageBase) SetDestinationLname(s string) { m.DestinationLname = s }
