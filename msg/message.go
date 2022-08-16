@@ -38,7 +38,7 @@ type MessageBase struct {
 // InitMessageBase constructor
 func (m *MessageBase) InitMessageBase() {
 	m.UUID = uuid.New()
-	m.Timestamp = time.Now().Unix()
+	m.Timestamp = time.Now().UnixMilli() //.Unix()
 	m.Timeout = 10
 	m.Major = 1
 	m.Minor = 0

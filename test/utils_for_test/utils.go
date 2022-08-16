@@ -93,7 +93,7 @@ func WaitForManyShosets(s []*shoset.Shoset) {
 // Forces reroute of every shosets in the list.
 func RouteManyShosets(s []*shoset.Shoset, wait bool) {
 	for _, t := range s {
-		routing := msg.NewRoutingEvent(t.GetLogicalName(), "")
+		routing := msg.NewRoutingEvent(t.GetLogicalName(), true, 0, "")
 		t.Send(routing)
 	}
 	if wait {

@@ -115,7 +115,7 @@ func testRouteTable(ctx context.Context, done context.CancelFunc) {
 	s = utilsForTest.CreateManyShosets(tt, s, false)
 	utilsForTest.WaitForManyShosets(s)
 
-	time.Sleep(3 * time.Second)
+	time.Sleep(10 * time.Second)
 
 	utilsForTest.PrintManyShosets(s)
 
@@ -124,16 +124,18 @@ func testRouteTable(ctx context.Context, done context.CancelFunc) {
 	s = utilsForTest.CreateManyShosets(tt, s, false)
 	utilsForTest.WaitForManyShosets(s)
 
-	time.Sleep(3 * time.Second)
+	time.Sleep(10 * time.Second)
 
 	utilsForTest.PrintManyShosets(s)
 }
 
 func testForwardMessage(ctx context.Context, done context.CancelFunc) {
-	tt := utilsForTest.LinkedCircles
+	tt := utilsForTest.Circle
 	s := []*shoset.Shoset{}
 	s = utilsForTest.CreateManyShosets(tt, s, false)
 	utilsForTest.WaitForManyShosets(s)
+
+	time.Sleep(1 * time.Second)
 
 	utilsForTest.PrintManyShosets(s)
 
@@ -282,7 +284,7 @@ func testEndConnection(ctx context.Context, done context.CancelFunc) {
 
 	time.Sleep(5 * time.Second)
 
-	fmt.Println("####",s[2].GetLogicalName(), " is ending connection to B")
+	fmt.Println("####", s[2].GetLogicalName(), " is ending connection to B")
 	s[2].EndProtocol("B", "127.0.0.1:8002")
 
 	time.Sleep(5 * time.Second)
@@ -356,8 +358,8 @@ func main() {
 		// testPresentationENIB(ctx, done)
 		// oldTest.TestJoin3(ctx, done)
 
-		testRouteTable(ctx, done)
-		// testForwardMessage(ctx, done)
+		// testRouteTable(ctx, done)
+		testForwardMessage(ctx, done)
 		// testEndConnection(ctx, done)
 	} else if arg == "5" {
 		testForwardMessageMultiProcess2((os.Args)[2:])

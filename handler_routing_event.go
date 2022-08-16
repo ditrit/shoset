@@ -24,14 +24,24 @@ func (reh *RoutingEventHandler) HandleDoubleWay(c *ShosetConn, message msg.Messa
 
 	routingEvt := message.(msg.RoutingEvent)
 
-	originLogicalName := routingEvt.GetOrigin()
-
-	// Tries to load the existing Route.
-	value, ok := c.GetShoset().RouteTable.Load(originLogicalName)
-	if ok && !((value.(Route).GetUUID() != routingEvt.GetUUID() && routingEvt.Timestamp > value.(Route).GetTimestamp()) || (routingEvt.GetNbSteps() < value.(Route).GetNbSteps())) { // See table in instructions.
+	// Not saving Route to the same Lname
+	if c.GetLocalLogicalName() == routingEvt.GetOrigin() {
 		return nil
 	}
-	c.GetShoset().SaveRoute(c, &routingEvt)
+
+	// Tries to load the existing Route.
+	value, ok := c.GetShoset().RouteTable.Load(routingEvt.GetOrigin())
+
+	if !ok {
+		c.GetShoset().SaveRoute(c, &routingEvt)
+		return nil
+	} else if (value.(Route).GetUUID() != routingEvt.GetUUID()) && (routingEvt.GetRerouteTimestamp() > value.(Route).GetTimestamp()) {
+		c.GetShoset().SaveRoute(c, &routingEvt)
+		return nil
+	} else if routingEvt.GetNbSteps() < value.(Route).GetNbSteps() {
+		c.GetShoset().SaveRoute(c, &routingEvt)
+		return nil
+	}
 	return nil
 }
 

@@ -465,7 +465,7 @@ func (s *Shoset) forwardMessage(m msg.Message) {
 				s.RouteTable.Delete(m.GetDestinationLname())
 
 				// Reroute network
-				routing := msg.NewRoutingEvent(s.GetLogicalName(), "")
+				routing := msg.NewRoutingEvent(s.GetLogicalName(), true, 0, "")
 				s.Send(routing)
 
 				tryNumber++
@@ -482,7 +482,7 @@ func (s *Shoset) forwardMessage(m msg.Message) {
 			s.Logger.Warn().Msg("Forward message : Failed to forward message destined to " + m.GetDestinationLname() + ". (no route) (waiting for correct route)")
 
 			// Reroute network
-			routing := msg.NewRoutingEvent(s.GetLogicalName(), "")
+			routing := msg.NewRoutingEvent(s.GetLogicalName(), true, 0, "")
 			s.Send(routing)
 
 			// Creation channel
@@ -507,14 +507,15 @@ func (s *Shoset) forwardMessage(m msg.Message) {
 }
 
 func (s *Shoset) SaveRoute(c *ShosetConn, routingEvt *msg.RoutingEvent) {
-	s.Logger.Debug().Msg("Saving route to " + routingEvt.GetOrigin() + " through " + c.GetRemoteLogicalName() + " IP : " + c.GetRemoteAddress())
+	s.Logger.Debug().Msg(s.GetLogicalName() + " is saving a route to " + routingEvt.GetOrigin() + " through " + c.GetRemoteLogicalName() + " IP : " + c.GetRemoteAddress())
 
-	s.RouteTable.Store(routingEvt.GetOrigin(), NewRoute(c.GetRemoteLogicalName(), c, routingEvt.GetNbSteps(), routingEvt.GetUUID(), routingEvt.Timestamp))
+	s.RouteTable.Store(routingEvt.GetOrigin(), NewRoute(c.GetRemoteLogicalName(), c, routingEvt.GetNbSteps(), routingEvt.GetUUID(), routingEvt.GetRerouteTimestamp()))
 
 	// Send NewRouteEvent
 	s.RoutingEventBus.Publish(routingEvt.GetOrigin(), true)
 
-	reRouting := msg.NewRoutingEvent(c.GetLocalLogicalName(), routingEvt.GetUUID())
+	// Reroutes self to try to take advantage of the change in the network that triggered the Save but with the same timestamp and ID to avoid triggering it over and over.
+	reRouting := msg.NewRoutingEvent(c.GetLocalLogicalName(), false, routingEvt.GetRerouteTimestamp(), routingEvt.GetUUID())
 	s.Send(reRouting)
 
 	// Rebroadcast Routing event
