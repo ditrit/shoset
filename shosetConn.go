@@ -36,7 +36,7 @@ type ShosetConn struct {
 
 	remoteLname      string // logical name of the socket in front of this one
 	remoteShosetType string // shosetType of the socket in front of this one
-	dir              string
+	direction        string // direction of the connection (in or out)
 	remoteAddress    string // address of the socket in front of this one
 
 	protocol string // protocol type used by the ShosetConn (join, link, ...) (Usualy is not known ("") at the time of creation of the ShosetConn.)
@@ -68,8 +68,8 @@ func (c *ShosetConn) GetRemoteShosetType() string { return c.remoteShosetType }
 // GetLocalShosetType returns shoset.GetShosetType() from ShosetConn.
 func (c *ShosetConn) GetLocalShosetType() string { return c.GetShoset().GetShosetType() }
 
-// GetDir returns dir from ShosetConn.
-func (c *ShosetConn) GetDir() string { return c.dir }
+// GetDirection returns direction from ShosetConn.
+func (c *ShosetConn) GetDirection() string { return c.direction }
 
 // GetRemoteAddress returns remoteAddress from ShosetConn.
 func (c *ShosetConn) GetRemoteAddress() string { return c.remoteAddress }
@@ -139,19 +139,19 @@ func (c *ShosetConn) Store(protocol, lName, address, shosetType string) {
 
 // NewShosetConn creates a new ShosetConn object for a specific address.
 // Initializes each fields.
-func NewShosetConn(s *Shoset, address, dir string) (*ShosetConn, error) {
+func NewShosetConn(s *Shoset, address, direction string) (*ShosetConn, error) {
 	ipAddress, err := GetIP(address)
 	if err != nil {
 		return nil, err
 	}
 
 	logger := s.Logger.With().Str("scid", uuid.New()).Logger()
-	logger.Debug().Strs("address-dir", []string{address, dir}).Msg("shosetConn created")
+	logger.Debug().Strs("address-direction", []string{address, direction}).Msg("shosetConn created")
 
 	return &ShosetConn{
 		Logger:        logger,
 		shoset:        s,
-		dir:           dir,
+		direction:     direction,
 		conn:          new(tls.Conn),
 		rb:            new(msg.Reader),
 		wb:            new(msg.Writer),
@@ -162,7 +162,7 @@ func NewShosetConn(s *Shoset, address, dir string) (*ShosetConn, error) {
 
 // String returns the formatted string of ShosetConn object in a pretty way.
 func (c *ShosetConn) String() string {
-	return fmt.Sprintf("ShosetConn{RemoteLogicalName : %s, remoteAddress : %s, type : %s, protocol : %s, way : %s, isValid : %v}", c.GetRemoteLogicalName(), c.GetRemoteAddress(), c.GetRemoteShosetType(), c.GetProtocol(), c.GetDir(), c.GetIsValid())
+	return fmt.Sprintf("ShosetConn{RemoteLogicalName : %s, remoteAddress : %s, type : %s, protocol : %s, way : %s, isValid : %v}", c.GetRemoteLogicalName(), c.GetRemoteAddress(), c.GetRemoteShosetType(), c.GetProtocol(), c.GetDirection(), c.GetIsValid())
 }
 
 // HandleConfig handles ConfigProtocol message.
@@ -175,7 +175,7 @@ func (c *ShosetConn) HandleConfig(cfg *msg.ConfigProtocol) {
 	for {
 		protocolConn, err := tls.Dial(CONNECTION_TYPE, c.GetRemoteAddress(), c.GetShoset().GetTlsConfigDoubleWay())
 		if err != nil {
-			time.Sleep(time.Millisecond * time.Duration(100)) //10
+			time.Sleep(time.Millisecond * time.Duration(2000))
 			c.Logger.Error().Msg("HandleConfig err: " + err.Error())
 			continue
 		}
@@ -222,18 +222,6 @@ func (c *ShosetConn) RunInConnDouble() {
 			c.Logger.Error().Msg("err in ReceiveMessage RunInConnDouble: " + err.Error())
 			return
 		}
-		//time.Sleep(10 * time.Millisecond)
-
-		for {
-			err := c.ReceiveMessage()
-			// time.Sleep(time.Millisecond * time.Duration(100))
-			if err != nil {
-				c.Logger.Error().Msg("socket closed: err in ReceiveMessage HandleConfig: " + err.Error())
-				break
-			}
-			//time.Sleep(10 * time.Millisecond)
-		}
-
 	}
 }
 
@@ -242,14 +230,15 @@ func (c *ShosetConn) ReceiveMessage() error {
 	messageType, err := c.GetReader().ReadString()
 	switch {
 	case err == io.EOF:
+		c.GetShoset().DeleteConn(c.GetRemoteAddress(), c.GetRemoteLogicalName())
 		return err
 	case errors.Is(err, syscall.ECONNRESET):
 		return nil
 	case errors.Is(err, syscall.EPIPE):
 		return nil
 	case err != nil:
-		if c.GetDir() == IN {
-			c.GetShoset().deleteConn(c.GetRemoteLogicalName(), c.GetRemoteAddress())
+		if c.GetDirection() == IN {
+			c.GetShoset().DeleteConn(c.GetRemoteLogicalName(), c.GetRemoteAddress())
 		}
 		return err
 	}
@@ -270,16 +259,16 @@ func (c *ShosetConn) ReceiveMessage() error {
 func (c *ShosetConn) handleMessageType(messageType string) error {
 	handler, ok := c.GetShoset().Handlers[messageType]
 	if !ok {
-		if c.GetDir() == IN {
-			c.GetShoset().deleteConn(c.GetRemoteLogicalName(), c.GetRemoteAddress())
+		if c.GetDirection() == IN {
+			c.GetShoset().DeleteConn(c.GetRemoteLogicalName(), c.GetRemoteAddress())
 		}
 		return errors.New("ReceiveMessage : non implemented type of message " + messageType)
 	}
 
 	messageValue, err := handler.Get(c)
 	if err != nil {
-		if c.GetDir() == IN {
-			c.GetShoset().deleteConn(c.GetRemoteLogicalName(), c.GetRemoteAddress())
+		if c.GetDirection() == IN {
+			c.GetShoset().DeleteConn(c.GetRemoteLogicalName(), c.GetRemoteAddress())
 		}
 		return errors.New("ReceiveMessage : can not read value of " + messageType + " : " + err.Error())
 	}

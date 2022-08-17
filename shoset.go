@@ -36,7 +36,7 @@ type Shoset struct {
 
 	ConnsByLname     *MapSyncMap // map[lName]map[remoteAddress]*ShosetConn   connections by logical name
 	LnamesByType     *MapSyncMap // map[shosetType]map[lName]bool used for gandalf
-	LnamesByProtocol *MapSyncMap // map[protocolType]map[lName]bool
+	LnamesByProtocol *MapSyncMap // map[protocolType]map[lName]bool logical names by protocol type
 	ConnsSingleBool  *sync.Map   // map[ipAddress]bool ipAddresses waiting in singleWay to be handled for TLS double way
 	ConnsSingleConn  *sync.Map   // map[ipAddress]*ShosetConn ShosetConns waiting in singleWay to be handled for TLS double way
 	RouteTable       *sync.Map   // map[lName]*Route Route to another logical name
@@ -65,34 +65,70 @@ type Shoset struct {
 	LaunchedProtocol concurentData.ConcurentSlice // List of IP addesses a Protocol was initiated with (but not yet finished)
 	// The shoset is ready for use when the list is empty
 	// Use WaitForProtocols() to wait for the shoset to be ready.
+
+	mu sync.RWMutex
 }
 
 // GetBindAddress returns bindAddress from Shoset.
-func (s *Shoset) GetBindAddress() string { return s.bindAddress }
+func (s *Shoset) GetBindAddress() string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.bindAddress
+}
 
 // GetLogicalName returns lName from Shoset.
-func (s *Shoset) GetLogicalName() string { return s.logicalName }
+func (s *Shoset) GetLogicalName() string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.logicalName
+}
 
 // GetShosetType returns shosetType from Shoset.
-func (s *Shoset) GetShosetType() string { return s.shosetType }
+func (s *Shoset) GetShosetType() string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.shosetType
+}
 
 // GetIsValid returns isValid from Shoset.
-func (s *Shoset) GetIsValid() bool { return s.isValid }
+func (s *Shoset) GetIsValid() bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.isValid
+}
 
 // GetIsPki returns isPki from Shoset.
-func (s *Shoset) GetIsPki() bool { return s.isPki }
+func (s *Shoset) GetIsPki() bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.isPki
+}
 
 // GetListener returns listener from Shoset.
-func (s *Shoset) GetListener() net.Listener { return s.listener }
+func (s *Shoset) GetListener() net.Listener {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.listener
+}
 
 // GetTlsConfigSingleWay returns tlsConfigSingleWay from Shoset.
-func (s *Shoset) GetTlsConfigSingleWay() *tls.Config { return s.tlsConfigSingleWay }
+func (s *Shoset) GetTlsConfigSingleWay() *tls.Config {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.tlsConfigSingleWay
+}
 
 // GetTlsConfigDoubleWay returns tlsConfigDoubleWay from Shoset.
-func (s *Shoset) GetTlsConfigDoubleWay() *tls.Config { return s.tlsConfigDoubleWay }
+func (s *Shoset) GetTlsConfigDoubleWay() *tls.Config {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.tlsConfigDoubleWay
+}
 
 // GetConnsByTypeArray returns an array of *ShosetConn known from a Shoset depending on a specific shosetType.
 func (s *Shoset) GetConnsByTypeArray(shosetType string) []*ShosetConn {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	lNamesByType := s.LnamesByType.Keys(shosetType)
 	var connsByType []*ShosetConn
 	for _, lName := range lNamesByType {
@@ -108,27 +144,45 @@ func (s *Shoset) GetConnsByTypeArray(shosetType string) []*ShosetConn {
 
 // IsCertified returns true if path corresponds to an existing repertory which means that the Shoset has created its repertory and is certified.
 func (s *Shoset) IsCertified(path string) bool {
-	if fileExists(PATH_CA_PRIVATE_KEY) {
+	if fileExists(path + PATH_CA_PRIVATE_KEY) { // path ??
 		s.SetIsPki(true)
 	}
 	return fileExists(path)
 }
 
 // SetBindAddress sets the bindAddress for a Shoset.
-func (s *Shoset) SetBindAddress(bindAddress string) { s.bindAddress = bindAddress }
+func (s *Shoset) SetBindAddress(bindAddress string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.bindAddress = bindAddress
+}
 
 // SetIsValid sets the state for a Shoset.
-func (s *Shoset) SetIsValid(state bool) { s.isValid = state }
+func (s *Shoset) SetIsValid(state bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.isValid = state
+}
 
 // SetIsPki sets the state for a Shoset.
-func (s *Shoset) SetIsPki(state bool) { s.isPki = state }
+func (s *Shoset) SetIsPki(state bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.isPki = state
+}
 
 // SetListener sets the listener for a Shoset.
-func (s *Shoset) SetListener(listener net.Listener) { s.listener = listener }
+func (s *Shoset) SetListener(listener net.Listener) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.listener = listener
+}
 
-// deleteConn deletes a ShosetConn from ConnsByLname map from a Shoset
-func (s *Shoset) deleteConn(Lname, remoteAddress string) {
+// DeleteConn deletes a ShosetConn from ConnsByLname map from a Shoset
+func (s *Shoset) DeleteConn(Lname, remoteAddress string) {
 	// Lock shoset for the operation
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
 	// Check if the ShosetCon exists
 	conn, ok := s.ConnsByLname.LoadValueFromKeys(Lname, remoteAddress)
@@ -140,9 +194,6 @@ func (s *Shoset) deleteConn(Lname, remoteAddress string) {
 	c := conn.(*ShosetConn)
 
 	s.ConnsByLname.DeleteValueFromKeys(Lname, remoteAddress)
-
-	// Assume qu'il n'y a jamais plus d'une connection vers un lname, on ne peut pas être sure si c'est join ou link
-	// Que des link ou ques des join avec un Lname
 
 	s.LnamesByProtocol.DeleteValueFromKeys(c.GetProtocol(), Lname)
 	s.LnamesByType.DeleteValueFromKeys(c.GetRemoteShosetType(), Lname)
@@ -247,6 +298,8 @@ func NewShoset(logicalName, shosetType string) *Shoset {
 
 // String returns the formatted string of Shoset object in a pretty indented way.
 func (s *Shoset) String() string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	description := fmt.Sprintf("Shoset{\n\t- lName: %s,\n\t- bindAddr : %s,\n\t- type : %s, \n\t- isPki : %t", s.GetLogicalName(), s.GetBindAddress(), s.GetShosetType(), s.GetIsPki())
 
 	description += ", \n\t- LaunchedProtocol : " + s.LaunchedProtocol.String()
@@ -365,7 +418,7 @@ func (s *Shoset) Protocol(bindAddress, remoteAddress, protocolType string) {
 
 	s.ConnsByLname.GetConfig().SetFileName(formattedIpAddress)
 
-	if !s.IsCertified(s.ConnsByLname.GetConfig().baseDir + formattedIpAddress) {
+	if !s.IsCertified(s.ConnsByLname.GetConfig().baseDirectory + formattedIpAddress) {
 		s.Logger.Debug().Msg("ask certification")
 
 		_, err = s.ConnsByLname.GetConfig().InitFolders(formattedIpAddress)
@@ -409,7 +462,7 @@ func (s *Shoset) Protocol(bindAddress, remoteAddress, protocolType string) {
 }
 
 func (s *Shoset) EndProtocol(Lname, remoteAddress string) {
-	// find the ShosetConn in the list
+	// Finds the ShosetConn in the list
 	var c *ShosetConn
 	if conn, ok := s.ConnsByLname.LoadValueFromKeys(Lname, remoteAddress); !ok {
 		s.Logger.Error().Msg("No Existing connection to Lname : " + Lname + " IP : " + remoteAddress + ", no connection to end.")
@@ -428,7 +481,7 @@ func (s *Shoset) EndProtocol(Lname, remoteAddress string) {
 	}
 
 	s.LnamesByProtocol.AppendToKeys(PROTOCOL_EXIT, Lname, true) //Bye ou delete ?
-	s.deleteConn(Lname, remoteAddress)
+	s.DeleteConn(Lname, remoteAddress)
 }
 
 // ######## Route and forwarding : ########

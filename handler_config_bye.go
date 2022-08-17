@@ -41,7 +41,7 @@ func (cbh *ConfigByeHandler) HandleDoubleWay(c *ShosetConn, message msg.Message)
 		// incoming delete signal.
 		// forget the concerned shoset from our list of known shosets and close connection.
 
-		c.GetShoset().deleteConn(cfg.GetLogicalName(), cfg.GetAddress())
+		c.GetShoset().DeleteConn(cfg.GetLogicalName(), cfg.GetAddress())
 	}
 	return nil
 }

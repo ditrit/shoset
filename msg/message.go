@@ -24,12 +24,12 @@ type Message interface {
 // MessageBase base struct for messages
 type MessageBase struct {
 	UUID             string // automatically generated id for a single message
-	Tenant           string // ??
-	Token            string // ??
-	Timeout          int64  // time set to keep event in memory
+	Tenant           string // tenant system, filter only messages for a specific tenant
+	Token            string // ! refactor this attribute !
+	Timeout          int64  // time set to keep message in memory
 	Timestamp        int64  // time when message is created (to the millesecond)
-	Payload          string
-	Next             string // ??
+	Payload          string // handle args info
+	Next             string // ! refactor this attribute !
 	Major            int8   // ??
 	Minor            int8   // ??
 	DestinationLname string // LogicalName the message is destined to (For forwarding)

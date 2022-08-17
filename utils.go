@@ -22,7 +22,7 @@ import (
 	"github.com/urfave/cli"
 )
 
-// fileExists returns true if the path indicated correponds to an existing file
+// fileExists returns true if the path indicated corresponds to an existing file
 func fileExists(filepath string) bool {
 	_, err := os.Stat(filepath)
 	return !os.IsNotExist(err)
@@ -60,10 +60,10 @@ func removeDuplicateStr(strSlice []string) []string {
 }
 
 // Keys returns a []string corresponding to the keys from the map[string]*sync.Map object.
-// dir set the specific keys depending on the desired direction.
-func Keys(mapSync *sync.Map, dir string) []string {
+// direction set the specific keys depending on the desired direction.
+func Keys(mapSync *sync.Map, direction string) []string {
 	var keys []string
-	if dir == ALL {
+	if direction == ALL {
 		// all keys whatever the direction from the ShosetConn
 		mapSync.Range(func(key, _ interface{}) bool {
 			keys = append(keys, key.(string))
@@ -72,7 +72,7 @@ func Keys(mapSync *sync.Map, dir string) []string {
 	} else {
 		// keys with specific ShosetConn direction
 		mapSync.Range(func(key, value interface{}) bool {
-			if value.(*ShosetConn).GetDir() == dir {
+			if value.(*ShosetConn).GetDirection() == direction {
 				keys = append(keys, key.(string))
 			}
 			return true

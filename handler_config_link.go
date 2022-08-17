@@ -28,7 +28,7 @@ func (clh *ConfigLinkHandler) HandleDoubleWay(c *ShosetConn, message msg.Message
 
 		c.Logger.Trace().Str("lname", cfg.GetLogicalName()).Str("IP", cfg.GetAddress()).Msg("Incoming link request : " + PROTOCOL_LINK)
 
-		c.GetShoset().deleteConn(cfg.GetLogicalName(), cfg.GetAddress())
+		c.GetShoset().DeleteConn(cfg.GetLogicalName(), cfg.GetAddress())
 
 		c.SetRemoteAddress(cfg.GetAddress())
 		c.Store(PROTOCOL_LINK, cfg.GetLogicalName(), cfg.GetAddress(), cfg.GetShosetType())
@@ -65,7 +65,7 @@ func (clh *ConfigLinkHandler) HandleDoubleWay(c *ShosetConn, message msg.Message
 
 		c.Logger.Trace().Str("lname", cfg.GetLogicalName()).Str("IP", cfg.GetAddress()).Msg("Incoming acknowledge link : " + ACKNOWLEDGE_LINK)
 
-		c.GetShoset().deleteConn(cfg.GetLogicalName(), cfg.GetAddress())
+		c.GetShoset().DeleteConn(cfg.GetLogicalName(), cfg.GetAddress())
 
 		c.Store(PROTOCOL_LINK, cfg.GetLogicalName(), c.GetRemoteAddress(), cfg.GetShosetType())
 

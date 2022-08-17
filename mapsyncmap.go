@@ -25,35 +25,38 @@ func (m *MapSyncMap) SetConfig(cfg *Config) {
 }
 
 // updateFile updates config after being set
-func (m *MapSyncMap) updateFile(protocol string, keys []string) {
-	m.cfg.AppendToKey(protocol, keys)
+func (m *MapSyncMap) updateFile(protocol string, addresses []string) error {
+	m.cfg.AppendToKey(protocol, addresses)
 
 	if err := m.cfg.WriteConfig(m.cfg.GetFileName()); err != nil {
 		log.Error().Msg("error writing config: " + err.Error())
-		return
+		return err
 	}
+	return nil
 }
 
 // StoreConfig sets the value for a key.
 // It also updates the viper config file to keep new changes up to date.
 // Overrides Store from sync.Map
-func (m *MapSyncMap) StoreConfig(lName, key, protocol string, value interface{}) {
-	// Create a new key1 if it doesn't exists
+func (m *MapSyncMap) StoreConfig(lName, address, protocol string, conn interface{}) error {
+	// Create a new if it doesn't exists
 	if syncMap, _ := m.Load(lName); syncMap == nil {
 		m.Store(lName, new(sync.Map))
 	}
 
 	syncMap, _ := m.Load(lName)
-	syncMap.(*sync.Map).Store(key, value)
+	syncMap.(*sync.Map).Store(address, conn)
 
 	// OUT is because we only handle the IPaddresses we had to protocol on at some point.
 	// They are the one we need to manually reconnect if a problem happens.
 	syncMap, _ = m.Load(lName)
-	keys := Keys(syncMap.(*sync.Map), ALL) //OUT
-	log.Trace().Msg("Storing in config : " + protocol + " keys : " + fmt.Sprint(keys))
-	if len(keys) != 0 {
-		m.updateFile(protocol, keys)
+	addresses := Keys(syncMap.(*sync.Map), ALL) //OUT
+	log.Trace().Msg("Storing in config : " + protocol + " keys : " + fmt.Sprint(addresses))
+	if len(addresses) != 0 {
+		err := m.updateFile(protocol, addresses)
+		return err
 	}
+	return nil
 }
 
 // Iterate calls *MapSync.Range(iter) sequentially for each key and *MapSync present in the map.
@@ -90,7 +93,6 @@ func (m *MapSyncMap) Keys(sType string) []string {
 			return true
 		})
 	}
-
 	return removeDuplicateStr(keys)
 }
 

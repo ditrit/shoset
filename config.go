@@ -10,32 +10,34 @@ import (
 
 // Config: collection of configuration information for a shoset.
 type Config struct {
-	baseDir  string
-	fileName string
-	viper    *viper.Viper
-	mu       sync.Mutex
+	baseDirectory string
+	fileName      string
+	viper         *viper.Viper
+	mu            sync.Mutex
 }
 
 // NewConfig returns a *Config object.
 // Initialize home directory and viper.
 func NewConfig(name string) *Config {
-	homeDir := "."
-	homeDir, err := os.UserHomeDir()
+	homeDirectory := "."
+	homeDirectory, err := os.UserHomeDir()
 	if err != nil {
-		log.Error().Msg("couldn't find home dir folder: " + err.Error())
+		log.Error().Msg("couldn't get home directory folder: " + err.Error())
+		return nil
 	}
 	cfg := &Config{
-		baseDir: homeDir + "/.shoset/" + name + "/",
-		viper:   viper.New(),
+		baseDirectory: homeDirectory + "/.shoset/" + name + "/",
+		viper:         viper.New(),
 	}
-	if err := mkdir(cfg.baseDir); err != nil {
+	if err := mkdir(cfg.baseDirectory); err != nil {
 		log.Error().Msg("couldn't create folder: " + err.Error())
+		return nil
 	}
 	return cfg
 }
 
-// GetBaseDir returns baseDir from config, baseDir corresponds to homeDir + shoset repertory.
-func (cfg *Config) GetBaseDir() string { return cfg.baseDir }
+// GetBaseDirectory returns baseDirectory from config, baseDirectory corresponds to homeDirectory + shoset repertory.
+func (cfg *Config) GetBaseDirectory() string { return cfg.baseDirectory }
 
 // GetFileName returns fileName from config.
 func (cfg *Config) GetFileName() string { return cfg.fileName }
@@ -45,23 +47,23 @@ func (cfg *Config) SetFileName(fileName string) { cfg.fileName = fileName }
 
 // InitFolders creates following config folders if needed: <base>/<name>/{cert, config}.
 func (cfg *Config) InitFolders(name string) (string, error) {
-	if err := mkdir(cfg.baseDir + name + "/"); err != nil {
+	if err := mkdir(cfg.baseDirectory + name + "/"); err != nil {
 		return VOID, err
 	}
-	if err := mkdir(cfg.baseDir + name + PATH_CONFIG_DIR); err != nil {
+	if err := mkdir(cfg.baseDirectory + name + PATH_CONFIG_DIRECTORY); err != nil {
 		return VOID, err
 	}
-	if err := mkdir(cfg.baseDir + name + PATH_CERT_DIR); err != nil {
+	if err := mkdir(cfg.baseDirectory + name + PATH_CERT_DIRECTORY); err != nil {
 		return VOID, err
 	}
-	return cfg.baseDir, nil
+	return cfg.baseDirectory, nil
 }
 
 // ReadConfig will load the configuration file from disk for a given fileName.
 // Initialize viper parameters before reading.
 func (cfg *Config) ReadConfig(fileName string) error {
 
-	cfg.viper.AddConfigPath(cfg.baseDir + fileName + PATH_CONFIG_DIR)
+	cfg.viper.AddConfigPath(cfg.baseDirectory + fileName + PATH_CONFIG_DIRECTORY)
 	cfg.viper.SetConfigName(CONFIG_FILE)
 	cfg.viper.SetConfigType(CONFIG_TYPE)
 
@@ -75,7 +77,7 @@ func (cfg *Config) WriteConfig(fileName string) error {
 	cfg.mu.Lock()
 	defer cfg.mu.Unlock()
 
-	return cfg.viper.WriteConfigAs(cfg.baseDir + fileName + PATH_CONFIG_DIR + CONFIG_FILE)
+	return cfg.viper.WriteConfigAs(cfg.baseDirectory + fileName + PATH_CONFIG_DIRECTORY + CONFIG_FILE)
 }
 
 // AppendToKey sets the value for a key for viper config.

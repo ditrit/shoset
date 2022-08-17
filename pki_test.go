@@ -31,7 +31,7 @@ func TestPrepareCertificate(t *testing.T) {
 // TestSignCertificate verifies if SignCertificate() function returns a correct signedCertificate.
 func TestSignCertificate(t *testing.T) {
 	shoset := NewShoset("cl", "cl") // cluster
-	shoset.InitPKI("localhost:8001")
+	shoset.InitPKI("127.0.0.1:8001")
 
 	TestPrepareCertificate(t)
 
@@ -44,7 +44,7 @@ func TestSignCertificate(t *testing.T) {
 // TestGenerateSecret verifies if GenerateSecret() returns a correct secret.
 func TestGenerateSecret(t *testing.T) {
 	shoset := NewShoset("cl", "cl") // cluster
-	shoset.InitPKI("localhost:8001")
+	shoset.InitPKI("127.0.0.1:8002")
 
 	secret := shoset.GenerateSecret(VOID, VOID)
 	if secret == VOID {

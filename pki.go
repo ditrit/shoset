@@ -21,18 +21,6 @@ import (
 // First inits CA role and then inits Shoset itself.
 // Overload of shoset.Bind() function
 func (s *Shoset) InitPKI(bindAddress string) {
-	s.InitCA(bindAddress)
-	s.InitShoset(bindAddress)
-}
-
-// InitCA inits CA role for the concerned Shoset, who then become admin of network.
-func (s *Shoset) InitCA(bindAddress string) {
-	if s.GetIsPki() {
-		s.Logger.Error().Msg("shoset is already pki")
-		return
-	}
-	s.SetIsPki(true)
-
 	ipAddress, err := GetIP(bindAddress)
 	if err != nil {
 		s.Logger.Error().Msg("wrong IP format : " + err.Error())
@@ -42,13 +30,37 @@ func (s *Shoset) InitCA(bindAddress string) {
 	formattedIpAddress = strings.Replace(formattedIpAddress, ".", "-", -1) // formats for filesystem to 127-0-0-1_8001 instead of 127.0.0.1:8001
 	s.ConnsByLname.GetConfig().SetFileName(formattedIpAddress)
 
-	cfgDir, err := s.ConnsByLname.GetConfig().InitFolders(formattedIpAddress)
+	if !s.IsCertified(s.ConnsByLname.GetConfig().baseDirectory + formattedIpAddress) {
+		s.initCA(formattedIpAddress)
+		s.initShoset(bindAddress)
+	} else {
+		err = s.SetUpDoubleWay()
+		if err != nil {
+			s.Logger.Error().Msg(err.Error())
+			return
+		}
+	}
+
+	if s.GetBindAddress() == VOID {
+		err := s.Bind(bindAddress)
+		if err != nil {
+			s.Logger.Error().Msg("couldn't set bindAddress : " + err.Error())
+			return
+		}
+	}
+}
+
+// initCA inits CA role for the concerned Shoset, who then become admin of network.
+func (s *Shoset) initCA(formattedIpAddress string) {
+	s.SetIsPki(true)
+
+	cfgDirectory, err := s.ConnsByLname.GetConfig().InitFolders(formattedIpAddress)
 	if err != nil {
-		s.Logger.Error().Msg("couldn't get dirname : " + err.Error())
+		s.Logger.Error().Msg("couldn't init folders : " + err.Error())
 		return
 	}
 	fileName := s.ConnsByLname.GetConfig().GetFileName()
-	CApath := cfgDir + fileName + PATH_CA_CERT
+	CApath := cfgDirectory + fileName + PATH_CA_CERT
 
 	CAcertificate := &x509.Certificate{
 		SerialNumber: big.NewInt(1653),
@@ -69,7 +81,7 @@ func (s *Shoset) InitCA(bindAddress string) {
 	}
 
 	CAprivateKey, _ := rsa.GenerateKey(rand.Reader, 2048)
-	err = EncodeFile(CAprivateKey, RSA_PRIVATE_KEY, cfgDir+fileName+PATH_CA_PRIVATE_KEY)
+	err = EncodeFile(CAprivateKey, RSA_PRIVATE_KEY, cfgDirectory+fileName+PATH_CA_PRIVATE_KEY)
 	if err != nil {
 		s.Logger.Error().Msg(err.Error())
 		return
@@ -90,18 +102,17 @@ func (s *Shoset) InitCA(bindAddress string) {
 	}
 }
 
-// InitShoset inits certs for the Shoset with the previous created CA.
-func (s *Shoset) InitShoset(bindAddress string) {
+// initShoset inits certs for the Shoset with the previous created CA.
+func (s *Shoset) initShoset(bindAddress string) {
 	fileName := s.ConnsByLname.GetConfig().GetFileName()
-	cfgDir := s.ConnsByLname.GetConfig().GetBaseDir()
-	CApath := cfgDir + fileName + PATH_CA_CERT
+	cfgDirectory := s.ConnsByLname.GetConfig().GetBaseDirectory()
 
 	certificateRequest, hostPublicKey, hostPrivateKey, err := PrepareCertificate()
 	if err != nil {
 		s.Logger.Error().Msg("prepare certificate didn't work")
 		return
 	}
-	err = EncodeFile(hostPrivateKey, RSA_PRIVATE_KEY, s.ConnsByLname.GetConfig().GetBaseDir()+s.ConnsByLname.GetConfig().GetFileName()+PATH_PRIVATE_KEY)
+	err = EncodeFile(hostPrivateKey, RSA_PRIVATE_KEY, s.ConnsByLname.GetConfig().GetBaseDirectory()+s.ConnsByLname.GetConfig().GetFileName()+PATH_PRIVATE_KEY)
 	if err != nil {
 		s.Logger.Error().Msg(err.Error())
 		return
@@ -112,23 +123,15 @@ func (s *Shoset) InitShoset(bindAddress string) {
 		s.Logger.Error().Msg("sign cert didn't work")
 		return
 	}
-	err = EncodeFile(signedHostCert, CERTIFICATE, cfgDir+fileName+PATH_CERT)
+	err = EncodeFile(signedHostCert, CERTIFICATE, cfgDirectory+fileName+PATH_CERT)
 	if err != nil {
 		s.Logger.Error().Msg(err.Error())
 		return
 	}
-
-	os.Setenv(CERT_FILE_ENVIRONMENT, CApath)
 
 	err = s.SetUpDoubleWay()
 	if err != nil {
 		s.Logger.Error().Msg(err.Error())
-		return
-	}
-
-	err = s.Bind(bindAddress)
-	if err != nil {
-		s.Logger.Error().Msg("couldn't set bindAddress : " + err.Error())
 		return
 	}
 }
@@ -161,7 +164,18 @@ func PrepareCertificate() (*x509.Certificate, *rsa.PublicKey, *rsa.PrivateKey, e
 		SubjectKeyId: []byte{1, 2, 3, 4, 6},
 		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth},
 		KeyUsage:     x509.KeyUsageDigitalSignature,
-		IPAddresses:  []net.IP{net.ParseIP(LOCALHOST)},
+	}
+
+	interfaceAddresses, err := net.InterfaceAddrs()
+	if err != nil {
+		Log("err in interfaceAddrs : " + err.Error())
+	}
+	for _, a := range interfaceAddresses {
+		if ipNet, ok := a.(*net.IPNet); ok {
+			if ipNet.IP.To4() != nil {
+				certificateRequest.IPAddresses = append(certificateRequest.IPAddresses, ipNet.IP)
+			}
+		}
 	}
 
 	hostPrivateKey, err := rsa.GenerateKey(rand.Reader, 2048)
@@ -181,7 +195,7 @@ func (s *Shoset) SignCertificate(certificateRequest *x509.Certificate, hostPubli
 		return nil
 	}
 
-	filePath := s.ConnsByLname.GetConfig().GetBaseDir() + s.ConnsByLname.GetConfig().GetFileName()
+	filePath := s.ConnsByLname.GetConfig().GetBaseDirectory() + s.ConnsByLname.GetConfig().GetFileName()
 	loadedCAkeys, err := tls.LoadX509KeyPair(filePath+PATH_CA_CERT, filePath+PATH_CA_PRIVATE_KEY)
 	if err != nil {
 		s.Logger.Error().Msg("couldn't load keyPair : " + err.Error())
@@ -206,11 +220,16 @@ func (s *Shoset) SignCertificate(certificateRequest *x509.Certificate, hostPubli
 // Sets up Double Way for future secured exchanges.
 // Updates Single Way for future exchanges with non-certified Shoset.
 func (s *Shoset) SetUpDoubleWay() error {
-	fileName := s.ConnsByLname.GetConfig().GetFileName()
-	cfgDir := s.ConnsByLname.GetConfig().GetBaseDir()
-	CApath := cfgDir + fileName + PATH_CA_CERT
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
-	loadedCAkeys, err := tls.LoadX509KeyPair(cfgDir+fileName+PATH_CERT, cfgDir+fileName+PATH_PRIVATE_KEY)
+	fileName := s.ConnsByLname.GetConfig().GetFileName()
+	cfgDirectory := s.ConnsByLname.GetConfig().GetBaseDirectory()
+	CApath := cfgDirectory + fileName + PATH_CA_CERT
+
+	os.Setenv(CERT_FILE_ENVIRONMENT, CApath)
+
+	loadedCAkeys, err := tls.LoadX509KeyPair(cfgDirectory+fileName+PATH_CERT, cfgDirectory+fileName+PATH_PRIVATE_KEY)
 	if err != nil {
 		s.Logger.Error().Msg("Unable to Load certificate : " + err.Error())
 		return errors.New("Unable to Load certificate : " + err.Error())

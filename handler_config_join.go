@@ -28,7 +28,7 @@ func (cjh *ConfigJoinHandler) HandleDoubleWay(c *ShosetConn, message msg.Message
 
 		c.Logger.Trace().Str("lname", cfg.GetLogicalName()).Str("IP", cfg.GetAddress()).Msg("Incoming join request : " + PROTOCOL_JOIN)
 
-		c.GetShoset().deleteConn(cfg.GetLogicalName(), cfg.GetAddress())
+		c.GetShoset().DeleteConn(cfg.GetLogicalName(), cfg.GetAddress())
 
 		c.SetRemoteAddress(cfg.GetAddress())
 		c.Store(PROTOCOL_JOIN, c.GetShoset().GetLogicalName(), cfg.GetAddress(), c.GetShoset().GetShosetType())
@@ -59,7 +59,7 @@ func (cjh *ConfigJoinHandler) HandleDoubleWay(c *ShosetConn, message msg.Message
 
 		c.Logger.Trace().Str("lname", cfg.GetLogicalName()).Str("IP", cfg.GetAddress()).Msg("Incoming acknowledge join : " + ACKNOWLEDGE_JOIN)
 
-		c.GetShoset().deleteConn(cfg.GetLogicalName(), cfg.GetAddress())
+		c.GetShoset().DeleteConn(cfg.GetLogicalName(), cfg.GetAddress())
 
 		c.Store(PROTOCOL_JOIN, c.GetShoset().GetLogicalName(), c.GetRemoteAddress(), c.GetShoset().GetShosetType())
 
