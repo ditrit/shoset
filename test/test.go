@@ -195,7 +195,7 @@ func testForwardMessageMultiProcess(args []string) {
 	var cl *shoset.Shoset
 	if args[4] == "1" {
 		fmt.Println("#### Relaunch")
-		time.Sleep(2 * time.Second)
+		time.Sleep(3 * time.Second)
 		cl = utilsForTest.CreateShosetOnlyBindFromTopology(args[0], utilsForTest.StraightLine)
 	} else {
 		fmt.Println("#### Launch")
@@ -294,6 +294,48 @@ func testEndConnection(ctx context.Context, done context.CancelFunc) {
 	time.Sleep(10 * time.Second)
 }
 
+func EventCircle(ctx context.Context, done context.CancelFunc) {
+
+	tt := utilsForTest.Circle // Choose the network topology for the test
+
+	s := []*shoset.Shoset{} // Create the empty list of shosets
+
+	s = utilsForTest.CreateManyShosets(tt, s, false) // Populate the list with the shosets as specified in the selected topology and estavlish connection among them
+
+	utilsForTest.WaitForManyShosets(s) // Wait for every shosets in the list to be ready
+
+	utilsForTest.PrintManyShosets(s) // Display the info of every shosets in the list
+
+	destination := s[len(s)-1]
+	sender := s[0]
+
+	//Sender :
+	go func() {
+		i := 0
+		for {
+			time.Sleep(4 * time.Second)
+			event := msg.NewEventClassic("test_topic", "test_event", "test_payload"+fmt.Sprint(i))
+			sender.Send(event)
+			//fmt.Println("event (sender) : ", event)
+			i++
+		}
+	}()
+
+	//Receiver :
+	iterator := msg.NewIterator(destination.Queue["evt"])
+	go func() {
+		for {
+			event_rc := destination.Wait("evt", map[string]string{"topic": "test_topic", "event": "test_event"}, 10, iterator)
+			fmt.Println("event received : ", event_rc)
+		}
+	}()
+
+	//time.Sleep(10*time.Second)
+
+	select {} //Never return
+
+}
+
 func main() {
 	// Clear the content of the profiler folder
 	// os.RemoveAll("./profiler/")
@@ -360,7 +402,8 @@ func main() {
 
 		// testRouteTable(ctx, done)
 		// testForwardMessage(ctx, done)
-		testEndConnection(ctx, done)
+		//testEndConnection(ctx, done)
+		EventCircle(ctx, done)
 	} else if arg == "5" {
 		testForwardMessageMultiProcess((os.Args)[2:])
 	} else if arg == "6" {

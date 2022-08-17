@@ -27,7 +27,9 @@ func SimpleExample() {
 	//Receiver :
 	event_rc := cl1.Wait("evt", map[string]string{"topic": "test_topic", "event": "test_event"}, 5, nil)
 	fmt.Println("event received : ", event_rc)
-	shoset.Log("event received (Payload) : " + event_rc.GetPayload())
+	if event_rc != nil {
+		shoset.Log("event received (Payload) : " + event_rc.GetPayload())
+	}
 }
 
 // Send an event every second forever :
@@ -59,7 +61,9 @@ func TestEventContinuousSend() {
 		for {
 			event_rc := cl1.Wait("evt", map[string]string{"topic": "test_topic", "event": "test_event"}, 5, iterator)
 			fmt.Println("event received : ", event_rc)
-			shoset.Log("event received (Payload) : " + event_rc.GetPayload())
+			if event_rc != nil {
+				shoset.Log("event received (Payload) : " + event_rc.GetPayload())
+			}
 		}
 	}()
 
@@ -151,7 +155,7 @@ func TestForwardingTopology() {
 
 	// Do someting else while it is sending and receiving messages.
 
-	time.Sleep(10*time.Second)
+	time.Sleep(10 * time.Second)
 
 	//select {} //Never return
 }

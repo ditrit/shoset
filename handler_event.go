@@ -1,6 +1,7 @@
 package shoset
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/ditrit/shoset/msg"
@@ -19,6 +20,7 @@ func (eh *EventHandler) Get(c *ShosetConn) (msg.Message, error) {
 
 // HandleDoubleWay handles message for a ShosetConn accordingly.
 func (eh *EventHandler) HandleDoubleWay(c *ShosetConn, message msg.Message) error {
+	fmt.Println("EVENT !!!")
 	evt := message.(msg.Event)
 	if notInQueue := c.GetShoset().Queue["evt"].Push(evt, c.GetRemoteShosetType(), c.GetLocalAddress()); notInQueue {
 		eh.Send(c.GetShoset(), evt)
