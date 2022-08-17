@@ -1,6 +1,6 @@
 #!/bin/sh
 
-sleep 12
+sleep 6
 
 #binary testNumber Lname receiver sender destination relaunch
 
