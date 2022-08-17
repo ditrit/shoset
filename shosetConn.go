@@ -17,12 +17,6 @@ import (
 	"github.com/rs/zerolog"
 )
 
-// status of the conn
-type ProtectedStatus struct {
-	value bool
-	m     sync.RWMutex
-}
-
 // ShosetConn : secured connection based on tls.Conn but with upgraded features
 type ShosetConn struct {
 	Logger zerolog.Logger // pretty logger
@@ -41,54 +35,108 @@ type ShosetConn struct {
 
 	protocol string // protocol type used by the ShosetConn (join, link, ...) (Usualy is not known ("") at the time of creation of the ShosetConn.)
 
-	isValid ProtectedStatus // status of the ShosetConn
+	isValid bool // status of the ShosetConn
+
+	mu sync.RWMutex
 }
 
 // GetConn returns conn from ShosetConn.
-func (c *ShosetConn) GetConn() *tls.Conn { return c.conn }
+func (c *ShosetConn) GetConn() *tls.Conn {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.conn
+}
 
 // GetShoset returns shoset from ShosetConn.
-func (c *ShosetConn) GetShoset() *Shoset { return c.shoset }
+func (c *ShosetConn) GetShoset() *Shoset {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.shoset
+}
 
 // GetReader returns rb from ShosetConn.
-func (c *ShosetConn) GetReader() *msg.Reader { return c.rb }
+func (c *ShosetConn) GetReader() *msg.Reader {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.rb
+}
 
 // GetWriter returns wb from ShosetConn.
-func (c *ShosetConn) GetWriter() *msg.Writer { return c.wb }
+func (c *ShosetConn) GetWriter() *msg.Writer { 
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.wb 
+}
 
 // GetRemoteLogicalName returns remoteLname from ShosetConn.
-func (c *ShosetConn) GetRemoteLogicalName() string { return c.remoteLname }
+func (c *ShosetConn) GetRemoteLogicalName() string { 
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.remoteLname 
+}
 
 // GetLocalLogicalName returns shoset.GetLogicalName() from ShosetConn.
-func (c *ShosetConn) GetLocalLogicalName() string { return c.GetShoset().GetLogicalName() }
+func (c *ShosetConn) GetLocalLogicalName() string { 
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.GetShoset().GetLogicalName() 
+}
 
 // GetRemoteShosetType returns remoteShosetType from ShosetConn.
-func (c *ShosetConn) GetRemoteShosetType() string { return c.remoteShosetType }
+func (c *ShosetConn) GetRemoteShosetType() string { 
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.remoteShosetType 
+}
 
 // GetLocalShosetType returns shoset.GetShosetType() from ShosetConn.
-func (c *ShosetConn) GetLocalShosetType() string { return c.GetShoset().GetShosetType() }
+func (c *ShosetConn) GetLocalShosetType() string { 
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.GetShoset().GetShosetType() 
+}
 
 // GetDirection returns direction from ShosetConn.
-func (c *ShosetConn) GetDirection() string { return c.direction }
+func (c *ShosetConn) GetDirection() string { 
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.direction 
+}
 
 // GetRemoteAddress returns remoteAddress from ShosetConn.
-func (c *ShosetConn) GetRemoteAddress() string { return c.remoteAddress }
+func (c *ShosetConn) GetRemoteAddress() string { 
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.remoteAddress 
+}
 
 // GetProtocol returns protocol from ShosetConn.
-func (c *ShosetConn) GetProtocol() string { return c.protocol }
+func (c *ShosetConn) GetProtocol() string { 
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.protocol 
+}
 
 // GetLocalAddress returns shoset.GetBindAddress() from ShosetConn.
-func (c *ShosetConn) GetLocalAddress() string { return c.GetShoset().GetBindAddress() }
+func (c *ShosetConn) GetLocalAddress() string { 
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.GetShoset().GetBindAddress() 
+}
 
 // GetIsValid returns isValid from ShosetConn.
 func (c *ShosetConn) GetIsValid() bool {
-	c.isValid.m.RLock()
-	defer c.isValid.m.RUnlock()
-	return c.isValid.value
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.isValid
 }
 
 // SetConn sets the lName for a ShosetConn.
-func (c *ShosetConn) SetConn(conn *tls.Conn) { c.conn = conn }
+func (c *ShosetConn) SetConn(conn *tls.Conn) { 
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.conn = conn 
+}
 
 // UpdateConn updates conn attribute along with its reader and writer.
 func (c *ShosetConn) UpdateConn(conn *tls.Conn) {
@@ -98,26 +146,46 @@ func (c *ShosetConn) UpdateConn(conn *tls.Conn) {
 }
 
 // SetRemoteLogicalName sets the lName for a ShosetConn.
-func (c *ShosetConn) SetRemoteLogicalName(lName string) { c.remoteLname = lName }
+func (c *ShosetConn) SetRemoteLogicalName(lName string) { 
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.remoteLname = lName 
+}
 
 // SetLocalAddress sets the bindAddress for a ShosetConn.
-func (c *ShosetConn) SetLocalAddress(bindAddress string) { c.GetShoset().SetBindAddress(bindAddress) }
+func (c *ShosetConn) SetLocalAddress(bindAddress string) { 
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.GetShoset().SetBindAddress(bindAddress) 
+}
 
 // SetRemoteShosetType sets the ShosetType for a ShosetConn.
-func (c *ShosetConn) SetRemoteShosetType(ShosetType string) { c.remoteShosetType = ShosetType }
+func (c *ShosetConn) SetRemoteShosetType(ShosetType string) { 
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.remoteShosetType = ShosetType 
+}
 
 // SetProtocol sets the protocol for a ShosetConn.
-func (c *ShosetConn) SetProtocol(protocol string) { c.protocol = protocol }
+func (c *ShosetConn) SetProtocol(protocol string) { 
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.protocol = protocol 
+}
 
 // SetIsValid sets the state for a ShosetConn.
 func (c *ShosetConn) SetIsValid(state bool) {
-	c.isValid.m.Lock()
-	defer c.isValid.m.Unlock()
-	c.isValid.value = state
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.isValid = state
 }
 
 // SetRemoteAddress sets the address for a ShosetConn.
-func (c *ShosetConn) SetRemoteAddress(address string) { c.remoteAddress = address }
+func (c *ShosetConn) SetRemoteAddress(address string) { 
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.remoteAddress = address 
+}
 
 // Stores stores info about ShosetConn and Shoset for protocols
 func (c *ShosetConn) Store(protocol, lName, address, shosetType string) {
@@ -156,7 +224,7 @@ func NewShosetConn(s *Shoset, address, direction string) (*ShosetConn, error) {
 		rb:            new(msg.Reader),
 		wb:            new(msg.Writer),
 		remoteAddress: ipAddress,
-		isValid:       ProtectedStatus{value: false},
+		isValid:       false,
 	}, nil
 }
 
@@ -230,7 +298,7 @@ func (c *ShosetConn) ReceiveMessage() error {
 	messageType, err := c.GetReader().ReadString()
 	switch {
 	case err == io.EOF:
-		c.GetShoset().DeleteConn(c.GetRemoteAddress(), c.GetRemoteLogicalName())
+		c.GetShoset().DeleteConn(c.GetRemoteLogicalName(), c.GetRemoteAddress())
 		return err
 	case errors.Is(err, syscall.ECONNRESET):
 		return nil

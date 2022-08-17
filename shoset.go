@@ -144,7 +144,8 @@ func (s *Shoset) GetConnsByTypeArray(shosetType string) []*ShosetConn {
 
 // IsCertified returns true if path corresponds to an existing repertory which means that the Shoset has created its repertory and is certified.
 func (s *Shoset) IsCertified(path string) bool {
-	if fileExists(path + PATH_CA_PRIVATE_KEY) { // path ??
+	fmt.Println(path + PATH_CA_PRIVATE_KEY)
+	if fileExists(path + PATH_CA_PRIVATE_KEY) {
 		s.SetIsPki(true)
 	}
 	return fileExists(path)
