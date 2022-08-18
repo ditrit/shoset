@@ -24,8 +24,8 @@ java -jar '/media/partagé/DitRit/GoPlantUML/plantuml-1.2022.6.jar' -svg -v ./um
 # Install graphviz (Not sure if it's necessary) :
 # sudo apt install graphviz
 
-# go-callvis -nostd -nointer --group pkg,type -minlen 5 -limit github.com/ditrit/shoset -focus github.com/ditrit/shoset -file ./call_graph/shoset ./../test
+go-callvis -nostd -nointer --group pkg,type -minlen 5 -limit github.com/ditrit/shoset -focus github.com/ditrit/shoset -file ./uml/call_graph/shoset ./test
 
-# go-callvis -nostd -nointer --group pkg,type -minlen 5 -limit github.com/ditrit/shoset -focus github.com/ditrit/shoset/msg -file ./call_graph/msg ./../test
+go-callvis -nostd -nointer --group pkg,type -minlen 5 -limit github.com/ditrit/shoset -focus github.com/ditrit/shoset/msg -file ./uml/call_graph/msg ./test
 
-# go-callvis -nostd -nointer --group pkg,type -minlen 5 -limit github.com/ditrit/shoset -focus github.com/ditrit/shoset/files -file ./call_graph/files ./../test #Not working
+go-callvis -nostd -nointer --group pkg,type -minlen 5 -limit github.com/ditrit/shoset -focus github.com/ditrit/shoset/files -file ./uml/call_graph/files ./test #Not working

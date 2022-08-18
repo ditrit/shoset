@@ -1,6 +1,7 @@
 #!/bin/bash
 
-# openssl s_server -accept 8080 -www -cert yourcert.crt -key yourcert.key -CAfile CAcert.crt
+#!!! NOT WORKING !!#
+#Problems with connection refused and Adresses already in use.
 
 # macros
 REPERTORY=~/.shoset
@@ -16,8 +17,10 @@ for SHOSET in $REPERTORY/*; do
             # Different ports for server et client ?
             # Connection refused ???
             PORT=$(expr 8080 + $i)
+            echo
+            echo
             cd $CONN/cert
-            echo "\n\n#### Folder currently checked : $PWD"
+            echo "#### Folder currently checked : $PWD"
 
             #echo -n "$SHOSET : " >> $LOGFILE ??
 

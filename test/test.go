@@ -130,7 +130,7 @@ func testRouteTable(ctx context.Context, done context.CancelFunc) {
 }
 
 func testForwardMessage(ctx context.Context, done context.CancelFunc) {
-	tt := utilsForTest.CircleWrongOrder
+	tt := utilsForTest.LinkedCircles
 	s := []*shoset.Shoset{}
 	s = utilsForTest.CreateManyShosets(tt, s, false)
 	utilsForTest.WaitForManyShosets(s)
@@ -366,10 +366,10 @@ func main() {
 	} else if arg == "5" {
 		testForwardMessageMultiProcess((os.Args)[2:])
 	} else if arg == "6" {
-		example.SimpleExample()
+		// example.SimpleExample()
 		// example.TestEventContinuousSend()
 		// example.TestSimpleForwarding()
-		// example.TestForwardingTopology()
+		example.TestForwardingTopology()
 	}
 
 	// Memory profiler

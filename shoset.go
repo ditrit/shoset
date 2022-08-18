@@ -258,13 +258,13 @@ func NewShoset(logicalName, shosetType string) *Shoset {
 
 	s.ConnsByLname.SetConfig(NewConfig(s.logicalName))
 
-	s.Queue["cfglink"] = msg.NewQueue()
+	//s.Queue["cfglink"] = msg.NewQueue() // Not neeeded
 	s.Handlers["cfglink"] = new(ConfigLinkHandler)
 
-	s.Queue["cfgjoin"] = msg.NewQueue()
+	//s.Queue["cfgjoin"] = msg.NewQueue() // Not neeeded
 	s.Handlers["cfgjoin"] = new(ConfigJoinHandler)
 
-	s.Queue["cfgbye"] = msg.NewQueue()
+	//s.Queue["cfgbye"] = msg.NewQueue() // Not neeeded
 	s.Handlers["cfgbye"] = new(ConfigByeHandler)
 
 	s.Queue["evt"] = msg.NewQueue()
@@ -276,7 +276,7 @@ func NewShoset(logicalName, shosetType string) *Shoset {
 	s.Queue["pkievt_TLSsingleWay"] = msg.NewQueue()
 	s.Handlers["pkievt_TLSsingleWay"] = new(PkiEventHandler)
 
-	// s.Queue["routingEvent"] = msg.NewQueue() // Not neeeded,
+	// s.Queue["routingEvent"] = msg.NewQueue() // Not neeeded
 	s.Handlers["routingEvent"] = new(RoutingEventHandler)
 
 	s.Queue["forwardAck"] = msg.NewQueue()
@@ -416,7 +416,7 @@ func (s *Shoset) Protocol(bindAddress, remoteAddress, protocolType string) {
 	formattedIpAddress := strings.Replace(ipAddress, ":", "_", -1)
 	formattedIpAddress = strings.Replace(formattedIpAddress, ".", "-", -1) // formats for filesystem to 127-0-0-1_8001 instead of 127.0.0.1:8001
 
-	s.mu.Lock()	
+	s.mu.Lock()
 	s.ConnsByLname.GetConfig().SetFileName(formattedIpAddress)
 	s.mu.Unlock()
 
