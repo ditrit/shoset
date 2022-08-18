@@ -60,7 +60,7 @@ type Shoset struct {
 	MessageEventBus eventBus.EventBus // Sends an event to everyone waiting for a message of the type received
 	// topic : MessageType
 
-	Done chan bool // goroutines synchronization
+	Done chan bool // goroutines synchronization //Not used ?
 
 	LaunchedProtocol concurentData.ConcurentSlice // List of IP addesses a Protocol was initiated with (but not yet finished)
 	// The shoset is ready for use when the list is empty
@@ -144,7 +144,6 @@ func (s *Shoset) GetConnsByTypeArray(shosetType string) []*ShosetConn {
 
 // IsCertified returns true if path corresponds to an existing repertory which means that the Shoset has created its repertory and is certified.
 func (s *Shoset) IsCertified(path string) bool {
-	fmt.Println(path + PATH_CA_PRIVATE_KEY)
 	if fileExists(path + PATH_CA_PRIVATE_KEY) {
 		s.SetIsPki(true)
 	}
@@ -417,7 +416,9 @@ func (s *Shoset) Protocol(bindAddress, remoteAddress, protocolType string) {
 	formattedIpAddress := strings.Replace(ipAddress, ":", "_", -1)
 	formattedIpAddress = strings.Replace(formattedIpAddress, ".", "-", -1) // formats for filesystem to 127-0-0-1_8001 instead of 127.0.0.1:8001
 
+	s.mu.Lock()	
 	s.ConnsByLname.GetConfig().SetFileName(formattedIpAddress)
+	s.mu.Unlock()
 
 	if !s.IsCertified(s.ConnsByLname.GetConfig().baseDirectory + formattedIpAddress) {
 		s.Logger.Debug().Msg("ask certification")

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 
-	// "runtime"
 	"strings"
 	"sync"
 	"syscall"
@@ -243,7 +242,7 @@ func (c *ShosetConn) HandleConfig(cfg *msg.ConfigProtocol) {
 	for {
 		protocolConn, err := tls.Dial(CONNECTION_TYPE, c.GetRemoteAddress(), c.GetShoset().GetTlsConfigDoubleWay())
 		if err != nil {
-			time.Sleep(time.Millisecond * time.Duration(2000))
+			time.Sleep(time.Millisecond * time.Duration(1000))
 			c.Logger.Error().Msg("HandleConfig err: " + err.Error())
 			continue
 		}

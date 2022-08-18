@@ -96,7 +96,7 @@ func (cfg *Config) AppendToKey(key string, values []string) {
 	cfg.viper.WriteConfig()
 }
 
-// DeleteFromKey deletes the vales from the list from the key.
+// DeleteFromKey deletes the values from the list from the key in the viper config.
 func (cfg *Config) DeleteFromKey(key string, value []string) {
 	cfg.mu.Lock()
 	defer cfg.mu.Unlock()

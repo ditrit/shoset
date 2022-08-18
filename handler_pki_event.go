@@ -5,7 +5,6 @@ import (
 	"crypto/tls"
 	"errors"
 	"io/ioutil"
-	"os"
 	"time"
 
 	"github.com/ditrit/shoset/msg"
@@ -153,7 +152,6 @@ func (c *ShosetConn) HandlePkiResponse(messageValue msg.Message) error {
 		c.GetShoset().SetIsPki(true)
 	}
 
-	os.Setenv(CERT_FILE_ENVIRONMENT, c.GetShoset().ConnsByLname.GetConfig().GetBaseDirectory()+c.GetShoset().ConnsByLname.GetConfig().GetFileName()+PATH_CA_CERT)
 	err = c.GetShoset().SetUpDoubleWay()
 	if err != nil {
 		c.Logger.Error().Msg(err.Error())
@@ -176,8 +174,8 @@ func (peh *PkiEventHandler) HandleDoubleWay(c *ShosetConn, message msg.Message) 
 			return errors.New("empty cert req received")
 		}
 
-		cfgDir := c.GetShoset().ConnsByLname.GetConfig().GetBaseDirectory()
-		CAcertificate, err := ioutil.ReadFile(cfgDir + c.GetShoset().ConnsByLname.GetConfig().GetFileName() + PATH_CA_CERT)
+		cfgDirectory := c.GetShoset().ConnsByLname.GetConfig().GetBaseDirectory()
+		CAcertificate, err := ioutil.ReadFile(cfgDirectory + c.GetShoset().ConnsByLname.GetConfig().GetFileName() + PATH_CA_CERT)
 		if err != nil {
 			return err
 		}

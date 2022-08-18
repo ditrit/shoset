@@ -18,11 +18,14 @@ func Test_concurentSlice(t *testing.T) {
 			fmt.Println("Change received.")
 		}
 	}()
-	
-	time.Sleep(10*time.Millisecond)
+
+	time.Sleep(10 * time.Millisecond)
 
 	for i := 0; i < number; i++ {
 		cSlice.AppendToConcurentSlice("Test " + fmt.Sprint(i))
+	}
+	if !cSlice.Contains("Test 0") {
+		t.Errorf("Wrong content after appending.")
 	}
 	if cSlice.String() != "[Test 0 Test 1 Test 2 Test 3 Test 4 Test 5 Test 6 Test 7 Test 8 Test 9]" {
 		t.Errorf("Wrong content after appending.")
@@ -75,7 +78,7 @@ func Test_concurentSlice(t *testing.T) {
 
 	err := cSlice.WaitForEmpty(5)
 
-	if err==nil{
+	if err == nil {
 		t.Errorf("Timeout error failed.")
 	}
 }

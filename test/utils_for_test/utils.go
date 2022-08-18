@@ -32,7 +32,7 @@ func CreateManyShosets(tt []*ShosetCreation, s []*shoset.Shoset, wait bool) []*s
 				s[i].InitPKI(t.LocalAddress)
 			} else {
 				for _, a := range t.RemoteAddresses {
-					s[i].Protocol(t.LocalAddress, a, t.ProtocolType)
+					s[i].Protocol(t.LocalAddress, a, t.ProtocolType) // Launch as goroutine is to fast for WaitForProtocol.
 				}
 			}
 			t.Launched = true

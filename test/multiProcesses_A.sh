@@ -6,7 +6,7 @@
 P=$!
 
 #Kill and restart
-sleep 15
+sleep 35
 
 kill $P
 

@@ -89,6 +89,16 @@ func (cSlice *ConcurentSlice) WaitForChange(timeout int) error {
 	}
 }
 
+func (cSlice *ConcurentSlice) Contains(data string) bool {
+	// contains range through a slice to search for a particular string
+	for _, v := range cSlice.sliceValues {
+		if v == data {
+			return true
+		}
+	}
+	return false
+}
+
 func (cSlice *ConcurentSlice) String() string {
 	cSlice.m.RLock()
 	defer cSlice.m.RUnlock()
