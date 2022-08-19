@@ -1,0 +1,23 @@
+# Ideas for Improvements and changes :
+
+- Add a description to the GitHub repository.
+- Integration of the routing system into other message types.
+    - Use route system to forward PKI requests
+    - command
+- Redo the polling based wait in some handlers with the event based system from event, simple mesage and forwardAck.
+- Finish adaptation to arbitrary network topology.
+- Cleaning up Gandalf specific things that are not used anymore.
+- Rerouting the entire network every time is not optimal.
+- Comprehensive status system for shosets and shosetConns using the event bus.
+- Optimize mutex in Shoset and ShosetConn.
+- Test with many shosets in a single Lname.
+- Separate the project in smaller packages :
+    - Put mapsyncmap in a dedicated package.
+    - Put config in a dedicated package.
+- Launch at the same time multiple shosets.
+- Fix script `cert_checker.sh`.
+- Function to use Protocol without relaunching saved connections.
+- Need an IDE agnostic way to launch many scripts in many dedicated terminals at once. (Or Doker containers).
+- `README.md` :
+  - Fix the links.
+  - Update the content.
