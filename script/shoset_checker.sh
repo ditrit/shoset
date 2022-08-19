@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# !!! NOT WORKING !!!
+# Need updating and test.
+
 # macros
 REPERTORY=~/.shoset
 LOGFILE=$REPERTORY/shoset_checker.txt

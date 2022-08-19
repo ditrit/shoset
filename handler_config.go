@@ -31,7 +31,7 @@ func (ch *ConfigHandler) HandleDoubleWay(c *ShosetConn, message msg.Message) err
 func (ch *ConfigHandler) Send(s *Shoset, cmd msg.Message) {
 	s.ConnsByLname.Iterate(
 		func(key string, conn interface{}) {
-			if err := conn.(*ShosetConn).SendMessage(cmd); err != nil {
+			if err := conn.(*ShosetConn).GetWriter().SendMessage(cmd); err != nil {
 				conn.(*ShosetConn).Logger.Warn().Msg("couldn't send config msg : " + err.Error())
 			}
 		},

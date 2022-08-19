@@ -25,33 +25,59 @@ func (clh *ConfigLinkHandler) HandleDoubleWay(c *ShosetConn, message msg.Message
 	case PROTOCOL_LINK:
 		// incoming link request, a socket wants to link to this one.
 		// save info and retrieve brothers to inform network.
+
+		c.Logger.Trace().Str("lname", cfg.GetLogicalName()).Str("IP", cfg.GetAddress()).Msg("Incoming link request : " + PROTOCOL_LINK)
+
+		c.GetShoset().DeleteConn(cfg.GetLogicalName(), cfg.GetAddress())
+
 		c.SetRemoteAddress(cfg.GetAddress())
 		c.Store(PROTOCOL_LINK, cfg.GetLogicalName(), cfg.GetAddress(), cfg.GetShosetType())
 
+		// Send ACKNOWLEDGE_LINK
+		configOk := msg.NewConfigProtocol(cfg.GetAddress(), c.GetShoset().GetLogicalName(), c.GetShoset().GetShosetType(), ACKNOWLEDGE_LINK)
+		if err := c.GetWriter().SendMessage(*configOk); err != nil {
+			c.Logger.Warn().Msg("couldn't send configOk : " + err.Error())
+		}
+
 		localBrothersArray := []string{}
-		if localBrothers, _ := c.GetShoset().ConnsByLname.smap.Load(c.GetShoset().GetLogicalName()); localBrothers != nil {
+		if localBrothers, _ := c.GetShoset().ConnsByLname.Load(c.GetShoset().GetLogicalName()); localBrothers != nil {
 			localBrothersArray = Keys(localBrothers.(*sync.Map), ALL)
 		}
 
-		remoteBrothers, _ := c.GetShoset().ConnsByLname.smap.Load(c.GetRemoteLogicalName())
+		remoteBrothers, _ := c.GetShoset().ConnsByLname.Load(c.GetRemoteLogicalName())
 		remoteBrothersArray := []string{}
 		if remoteBrothers != nil {
 			remoteBrothersArray = Keys(remoteBrothers.(*sync.Map), ALL)
 		}
 
-		cfgBrothers := msg.NewCfgBrothers(localBrothersArray, remoteBrothersArray, BROTHERS, c.GetShoset().GetLogicalName(), c.GetShoset().GetShosetType())
+		cfgBrothers := msg.NewConfigBrothersProtocol(localBrothersArray, remoteBrothersArray, BROTHERS, c.GetShoset().GetLogicalName(), c.GetShoset().GetShosetType())
 		remoteBrothers.(*sync.Map).Range(func(_, value interface{}) bool {
 			func(_, remoteBro interface{}) {
-				if err := remoteBro.(*ShosetConn).SendMessage(*cfgBrothers); err != nil {
+				if err := remoteBro.(*ShosetConn).GetWriter().SendMessage(*cfgBrothers); err != nil {
 					remoteBro.(*ShosetConn).Logger.Warn().Msg("couldn't send brothers : " + err.Error())
 				}
 			}(nil, value)
 			return true
 		})
 
+	case ACKNOWLEDGE_LINK:
+		// incoming acknowledge_link, link request accepted.
+
+		c.Logger.Trace().Str("lname", cfg.GetLogicalName()).Str("IP", cfg.GetAddress()).Msg("Incoming acknowledge link : " + ACKNOWLEDGE_LINK)
+
+		c.GetShoset().DeleteConn(cfg.GetLogicalName(), cfg.GetAddress())
+
+		c.Store(PROTOCOL_LINK, cfg.GetLogicalName(), c.GetRemoteAddress(), cfg.GetShosetType())
+
+		// Deletes the IP from the list of started but not yet ready.
+		c.GetShoset().LaunchedProtocol.DeleteFromConcurentSlice(c.GetRemoteAddress())
+
 	case BROTHERS:
 		// incoming brother information, new shoset in the network.
 		// save info and call sendToBrothers to handle message.
+
+		c.Logger.Trace().Str("lname", cfg.GetLogicalName()).Str("IP", cfg.GetAddress()).Msg("Incoming brother information : " + BROTHERS)
+
 		c.Store(PROTOCOL_LINK, cfg.GetLogicalName(), c.GetRemoteAddress(), cfg.GetShosetType())
 
 		sendToBrothers(c, message)
@@ -79,15 +105,15 @@ func sendToBrothers(c *ShosetConn, m msg.Message) {
 
 		mapSync := new(sync.Map)
 		mapSync.Store(c.GetLocalLogicalName(), true)
-		c.GetShoset().LnamesByProtocol.smap.Store(PROTOCOL_LINK, mapSync)
-		c.GetShoset().LnamesByType.smap.Store(c.GetRemoteShosetType(), mapSync)
-		c.GetShoset().ConnsByLname.Store(c.GetShoset().GetLogicalName(), bro, PROTOCOL_LINK, fake_conn)
+		c.GetShoset().LnamesByProtocol.Store(PROTOCOL_LINK, mapSync)
+		c.GetShoset().LnamesByType.Store(c.GetRemoteShosetType(), mapSync)
+		c.GetShoset().ConnsByLname.StoreConfig(c.GetShoset().GetLogicalName(), bro, PROTOCOL_LINK, fake_conn)
 
 	}
 
 	// handle remote brothers (not the same type of shoset).
 	// need to link protocol on them if not already in the map of known conn.
-	mapConns, _ := c.GetShoset().ConnsByLname.smap.Load(cfg.GetLogicalName())
+	mapConns, _ := c.GetShoset().ConnsByLname.Load(cfg.GetLogicalName())
 	if mapConns == nil {
 		return
 	}

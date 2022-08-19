@@ -1,8 +1,6 @@
 package shoset
 
 import (
-	"sync"
-
 	"github.com/ditrit/shoset/msg"
 	"github.com/rs/zerolog/log"
 )
@@ -20,18 +18,20 @@ func (cbh *ConfigByeHandler) Get(c *ShosetConn) (msg.Message, error) {
 
 // HandleDoubleWay handles message for a ShosetConn accordingly.
 func (cbh *ConfigByeHandler) HandleDoubleWay(c *ShosetConn, message msg.Message) error {
+
 	cfg := message.(msg.ConfigProtocol)
 
 	switch cfg.GetCommandName() {
 	case PROTOCOL_EXIT:
 		// incoming bye request.
 		// send delete signal to all connected shosets from our list of known shosets.
-		cfgNewDelete := msg.NewCfg(cfg.GetAddress(), c.GetShoset().GetLogicalName(), c.GetShoset().GetShosetType(), DELETE)
+		cfgNewDelete := msg.NewConfigProtocol(cfg.GetAddress(), c.GetShoset().GetLogicalName(), c.GetShoset().GetShosetType(), DELETE)
 		c.GetShoset().ConnsByLname.Iterate(
-			func(address string, bro interface{}) {
+			func(address string, bro interface{}) { // Enovoyé à tous, pas seulement les brothers ?
 				if address != cfg.GetAddress() {
-					if err := bro.(*ShosetConn).SendMessage(*cfgNewDelete); err != nil {
-						bro.(*ShosetConn).Logger.Warn().Msg("couldn't send cfgnewdelete : " + err.Error())
+					err := bro.(*ShosetConn).GetWriter().SendMessage(*cfgNewDelete)
+					if err != nil {
+						bro.(*ShosetConn).Logger.Warn().Msg("couldn't send cfgNewDelete : " + err.Error())
 					}
 				}
 			},
@@ -40,11 +40,8 @@ func (cbh *ConfigByeHandler) HandleDoubleWay(c *ShosetConn, message msg.Message)
 	case DELETE:
 		// incoming delete signal.
 		// forget the concerned shoset from our list of known shosets and close connection.
-		mapSync := new(sync.Map)
-		mapSync.Store(cfg.GetLogicalName(), true)
-		c.GetShoset().LnamesByProtocol.smap.Store(PROTOCOL_EXIT, mapSync)
-		c.GetShoset().LnamesByType.smap.Store(cfg.GetShosetType(), mapSync)
-		c.GetShoset().deleteConn(cfg.GetAddress(), cfg.GetLogicalName())
+
+		c.GetShoset().DeleteConn(cfg.GetLogicalName(), cfg.GetAddress())
 	}
 	return nil
 }

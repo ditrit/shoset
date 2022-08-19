@@ -4,7 +4,7 @@ package msg
 type Command struct {
 	MessageBase
 	Target  string
-	Command string
+	Command string // type of command
 	Context map[string]interface{}
 }
 
@@ -21,8 +21,8 @@ func NewCommand(target string, command string, payload string) *Command {
 	return c
 }
 
-// GetMsgType accessor
-func (c Command) GetMsgType() string { return "cmd" }
+// GetMessageType accessor
+func (c Command) GetMessageType() string { return "cmd" }
 
 // GetTarget :
 func (c Command) GetTarget() string { return c.Target }

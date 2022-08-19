@@ -5,7 +5,6 @@ import (
 	"crypto/tls"
 	"errors"
 	"io/ioutil"
-	"os"
 	"time"
 
 	"github.com/ditrit/shoset/msg"
@@ -23,21 +22,21 @@ func (peh *PkiEventHandler) Get(c *ShosetConn) (msg.Message, error) {
 }
 
 // RunPkiRequest is the first step to get certified.
-// Creates certRequest and send it as an event in the network to reach CA and get certified.
+// Creates certificateRequest and send it as an event in the network to reach CA and get certified.
 func (c *ShosetConn) RunPkiRequest(address string) error {
-	certRequest, hostPublicKey, hostPrivateKey, err := PrepareCertificate()
+	certificateRequest, hostPublicKey, hostPrivateKey, err := PrepareCertificate()
 	if err != nil {
 		c.Logger.Error().Msg("prepare certificate didn't work : " + err.Error())
 		return errors.New("prepare certificate didn't work" + err.Error())
 	}
 
-	err = EncodeFile(hostPrivateKey, RSA_PRIVATE_KEY, c.GetShoset().ConnsByLname.GetConfig().GetBaseDir()+c.GetShoset().ConnsByLname.GetConfig().GetFileName()+PATH_PRIVATE_KEY)
+	err = EncodeFile(hostPrivateKey, RSA_PRIVATE_KEY, c.GetShoset().ConnsByLname.GetConfig().GetBaseDirectory()+c.GetShoset().ConnsByLname.GetConfig().GetFileName()+PATH_PRIVATE_KEY)
 	if err != nil {
 		c.Logger.Error().Msg(err.Error())
 		return err
 	}
-	
-	pkiEvent := msg.NewPkiEventInit(TLS_SINGLE_WAY_PKI_EVT, address, c.GetShoset().GetLogicalName(), certRequest, hostPublicKey)
+
+	pkiEvent := msg.NewPkiEventInit(TLS_SINGLE_WAY_PKI_EVT, address, c.GetShoset().GetLogicalName(), certificateRequest, hostPublicKey)
 	for {
 		pkiConn, err := tls.Dial(CONNECTION_TYPE, c.GetRemoteAddress(), c.GetShoset().tlsConfigSingleWay)
 		if err != nil {
@@ -45,18 +44,17 @@ func (c *ShosetConn) RunPkiRequest(address string) error {
 			continue
 		}
 		c.UpdateConn(pkiConn)
-		
-		err = c.SendMessage(*pkiEvent)
+
+		err = c.GetWriter().SendMessage(*pkiEvent)
 		if err != nil {
 			c.Logger.Error().Msg("couldn't send pkievt_TLSsingleWay: " + err.Error())
 		}
-		
+
 		err = c.ReceiveMessage()
-		// time.Sleep(time.Millisecond * time.Duration(100))
 		if err != nil {
 			continue
 		}
-		
+
 		c.Logger.Debug().Msg("RunPkiRequest: socket closed")
 		c.GetConn().Close()
 		return nil
@@ -98,14 +96,14 @@ func (c *ShosetConn) HandlePkiRequest(messageValue msg.Message) error {
 		return nil
 	}
 
-	certificateDirectory := c.GetShoset().ConnsByLname.GetConfig().GetBaseDir() + c.GetShoset().ConnsByLname.GetConfig().GetFileName()
+	certificateDirectory := c.GetShoset().ConnsByLname.GetConfig().GetBaseDirectory() + c.GetShoset().ConnsByLname.GetConfig().GetFileName()
 	CAcertificate, err := ioutil.ReadFile(certificateDirectory + PATH_CA_CERT)
 	if err != nil {
 		c.Logger.Error().Msg("couldn't get CAcertificate: " + err.Error())
 		return err
 	}
 
-	signedCertificate := c.GetShoset().SignCertificate(evt.GetCertReq(), evt.GetHostPublicKey())
+	signedCertificate := c.GetShoset().SignCertificate(evt.GetCertificateRequest(), evt.GetHostPublicKey())
 	if signedCertificate == nil {
 		c.Logger.Error().Msg("signCertificate didn't work")
 		return errors.New("signCertificate didn't work")
@@ -113,7 +111,7 @@ func (c *ShosetConn) HandlePkiRequest(messageValue msg.Message) error {
 
 	var CAprivateKey *rsa.PrivateKey
 	if c.GetShoset().GetLogicalName() == evt.GetLogicalName() { // same logical name than CA, add CAprivateKey to the return event
-		CAprivateKey, err = GetPrivateKey(c.GetShoset().ConnsByLname.GetConfig().GetBaseDir() + c.GetShoset().ConnsByLname.GetConfig().GetFileName() + PATH_CA_PRIVATE_KEY)
+		CAprivateKey, err = GetPrivateKey(c.GetShoset().ConnsByLname.GetConfig().GetBaseDirectory() + c.GetShoset().ConnsByLname.GetConfig().GetFileName() + PATH_CA_PRIVATE_KEY)
 		if err != nil {
 			c.Logger.Error().Msg("couldn't get CAprivateKey : " + err.Error())
 			return err
@@ -121,7 +119,7 @@ func (c *ShosetConn) HandlePkiRequest(messageValue msg.Message) error {
 	}
 
 	pkiEventResponse := msg.NewPkiEventReturn(TLS_SINGLE_WAY_RETURN_PKI_EVT, evt.GetRequestAddress(), signedCertificate, CAcertificate, CAprivateKey)
-	err = c.SendMessage(*pkiEventResponse)
+	err = c.GetWriter().SendMessage(*pkiEventResponse)
 	if err != nil {
 		c.Logger.Error().Msg("couldn't send singleConn returnpkievt: " + err.Error())
 		return err
@@ -132,13 +130,13 @@ func (c *ShosetConn) HandlePkiRequest(messageValue msg.Message) error {
 // HandlePkiResponse encodes received signed certificate and sets up TLS Double Way for the Shoset.
 func (c *ShosetConn) HandlePkiResponse(messageValue msg.Message) error {
 	evt := messageValue.(msg.PkiEvent)
-	err := EncodeFile(evt.GetSignedCert(), CERTIFICATE, c.GetShoset().ConnsByLname.GetConfig().GetBaseDir()+c.GetShoset().ConnsByLname.GetConfig().GetFileName()+PATH_CERT)
+	err := EncodeFile(evt.GetSignedCert(), CERTIFICATE, c.GetShoset().ConnsByLname.GetConfig().GetBaseDirectory()+c.GetShoset().ConnsByLname.GetConfig().GetFileName()+PATH_CERT)
 	if err != nil {
 		c.Logger.Error().Msg(err.Error())
 		return err
 	}
 
-	CApath := c.GetShoset().ConnsByLname.GetConfig().GetBaseDir() + c.GetShoset().ConnsByLname.GetConfig().GetFileName() + PATH_CA_CERT
+	CApath := c.GetShoset().ConnsByLname.GetConfig().GetBaseDirectory() + c.GetShoset().ConnsByLname.GetConfig().GetFileName() + PATH_CA_CERT
 	err = ioutil.WriteFile(CApath, evt.GetCAcert(), 0644)
 	if err != nil {
 		c.Logger.Error().Msg("couldn't write CAcertificate: " + err.Error())
@@ -146,7 +144,7 @@ func (c *ShosetConn) HandlePkiResponse(messageValue msg.Message) error {
 	}
 
 	if evt.GetCAprivateKey() != nil { // same logical name than CA, so the Shoset becomes CA as well
-		err = EncodeFile(evt.GetCAprivateKey(), RSA_PRIVATE_KEY, c.GetShoset().ConnsByLname.GetConfig().GetBaseDir()+c.GetShoset().ConnsByLname.GetConfig().GetFileName()+PATH_CA_PRIVATE_KEY)
+		err = EncodeFile(evt.GetCAprivateKey(), RSA_PRIVATE_KEY, c.GetShoset().ConnsByLname.GetConfig().GetBaseDirectory()+c.GetShoset().ConnsByLname.GetConfig().GetFileName()+PATH_CA_PRIVATE_KEY)
 		if err != nil {
 			c.Logger.Error().Msg(err.Error())
 			return err
@@ -154,8 +152,6 @@ func (c *ShosetConn) HandlePkiResponse(messageValue msg.Message) error {
 		c.GetShoset().SetIsPki(true)
 	}
 
-	os.Setenv(CERT_FILE_ENVIRONMENT, c.GetShoset().ConnsByLname.GetConfig().GetBaseDir()+c.GetShoset().ConnsByLname.GetConfig().GetFileName()+PATH_CA_CERT)
-	
 	err = c.GetShoset().SetUpDoubleWay()
 	if err != nil {
 		c.Logger.Error().Msg(err.Error())
@@ -173,18 +169,18 @@ func (peh *PkiEventHandler) HandleDoubleWay(c *ShosetConn, message msg.Message) 
 	case evt.GetCommand() == TLS_DOUBLE_WAY_PKI_EVT && c.GetShoset().GetIsPki():
 		// this shoset is PKI and a TLSdoubleWay shoset sent a cert request.
 		// handle this cert request and return the signed cert.
-		if evt.GetCertReq() == nil {
+		if evt.GetCertificateRequest() == nil {
 			c.Logger.Error().Msg("empty cert req received")
 			return errors.New("empty cert req received")
 		}
 
-		cfgDir := c.GetShoset().ConnsByLname.GetConfig().GetBaseDir()
-		CAcertificate, err := ioutil.ReadFile(cfgDir + c.GetShoset().ConnsByLname.GetConfig().GetFileName() + PATH_CA_CERT)
+		cfgDirectory := c.GetShoset().ConnsByLname.GetConfig().GetBaseDirectory()
+		CAcertificate, err := ioutil.ReadFile(cfgDirectory + c.GetShoset().ConnsByLname.GetConfig().GetFileName() + PATH_CA_CERT)
 		if err != nil {
 			return err
 		}
 
-		signedCertificate := c.GetShoset().SignCertificate(evt.GetCertReq(), evt.GetHostPublicKey())
+		signedCertificate := c.GetShoset().SignCertificate(evt.GetCertificateRequest(), evt.GetHostPublicKey())
 		if signedCertificate == nil {
 			c.Logger.Error().Msg("CA failed to sign cert")
 			return errors.New("CA failed to sign cert")
@@ -198,7 +194,7 @@ func (peh *PkiEventHandler) HandleDoubleWay(c *ShosetConn, message msg.Message) 
 		// this shoset received a signed cert from a TLSdoubleWay shoset destined to a TLSsingleWay shoset known by this one.
 		// send back the signed cert to the destined TLSsingleWay shoset.
 		evt.SetCommand(TLS_SINGLE_WAY_RETURN_PKI_EVT)
-		if err := singleWayCertReqConn.(*ShosetConn).SendMessage(evt); err != nil {
+		if err := singleWayCertReqConn.(*ShosetConn).GetWriter().SendMessage(evt); err != nil {
 			singleWayCertReqConn.(*ShosetConn).Logger.Warn().Msg("couldn't send returnpkievt : " + err.Error())
 			return err
 		}
@@ -206,7 +202,7 @@ func (peh *PkiEventHandler) HandleDoubleWay(c *ShosetConn, message msg.Message) 
 
 	default:
 		// this shoset is not PKI and a TLSdoubleWay shoset sent a cert request.
-		// send back the cert request into the network until it reaches a PKI if it is not in it yet.
+		// sends back the cert request into the network until it reaches a PKI if it is not in it yet.
 		if notInQueue := c.GetShoset().Queue["pkievt_TLSdoubleWay"].Push(evt, c.GetRemoteShosetType(), c.GetLocalAddress()); notInQueue {
 			peh.Send(c.GetShoset(), evt)
 		}
@@ -218,7 +214,7 @@ func (peh *PkiEventHandler) HandleDoubleWay(c *ShosetConn, message msg.Message) 
 func (peh *PkiEventHandler) Send(s *Shoset, evt msg.Message) {
 	s.ConnsByLname.Iterate(
 		func(key string, conn interface{}) {
-			if err := conn.(*ShosetConn).SendMessage(evt); err != nil {
+			if err := conn.(*ShosetConn).GetWriter().SendMessage(evt); err != nil {
 				conn.(*ShosetConn).Logger.Warn().Msg("couldn't send pkievt_TLSsingleWay : " + err.Error())
 			}
 		},

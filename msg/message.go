@@ -8,7 +8,7 @@ import (
 
 // Message interface
 type Message interface {
-	GetMsgType() string
+	GetMessageType() string
 	GetUUID() string
 	GetTenant() string
 	GetToken() string
@@ -17,70 +17,62 @@ type Message interface {
 	GetPayload() string
 	GetMajor() int8
 	GetMinor() int8
+
+	GetDestinationLname() string
 }
 
 // MessageBase base struct for messages
 type MessageBase struct {
-	UUID      string
-	Tenant    string
-	Token     string
-	Timeout   int64
-	Timestamp int64
-	Payload   string
-	Next      string
-	Major     int8
-	Minor     int8
+	UUID             string // automatically generated id for a single message
+	Tenant           string // tenant system, filter only messages for a specific tenant
+	Token            string // ! refactor this attribute !
+	Timeout          int64  // time set to keep message in memory
+	Timestamp        int64  // time when message is created (to the millesecond)
+	Payload          string // handle args info
+	Next             string // ! refactor this attribute !
+	Major            int8   // ??
+	Minor            int8   // ??
+	DestinationLname string // LogicalName the message is destined to (For forwarding)
 }
 
 // InitMessageBase constructor
 func (m *MessageBase) InitMessageBase() {
 	m.UUID = uuid.New()
-	m.Timestamp = time.Now().Unix()
-	m.Timeout = 10 // time set to keep event in memory
+	m.Timestamp = time.Now().UnixMilli()
+	m.Timeout = 10
 	m.Major = 1
 	m.Minor = 0
 }
 
-// GetUUID accessor
-func (m MessageBase) GetUUID() string {
-	return m.UUID
-}
+// GetUUID returns UUID from MessageBase.
+func (m MessageBase) GetUUID() string { return m.UUID }
 
-func (m *MessageBase) SetUUID(newUUID string) {
-	m.UUID = newUUID
-}
+// SetUUID sets UUID for MessageBase.
+func (m *MessageBase) SetUUID(newUUID string) { m.UUID = newUUID }
 
-// GetTenant accessor
-func (m MessageBase) GetTenant() string {
-	return m.Tenant
-}
+// GetTenant returns Tenant from MessageBase.
+func (m MessageBase) GetTenant() string { return m.Tenant }
 
-// GetToken accessor
-func (m MessageBase) GetToken() string {
-	return m.Token
-}
+// GetToken returns Token from MessageBase.
+func (m MessageBase) GetToken() string { return m.Token }
 
-// GetTimestamp accessor
-func (m MessageBase) GetTimestamp() int64 {
-	return m.Timestamp
-}
+// GetTimestamp returns Timestamp from MessageBase.
+func (m MessageBase) GetTimestamp() int64 { return m.Timestamp }
 
-// GetTimeout accessor
-func (m MessageBase) GetTimeout() int64 {
-	return m.Timeout
-}
+// GetTimeout returns Timeout from MessageBase.
+func (m MessageBase) GetTimeout() int64 { return m.Timeout }
 
-// GetPayload accessor
-func (m MessageBase) GetPayload() string {
-	return m.Payload
-}
+// GetPayload returns Payload from MessageBase.
+func (m MessageBase) GetPayload() string { return m.Payload }
 
-// GetMajor accessor
-func (m MessageBase) GetMajor() int8 {
-	return m.Major
-}
+// GetMajor returns Major from MessageBase.
+func (m MessageBase) GetMajor() int8 { return m.Major }
 
-// GetMinor accessor
-func (m MessageBase) GetMinor() int8 {
-	return m.Minor
-}
+// GetMinor returns Minor from MessageBase.
+func (m MessageBase) GetMinor() int8 { return m.Minor }
+
+// GetDestinationLname returns DestinationLname from MessageBase.
+func (m MessageBase) GetDestinationLname() string { return m.DestinationLname }
+
+// Set DestinationLname sets DestinationLname from MessageBase.
+func (m *MessageBase) SetDestinationLname(s string) { m.DestinationLname = s }

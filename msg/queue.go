@@ -146,6 +146,10 @@ func (q *Queue) remove(key string) {
 
 // IsEmpty : the event queue is empty
 func (q *Queue) IsEmpty() bool {
+
+	q.m.Lock()
+	defer q.m.Unlock() 
+
 	return q.qlist.Len() == 0
 }
 
@@ -158,4 +162,12 @@ func (q *Queue) Print() {
 		cell = cell.Prev()
 	}
 	fmt.Printf("nb cell : %d\n", q.qlist.Len())
+}
+
+func (q *Queue) LockQueue() {
+	q.m.Lock()
+}
+
+func (q *Queue) UnlockQueue() {
+	q.m.Unlock()
 }
