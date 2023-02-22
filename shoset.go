@@ -194,8 +194,6 @@ func (s *Shoset) DeleteConn(Lname, remoteAddress string) {
 
 	c := conn.(*ShosetConn)
 
-	s.ConnsByLname.DeleteValueFromKeys(Lname, remoteAddress)
-
 	s.LnamesByProtocol.DeleteValueFromKeys(c.GetProtocol(), Lname)
 	s.LnamesByType.DeleteValueFromKeys(c.GetRemoteShosetType(), Lname)
 	s.ConnsByLname.DeleteValueFromKeys(Lname, remoteAddress)
@@ -243,7 +241,7 @@ func NewShoset(logicalName, shosetType string) *Shoset {
 
 		logicalName: logicalName,
 		shosetType:  shosetType,
-		isValid:     true,
+		isValid:     false,
 		isPki:       false,
 		listener:    nil,
 
@@ -582,9 +580,9 @@ func (s *Shoset) Send(msg msg.Message) {
 	}
 }
 
-//Wait for message
-//args for event("evt") type : map[string]string{"topic": "topic_name", "event": "event_name"}
-//Leave iterator at nil if you don't want to supply it yourself. (avoids reading multiple time the same message)
+// Wait for message
+// args for event("evt") type : map[string]string{"topic": "topic_name", "event": "event_name"}
+// Leave iterator at nil if you don't want to supply it yourself. (avoids reading multiple time the same message)
 func (s *Shoset) Wait(msgType string, args map[string]string, timeout int, iterator *msg.Iterator) msg.Message {
 	if !contains(RECEIVABLE_TYPES, msgType) {
 		s.Logger.Error().Msg("Trying to receive an invalid message type or message of a type without a Wait function. Message type : " + msgType)
