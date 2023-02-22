@@ -1,7 +1,7 @@
 package eventBus
 
 // Subscribe a channel to a topic and receive Events of that topic (the channel is only used to receive)
-/* CAUTION : 
+/* CAUTION :
 -Channels are not resuable, they are closed when unsubscribing.
 -Sending more events than are read can create massive memory leaks.
 */
@@ -43,9 +43,9 @@ func (eb *EventBus) Publish(topic string, data interface{}) {
 		channels := append(DataChannelSlice{}, chans...)
 		for _, ch := range channels {
 			go func(data interface{}, Channel DataChannel) {
-				defer func() { // Avoids panicking when the channel was closed (by unsubscribing) before the send was completed
+				/*defer func() { // Avoids panicking when the channel was closed (by unsubscribing) before the send was completed
 					recover()
-				}()
+				}()*/
 				Channel <- data
 			}(data, ch)
 		}
@@ -71,7 +71,7 @@ func (eb *EventBus) UnSubscribe(topic string, ch DataChannel) error {
 	if prev, found := eb.subscribers[topic]; found {
 		for i, a := range eb.subscribers[topic] {
 			if a == ch {
-				close(ch)
+				//close(ch)
 
 				// Deletes channel from subscribers to the topic in an efficient way (avoids moving remaining data).
 				last := len(prev) - 1
