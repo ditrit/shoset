@@ -50,36 +50,58 @@ func (ch *CommandHandler) Send(s *Shoset, m msg.Message) {
 
 // Wait returns the message received for a given Shoset.
 func (ch *CommandHandler) Wait(s *Shoset, replies *msg.Iterator, args map[string]string, timeout int) *msg.Message {
+	timer := time.NewTimer(time.Duration(timeout) * time.Second)
+
 	commandName, ok := args["name"]
 	if !ok {
+		s.Logger.Error().Msg("no command name provided for Wait")
 		return nil
 	}
-	term := make(chan *msg.Message, 1)
-	cont := true
-	go func() {
-		for cont {
-			response := replies.Get()
-			if response == nil {
-				time.Sleep(time.Duration(10) * time.Millisecond)
-				continue
+
+	// Checks every message in the queue before waiting for a new message
+	// Checks message presence in two steps to avoid accessing attributs of <nil>
+	for {
+		cell := replies.Get()
+		if cell != nil {
+			message := cell.GetMessage()
+			if message != nil {
+				cmd := message.(msg.Command)
+				if cmd.GetCommand() == commandName {
+					return &message
+				}
 			}
-			message := response.GetMessage()
+		} else {
+			// Locking Queue to avoid missing a message while preparing the channel to receive events.
+			replies.GetQueue().LockQueue()
+			break
+		}
+	}
+	// Creating channel
+	chNewMessage := make(chan interface{})
+	s.MessageEventBus.Subscribe("cmd", chNewMessage)
+	replies.GetQueue().UnlockQueue()
+	defer s.MessageEventBus.UnSubscribe("cmd", chNewMessage)
+
+	for {
+		select {
+		case <-timer.C:
+			s.Logger.Warn().Msg("No message received in Wait Command (timeout).")
+			return nil
+		case <-chNewMessage:
+			//Checks message presence in two steps to avoid accessing fields of <nil>
+			s.Logger.Debug().Msg("New message received in Wait Command.")
+			cell := replies.Get()
+			if cell == nil {
+				break
+			}
+			message := cell.GetMessage()
 			if message == nil {
-				time.Sleep(time.Duration(10) * time.Millisecond)
-				continue
+				break
 			}
-			command := message.(msg.Command)
-			if command.GetCommand() == commandName {
-				term <- &message
-				return
+			cmd := message.(msg.Command)
+			if cmd.GetCommand() == commandName {
+				return &message
 			}
 		}
-	}()
-	select {
-	case res := <-term:
-		cont = false
-		return res
-	case <-time.After(time.Duration(timeout) * time.Second):
-		return nil
 	}
 }
