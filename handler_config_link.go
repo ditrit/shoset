@@ -39,17 +39,18 @@ func (clh *ConfigLinkHandler) HandleDoubleWay(c *ShosetConn, message msg.Message
 			c.Logger.Warn().Msg("couldn't send configOk : " + err.Error())
 		}
 
-		localBrothersArray := []string{}
+		localBrothersArray := []string{} // localBrothers = members = socket with the same Lname
 		if localBrothers, _ := c.GetShoset().ConnsByLname.Load(c.GetShoset().GetLogicalName()); localBrothers != nil {
 			localBrothersArray = Keys(localBrothers.(*sync.Map), ALL)
 		}
 
-		remoteBrothers, _ := c.GetShoset().ConnsByLname.Load(c.GetRemoteLogicalName())
+		remoteBrothers, _ := c.GetShoset().ConnsByLname.Load(c.GetRemoteLogicalName()) // brothers = sockets with the remote Lname = sockets linked to this one
 		remoteBrothersArray := []string{}
 		if remoteBrothers != nil {
 			remoteBrothersArray = Keys(remoteBrothers.(*sync.Map), ALL)
 		}
 
+		// we send the list of localBrothers to the remoteBrothers
 		cfgBrothers := msg.NewConfigBrothersProtocol(localBrothersArray, remoteBrothersArray, BROTHERS, c.GetShoset().GetLogicalName(), c.GetShoset().GetShosetType())
 		remoteBrothers.(*sync.Map).Range(func(_, value interface{}) bool {
 			func(_, remoteBro interface{}) {
@@ -95,19 +96,23 @@ func sendToBrothers(c *ShosetConn, m msg.Message) {
 	// handle local brothers (same type of shoset).
 	// need to add them to our known shosets as "fake" connection but do not protocol on it.
 	for _, bro := range localBrothers {
-		if bro == c.GetShoset().GetBindAddress() {
+		if bro == c.GetShoset().GetBindAddress() { // do not add myself
 			continue
 		}
 
-		fake_conn, _ := NewShosetConn(c.GetShoset(), bro, ME)
-		fake_conn.SetRemoteLogicalName(c.GetLocalLogicalName())
-		fake_conn.SetRemoteShosetType(c.GetLocalShosetType())
+		if _, ok := c.GetShoset().ConnsByLname.Load(bro); ok { // if bro is in ConnsByLname, it means it is already known
+			continue
+		}
+
+		newConn, _ := NewShosetConn(c.GetShoset(), bro, ME) // create a fake connection with no direction
+		newConn.SetRemoteLogicalName(c.GetLocalLogicalName())
+		newConn.SetRemoteShosetType(c.GetLocalShosetType())
 
 		mapSync := new(sync.Map)
 		mapSync.Store(c.GetLocalLogicalName(), true)
 		c.GetShoset().LnamesByProtocol.Store(PROTOCOL_LINK, mapSync)
 		c.GetShoset().LnamesByType.Store(c.GetRemoteShosetType(), mapSync)
-		c.GetShoset().ConnsByLname.StoreConfig(c.GetShoset().GetLogicalName(), bro, PROTOCOL_LINK, fake_conn)
+		c.GetShoset().ConnsByLname.StoreConfig(c.GetShoset().GetLogicalName(), bro, PROTOCOL_LINK, newConn)
 
 	}
 

@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"github.com/ditrit/shoset/msg"
-	"github.com/rs/zerolog/log"
 )
 
 // EventHandler implements MessageHandlers interface.
@@ -31,11 +30,14 @@ func (eh *EventHandler) HandleDoubleWay(c *ShosetConn, message msg.Message) erro
 
 // Send sends the message through the given Shoset network.
 func (eh *EventHandler) Send(s *Shoset, evt msg.Message) {
+	_ = s.Queue["evt"].Push(evt, VOID, VOID)
 	s.ConnsByLname.Iterate(
 		func(lname string, ipAddress string, conn interface{}) {
 			err := conn.(*ShosetConn).GetWriter().SendMessage(evt)
 			if err != nil {
-				log.Warn().Msg("couldn't send evt : " + err.Error())
+				s.Logger.Warn().Msg(s.GetLogicalName() + " couldn't send evt to " + conn.(*ShosetConn).GetRemoteLogicalName() + ": " + err.Error())
+			} else {
+				s.Logger.Debug().Msg("evt sent successfully from " + s.GetLogicalName() + " to " + conn.(*ShosetConn).GetRemoteLogicalName())
 			}
 		},
 	)
@@ -82,6 +84,7 @@ func (eh *EventHandler) Wait(s *Shoset, replies *msg.Iterator, args map[string]s
 			return nil
 		case <-chNewMessage:
 			//Checks message presence in two steps to avoid accessing fields of <nil>
+			s.Logger.Debug().Msg("New message received in Wait event.")
 			cell := replies.Get()
 			if cell == nil {
 				break
