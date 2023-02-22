@@ -18,10 +18,33 @@ var Line2 = []*ShosetCreation{
 	{Lname: "B", ShosetType: "cl", LocalAddress: "localhost:8002", RemoteAddresses: []string{"localhost:8001"}, ProtocolType: "link", Launched: false},
 }
 
+var Line2With3Shosets = []*ShosetCreation{
+	{Lname: "A", ShosetType: "cl", LocalAddress: "localhost:8001", RemoteAddresses: []string{""}, ProtocolType: "pki", Launched: false},
+	{Lname: "B", ShosetType: "cl", LocalAddress: "localhost:8002", RemoteAddresses: []string{"localhost:8001"}, ProtocolType: "link", Launched: false},
+	{Lname: "B", ShosetType: "cl", LocalAddress: "localhost:8003", RemoteAddresses: []string{"localhost:8001"}, ProtocolType: "link", Launched: false},
+	{Lname: "B", ShosetType: "cl", LocalAddress: "localhost:8004", RemoteAddresses: []string{"localhost:8002"}, ProtocolType: "join", Launched: false},
+	{Lname: "A", ShosetType: "cl", LocalAddress: "localhost:8005", RemoteAddresses: []string{"localhost:8001"}, ProtocolType: "join", Launched: false},
+}
+
+var Line2With2Shosets = []*ShosetCreation{
+	{Lname: "A", ShosetType: "cl", LocalAddress: "localhost:8001", RemoteAddresses: []string{""}, ProtocolType: "pki", Launched: false},
+	{Lname: "B", ShosetType: "cl", LocalAddress: "localhost:8002", RemoteAddresses: []string{"localhost:8001"}, ProtocolType: "link", Launched: false},
+	{Lname: "B", ShosetType: "cl", LocalAddress: "localhost:8003", RemoteAddresses: []string{"localhost:8002"}, ProtocolType: "join", Launched: false},
+}
+
 var Line3 = []*ShosetCreation{
 	{Lname: "A", ShosetType: "cl", LocalAddress: "localhost:8001", RemoteAddresses: []string{""}, ProtocolType: "pki", Launched: false},
 	{Lname: "B", ShosetType: "cl", LocalAddress: "localhost:8002", RemoteAddresses: []string{"localhost:8001"}, ProtocolType: "link", Launched: false},
 	{Lname: "C", ShosetType: "cl", LocalAddress: "localhost:8003", RemoteAddresses: []string{"localhost:8002"}, ProtocolType: "link", Launched: false},
+}
+
+var Line3WithMultipleShosets = []*ShosetCreation{
+	{Lname: "A", ShosetType: "cl", LocalAddress: "localhost:8001", RemoteAddresses: []string{""}, ProtocolType: "pki", Launched: false},
+	{Lname: "B", ShosetType: "cl", LocalAddress: "localhost:8002", RemoteAddresses: []string{"localhost:8001"}, ProtocolType: "link", Launched: false},
+	{Lname: "B", ShosetType: "cl", LocalAddress: "localhost:8003", RemoteAddresses: []string{"localhost:8001"}, ProtocolType: "link", Launched: false},
+	{Lname: "B", ShosetType: "cl", LocalAddress: "localhost:8004", RemoteAddresses: []string{"localhost:8001"}, ProtocolType: "link", Launched: false},
+	{Lname: "C", ShosetType: "cl", LocalAddress: "localhost:8005", RemoteAddresses: []string{"localhost:8002"}, ProtocolType: "link", Launched: false},
+	{Lname: "C", ShosetType: "cl", LocalAddress: "localhost:8006", RemoteAddresses: []string{"localhost:8002"}, ProtocolType: "link", Launched: false},
 }
 
 var StraightLine = []*ShosetCreation{
@@ -74,7 +97,7 @@ var Circle = []*ShosetCreation{
 
 var CircleWrongOrder = []*ShosetCreation{
 	{Lname: "A", ShosetType: "cl", LocalAddress: IPbyLname["A"], RemoteAddresses: []string{}, ProtocolType: "pki", Launched: false},
-	{Lname: "B", ShosetType: "cl", LocalAddress: IPbyLname["B"], RemoteAddresses: []string{IPbyLname["A"],IPbyLname["E"]}, ProtocolType: "link", Launched: false},
+	{Lname: "B", ShosetType: "cl", LocalAddress: IPbyLname["B"], RemoteAddresses: []string{IPbyLname["A"], IPbyLname["E"]}, ProtocolType: "link", Launched: false},
 	{Lname: "C", ShosetType: "cl", LocalAddress: IPbyLname["C"], RemoteAddresses: []string{IPbyLname["A"]}, ProtocolType: "link", Launched: false},
 	{Lname: "D", ShosetType: "cl", LocalAddress: IPbyLname["D"], RemoteAddresses: []string{IPbyLname["C"]}, ProtocolType: "link", Launched: false},
 	{Lname: "E", ShosetType: "cl", LocalAddress: IPbyLname["E"], RemoteAddresses: []string{IPbyLname["D"]}, ProtocolType: "link", Launched: false},

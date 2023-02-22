@@ -138,6 +138,9 @@ func TestForwardingTopology() {
 			message := msg.NewSimpleMessage(destination.GetLogicalName(), "test_payload"+fmt.Sprint(i))
 			sender.Send(message)
 			i++
+			if i >= 10 {
+				break
+			}
 		}
 	}()
 
@@ -155,7 +158,199 @@ func TestForwardingTopology() {
 
 	// Do someting else while it is sending and receiving messages.
 
-	time.Sleep(10 * time.Second)
+	time.Sleep(5 * time.Second) // Wait for the routing to be established
+	utilsForTest.PrintManyShosets(s)
+	time.Sleep(10 * time.Second) // Wait for the end of the test
+
+	//select {} //Never return
+}
+
+func TestMutltipleShosets() {
+	fmt.Println("TestMultipleShosets")
+	tt := utilsForTest.Line2With3Shosets // Choose the network topology for the test
+
+	s := []*shoset.Shoset{} // Create the empty list of shosets
+
+	s = utilsForTest.CreateManyShosets(tt, s, false) // Populate the list with the shosets as specified in the selected topology and estavlish connection among them
+
+	utilsForTest.WaitForManyShosets(s) // Wait for every shosets in the list to be ready
+
+	time.Sleep(3 * time.Second)
+
+	utilsForTest.PrintManyShosets(s) // Display the info of every shosets in the list
+
+	time.Sleep(20 * time.Second)
+
+	//select {} //Never return
+}
+
+func Test3Shosets() {
+
+	tt := utilsForTest.Line2With2Shosets // Choose the network topology for the test
+
+	s := []*shoset.Shoset{} // Create the empty list of shosets
+
+	s = utilsForTest.CreateManyShosets(tt, s, false) // Populate the list with the shosets as specified in the selected topology and estavlish connection among them
+
+	utilsForTest.WaitForManyShosets(s) // Wait for every shosets in the list to be ready
+
+	time.Sleep(3 * time.Second)
+
+	utilsForTest.PrintManyShosets(s) // Display the info of every shosets in the list
+
+	//Sender :
+	go func() {
+		i := 0
+		for {
+			time.Sleep(1 * time.Second)
+			event := msg.NewEventClassic("test_topic", "test_event", "test_payload"+fmt.Sprint(i))
+			s[0].Send(event)
+			fmt.Println("A send event to B1 : ", "test_payload"+fmt.Sprint(i))
+			i++
+		}
+	}()
+
+	//Receiver :
+	iterator := msg.NewIterator(s[1].Queue["evt"])
+	go func() {
+		for {
+			event_rc := s[1].Wait("evt", map[string]string{"topic": "test_topic", "event": "test_event"}, 5, iterator)
+			if event_rc != nil {
+				fmt.Println("B1 message received (Payload) : " + event_rc.GetPayload())
+			}
+		}
+	}()
+
+	//Receiver :
+	iterator2 := msg.NewIterator(s[2].Queue["evt"])
+	go func() {
+		for {
+			event_rc := s[2].Wait("evt", map[string]string{"topic": "test_topic", "event": "test_event"}, 5, iterator2)
+			if event_rc != nil {
+				fmt.Println("B2 message received (Payload) : " + event_rc.GetPayload())
+			}
+		}
+	}()
+
+	time.Sleep(20 * time.Second)
+}
+
+// test with A-B-B
+func Test3ShosetsCommand() {
+	fmt.Println("Test3ShosetsCommand : \n A-B1-B2 \n A send 'command' to B1 \n Normally the command is transmitted to B2")
+	tt := utilsForTest.Line2With2Shosets // Choose the network topology for the test
+
+	s := []*shoset.Shoset{} // Create the empty list of shosets
+
+	s = utilsForTest.CreateManyShosets(tt, s, false) // Populate the list with the shosets as specified in the selected topology and estavlish connection among them
+
+	utilsForTest.WaitForManyShosets(s) // Wait for every shosets in the list to be ready
+
+	//utilsForTest.PrintManyShosets(s) // Display the info of every shosets in the list
+
+	//destination := s[1] // B far from B
+	sender := s[0] // A pki
+
+	//Sender :
+	go func() {
+		i := 0
+		for {
+			time.Sleep(1 * time.Second)
+			message := msg.NewCommand("B", "test_command", "test_payload"+fmt.Sprint(i))
+			fmt.Println("A send command to B1 : ", "test_payload"+fmt.Sprint(i))
+			sender.Send(*message)
+			i++
+			if i >= 10 {
+				break
+			}
+		}
+	}()
+
+	//Receiver :
+	iterator := msg.NewIterator(s[1].Queue["cmd"])
+	go func() {
+		for {
+			event_rc := s[1].Wait("cmd", map[string]string{"name": "test_command"}, 5, iterator)
+			if event_rc != nil {
+				shoset.Log("B1 message received (Payload) : " + event_rc.GetPayload())
+			}
+		}
+	}()
+	iterator2 := msg.NewIterator(s[2].Queue["cmd"])
+	go func() {
+		for {
+			event_rc2 := s[2].Wait("cmd", map[string]string{"name": "test_command"}, 5, iterator2)
+			if event_rc2 != nil {
+				shoset.Log("B2 message received (Payload) : " + event_rc2.GetPayload())
+			}
+		}
+	}()
+
+	// Do someting else while it is sending and receiving messages.
+
+	time.Sleep(3 * time.Second) // Wait for the routing to be established
+
+	time.Sleep(5 * time.Second)      // Wait for the end of the test
+	utilsForTest.PrintManyShosets(s) // Display the info of every shosets in the list
+
+	//select {} //Never return
+}
+
+// test with A-B-B
+func Test2ShosetsCommand() {
+	fmt.Println("Test2ShosetsCommand : \n A-B \n A send 'command' to B")
+	tt := utilsForTest.Line2 // Choose the network topology for the test
+
+	s := []*shoset.Shoset{} // Create the empty list of shosets
+
+	s = utilsForTest.CreateManyShosets(tt, s, false) // Populate the list with the shosets as specified in the selected topology and estavlish connection among them
+
+	utilsForTest.WaitForManyShosets(s) // Wait for every shosets in the list to be ready
+
+	//utilsForTest.PrintManyShosets(s) // Display the info of every shosets in the list
+
+	destination := s[1] // B
+	sender := s[0]      // A pki
+
+	//Sender :
+	go func() {
+		i := 0
+		for {
+			time.Sleep(1 * time.Second)
+			message := msg.NewCommand("B", "test_command", "test_payload"+fmt.Sprint(i))
+			sender.Send(*message)
+			i++
+			if i >= 10 {
+				break
+			}
+		}
+	}()
+
+	//Receiver :
+	iterator := msg.NewIterator(s[1].Queue["cmd"])
+	go func() {
+		for {
+			event_rc := destination.Wait("cmd", map[string]string{"name": "test_command"}, 5, iterator)
+			if event_rc != nil {
+				shoset.Log("B2 message received (Payload) : " + event_rc.GetPayload())
+			}
+		}
+	}()
+	iterator2 := msg.NewIterator(s[0].Queue["cmd"])
+	go func() {
+		for {
+			event_rc := destination.Wait("cmd", map[string]string{"name": "test_command"}, 5, iterator2)
+			if event_rc != nil {
+				shoset.Log("B1 message received (Payload) : " + event_rc.GetPayload())
+			}
+		}
+	}()
+
+	// Do someting else while it is sending and receiving messages.
+
+	time.Sleep(3 * time.Second) // Wait for the routing to be established
+	utilsForTest.PrintManyShosets(s)
+	time.Sleep(20 * time.Second) // Wait for the end of the test
 
 	//select {} //Never return
 }

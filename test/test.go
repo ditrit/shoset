@@ -12,7 +12,7 @@ import (
 
 	"github.com/ditrit/shoset"
 	"github.com/ditrit/shoset/msg"
-	example "github.com/ditrit/shoset/test/example"
+	"github.com/ditrit/shoset/test/example"
 	oldTest "github.com/ditrit/shoset/test/old_test"
 	utilsForTest "github.com/ditrit/shoset/test/utils_for_test"
 )
@@ -192,7 +192,7 @@ func testForwardMessageMultiProcess(args []string) {
 	// 	}
 	// }
 
-	topology:=utilsForTest.CircleWrongOrder
+	topology := utilsForTest.CircleWrongOrder
 
 	var cl *shoset.Shoset
 	if args[4] == "1" {
@@ -364,14 +364,20 @@ func main() {
 		testForwardMessage(ctx, done)
 		// testEndConnection(ctx, done)
 	} else if arg == "5" {
-		testForwardMessageMultiProcess((os.Args)[2:])
+		//testForwardMessageMultiProcess((os.Args)[2:])
+		example.Test3Shosets()
 	} else if arg == "6" {
 		// example.SimpleExample()
-		// example.TestEventContinuousSend()
+		//example.TestEventContinuousSend()
+		//example.Test3Shosets()
 		// example.TestSimpleForwarding()
-		example.TestForwardingTopology()
+		//example.TestForwardingTopology()
+		example.TestMutltipleShosets()
+		//example.Test3ShosetsCommand()
+		//example.Test2ShosetsCommand()
+	} else if arg == "7" {
+		example.Test3ShosetsCommand()
 	}
-
 	// Memory profiler
 	// var memprofile = flag.String("memprofile", "./profiler/mem.prof", "write memory profile to `file`")
 
