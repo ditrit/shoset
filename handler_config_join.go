@@ -39,6 +39,7 @@ func (cjh *ConfigJoinHandler) HandleDoubleWay(c *ShosetConn, message msg.Message
 			c.Logger.Warn().Msg("couldn't send configOk : " + err.Error())
 		}
 
+		// Notify all the "members" = localBrothers (the ones with the same Lname) that a new member has joined so that they can all initiate a connection with the new member.
 		cfgNewMember := msg.NewConfigProtocol(cfg.GetAddress(), c.GetShoset().GetLogicalName(), c.GetShoset().GetShosetType(), MEMBER)
 		mapConns, _ := c.GetShoset().ConnsByLname.Load(c.GetShoset().GetLogicalName())
 		mapConns.(*sync.Map).Range(func(key, value interface{}) bool {
@@ -53,13 +54,36 @@ func (cjh *ConfigJoinHandler) HandleDoubleWay(c *ShosetConn, message msg.Message
 			return true
 		})
 
+		// Notify all the remoteBrothers (the ones with a different Lname) that a new member has joined so that they can all initiate a connection with the new member.
+		localBrothersArray := []string{} // localBrothers = members = socket with the same Lname
+		if localBrothers, _ := c.GetShoset().ConnsByLname.Load(c.GetShoset().GetLogicalName()); localBrothers != nil {
+			localBrothersArray = Keys(localBrothers.(*sync.Map), ALL)
+		}
+
+		c.GetShoset().ConnsByLname.Iterate(
+			func(lname string, ipAddress string, remoteBro interface{}) {
+				if lname != c.GetShoset().GetLogicalName() { // if remoteBrother
+					c.Logger.Debug().Msg("sending brother info to " + ipAddress)
+					remoteBrothers, _ := c.GetShoset().ConnsByLname.Load(lname) // remoteBrothers = sockets with the remote Lname = sockets linked to this one
+					remoteBrothersArray := []string{}
+					if remoteBrothers != nil {
+						remoteBrothersArray = Keys(remoteBrothers.(*sync.Map), ALL) // get the IP addresses of the remoteBrothers
+					}
+					cfgBrothers := msg.NewConfigBrothersProtocol(localBrothersArray, remoteBrothersArray, BROTHERS, c.GetShoset().GetLogicalName(), c.GetShoset().GetShosetType())
+					if err := remoteBro.(*ShosetConn).GetWriter().SendMessage(*cfgBrothers); err != nil {
+						remoteBro.(*ShosetConn).Logger.Warn().Msg("couldn't send brothers : " + err.Error())
+					}
+				}
+			},
+		)
+
 	case ACKNOWLEDGE_JOIN:
 		// incoming acknowledge_join, join request validated.
 		// save info.
 
 		c.Logger.Trace().Str("lname", cfg.GetLogicalName()).Str("IP", cfg.GetAddress()).Msg("Incoming acknowledge join : " + ACKNOWLEDGE_JOIN)
 
-		c.GetShoset().DeleteConn(cfg.GetLogicalName(), cfg.GetAddress())
+		// c.GetShoset().DeleteConn(cfg.GetLogicalName(), cfg.GetAddress()) // we never delete a conn
 
 		c.Store(PROTOCOL_JOIN, c.GetShoset().GetLogicalName(), c.GetRemoteAddress(), c.GetShoset().GetShosetType())
 
