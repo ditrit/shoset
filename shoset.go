@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"net"
+	"path/filepath"
 	"sort"
 	"strings"
 	"sync"
@@ -28,7 +29,7 @@ type MessageHandlers interface {
 	Wait(s *Shoset, replies *msg.Iterator, args map[string]string, timeout int) *msg.Message
 }
 
-//Shoset : smart object based on network socket but with upgraded features
+// Shoset : smart object based on network socket but with upgraded features
 type Shoset struct {
 	Logger zerolog.Logger // pretty logger
 
@@ -144,7 +145,7 @@ func (s *Shoset) GetConnsByTypeArray(shosetType string) []*ShosetConn {
 
 // IsCertified returns true if path corresponds to an existing repertory which means that the Shoset has created its repertory and is certified.
 func (s *Shoset) IsCertified(path string) bool {
-	if fileExists(path + PATH_CA_PRIVATE_KEY) {
+	if fileExists(filepath.Join(path, PATH_CA_PRIVATE_KEY)) {
 		s.SetIsPki(true)
 	}
 	return fileExists(path)
@@ -420,7 +421,7 @@ func (s *Shoset) Protocol(bindAddress, remoteAddress, protocolType string) {
 	s.ConnsByLname.GetConfig().SetFileName(formattedIpAddress)
 	s.mu.Unlock()
 
-	if !s.IsCertified(s.ConnsByLname.GetConfig().baseDirectory + formattedIpAddress) {
+	if !s.IsCertified(filepath.Join(s.ConnsByLname.GetConfig().baseDirectory, formattedIpAddress)) {
 		s.Logger.Debug().Msg("ask certification")
 
 		_, err = s.ConnsByLname.GetConfig().InitFolders(formattedIpAddress)

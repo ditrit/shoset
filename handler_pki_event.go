@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"errors"
 	"io/ioutil"
+	"path/filepath"
 	"time"
 
 	"github.com/ditrit/shoset/msg"
@@ -29,8 +30,8 @@ func (c *ShosetConn) RunPkiRequest(address string) error {
 		c.Logger.Error().Msg("prepare certificate didn't work : " + err.Error())
 		return errors.New("prepare certificate didn't work" + err.Error())
 	}
-
-	err = EncodeFile(hostPrivateKey, RSA_PRIVATE_KEY, c.GetShoset().ConnsByLname.GetConfig().GetBaseDirectory()+c.GetShoset().ConnsByLname.GetConfig().GetFileName()+PATH_PRIVATE_KEY)
+	path := filepath.Join(c.GetShoset().ConnsByLname.GetConfig().GetBaseDirectory(), c.GetShoset().ConnsByLname.GetConfig().GetFileName(), PATH_PRIVATE_KEY)
+	err = EncodeFile(hostPrivateKey, RSA_PRIVATE_KEY, path)
 	if err != nil {
 		c.Logger.Error().Msg(err.Error())
 		return err
@@ -96,8 +97,8 @@ func (c *ShosetConn) HandlePkiRequest(messageValue msg.Message) error {
 		return nil
 	}
 
-	certificateDirectory := c.GetShoset().ConnsByLname.GetConfig().GetBaseDirectory() + c.GetShoset().ConnsByLname.GetConfig().GetFileName()
-	CAcertificate, err := ioutil.ReadFile(certificateDirectory + PATH_CA_CERT)
+	certificateDirectory := filepath.Join(c.GetShoset().ConnsByLname.GetConfig().GetBaseDirectory(), c.GetShoset().ConnsByLname.GetConfig().GetFileName(), PATH_CA_CERT)
+	CAcertificate, err := ioutil.ReadFile(certificateDirectory)
 	if err != nil {
 		c.Logger.Error().Msg("couldn't get CAcertificate: " + err.Error())
 		return err
@@ -111,7 +112,7 @@ func (c *ShosetConn) HandlePkiRequest(messageValue msg.Message) error {
 
 	var CAprivateKey *rsa.PrivateKey
 	if c.GetShoset().GetLogicalName() == evt.GetLogicalName() { // same logical name than CA, add CAprivateKey to the return event
-		CAprivateKey, err = GetPrivateKey(c.GetShoset().ConnsByLname.GetConfig().GetBaseDirectory() + c.GetShoset().ConnsByLname.GetConfig().GetFileName() + PATH_CA_PRIVATE_KEY)
+		CAprivateKey, err = GetPrivateKey(filepath.Join(c.GetShoset().ConnsByLname.GetConfig().GetBaseDirectory(), c.GetShoset().ConnsByLname.GetConfig().GetFileName(), PATH_CA_PRIVATE_KEY))
 		if err != nil {
 			c.Logger.Error().Msg("couldn't get CAprivateKey : " + err.Error())
 			return err
@@ -130,13 +131,13 @@ func (c *ShosetConn) HandlePkiRequest(messageValue msg.Message) error {
 // HandlePkiResponse encodes received signed certificate and sets up TLS Double Way for the Shoset.
 func (c *ShosetConn) HandlePkiResponse(messageValue msg.Message) error {
 	evt := messageValue.(msg.PkiEvent)
-	err := EncodeFile(evt.GetSignedCert(), CERTIFICATE, c.GetShoset().ConnsByLname.GetConfig().GetBaseDirectory()+c.GetShoset().ConnsByLname.GetConfig().GetFileName()+PATH_CERT)
+	err := EncodeFile(evt.GetSignedCert(), CERTIFICATE, filepath.Join(c.GetShoset().ConnsByLname.GetConfig().GetBaseDirectory(), c.GetShoset().ConnsByLname.GetConfig().GetFileName(), PATH_CERT))
 	if err != nil {
 		c.Logger.Error().Msg(err.Error())
 		return err
 	}
 
-	CApath := c.GetShoset().ConnsByLname.GetConfig().GetBaseDirectory() + c.GetShoset().ConnsByLname.GetConfig().GetFileName() + PATH_CA_CERT
+	CApath := filepath.Join(c.GetShoset().ConnsByLname.GetConfig().GetBaseDirectory(), c.GetShoset().ConnsByLname.GetConfig().GetFileName(), PATH_CA_CERT)
 	err = ioutil.WriteFile(CApath, evt.GetCAcert(), 0644)
 	if err != nil {
 		c.Logger.Error().Msg("couldn't write CAcertificate: " + err.Error())
@@ -144,7 +145,8 @@ func (c *ShosetConn) HandlePkiResponse(messageValue msg.Message) error {
 	}
 
 	if evt.GetCAprivateKey() != nil { // same logical name than CA, so the Shoset becomes CA as well
-		err = EncodeFile(evt.GetCAprivateKey(), RSA_PRIVATE_KEY, c.GetShoset().ConnsByLname.GetConfig().GetBaseDirectory()+c.GetShoset().ConnsByLname.GetConfig().GetFileName()+PATH_CA_PRIVATE_KEY)
+		path := filepath.Join(c.GetShoset().ConnsByLname.GetConfig().GetBaseDirectory(), c.GetShoset().ConnsByLname.GetConfig().GetFileName(), PATH_CA_PRIVATE_KEY)
+		err = EncodeFile(evt.GetCAprivateKey(), RSA_PRIVATE_KEY, path)
 		if err != nil {
 			c.Logger.Error().Msg(err.Error())
 			return err
@@ -153,6 +155,7 @@ func (c *ShosetConn) HandlePkiResponse(messageValue msg.Message) error {
 	}
 
 	err = c.GetShoset().SetUpDoubleWay()
+	c.GetShoset().SetIsValid(true)
 	if err != nil {
 		c.Logger.Error().Msg(err.Error())
 		return err
@@ -174,8 +177,8 @@ func (peh *PkiEventHandler) HandleDoubleWay(c *ShosetConn, message msg.Message) 
 			return errors.New("empty cert req received")
 		}
 
-		cfgDirectory := c.GetShoset().ConnsByLname.GetConfig().GetBaseDirectory()
-		CAcertificate, err := ioutil.ReadFile(cfgDirectory + c.GetShoset().ConnsByLname.GetConfig().GetFileName() + PATH_CA_CERT)
+		cfgDirectory := filepath.Join(c.GetShoset().ConnsByLname.GetConfig().GetBaseDirectory(), c.GetShoset().ConnsByLname.GetConfig().GetFileName(), PATH_CA_CERT)
+		CAcertificate, err := ioutil.ReadFile(cfgDirectory)
 		if err != nil {
 			return err
 		}

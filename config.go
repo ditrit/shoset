@@ -2,6 +2,7 @@ package shoset
 
 import (
 	"os"
+	"path/filepath"
 	"sync"
 
 	"github.com/rs/zerolog/log"
@@ -26,7 +27,7 @@ func NewConfig(name string) *Config {
 		return nil
 	}
 	cfg := &Config{
-		baseDirectory: homeDirectory + "/.shoset/" + name + "/",
+		baseDirectory: filepath.Join(homeDirectory, ".shoset", name),
 		viper:         viper.New(),
 	}
 	if err := mkdir(cfg.baseDirectory); err != nil {
@@ -47,13 +48,13 @@ func (cfg *Config) SetFileName(fileName string) { cfg.fileName = fileName }
 
 // InitFolders creates following config folders if needed: <base>/<name>/{cert, config}.
 func (cfg *Config) InitFolders(name string) (string, error) {
-	if err := mkdir(cfg.baseDirectory + name + "/"); err != nil {
+	if err := mkdir(filepath.Join(cfg.baseDirectory, name)); err != nil {
 		return VOID, err
 	}
-	if err := mkdir(cfg.baseDirectory + name + PATH_CONFIG_DIRECTORY); err != nil {
+	if err := mkdir(filepath.Join(cfg.baseDirectory, name, PATH_CONFIG_DIRECTORY)); err != nil {
 		return VOID, err
 	}
-	if err := mkdir(cfg.baseDirectory + name + PATH_CERT_DIRECTORY); err != nil {
+	if err := mkdir(filepath.Join(cfg.baseDirectory, name, PATH_CERT_DIRECTORY)); err != nil {
 		return VOID, err
 	}
 	return cfg.baseDirectory, nil
@@ -63,7 +64,7 @@ func (cfg *Config) InitFolders(name string) (string, error) {
 // Initialize viper parameters before reading.
 func (cfg *Config) ReadConfig(fileName string) error {
 
-	cfg.viper.AddConfigPath(cfg.baseDirectory + fileName + PATH_CONFIG_DIRECTORY)
+	cfg.viper.AddConfigPath(filepath.Join(cfg.baseDirectory, fileName, PATH_CONFIG_DIRECTORY))
 	cfg.viper.SetConfigName(CONFIG_FILE)
 	cfg.viper.SetConfigType(CONFIG_TYPE)
 
@@ -77,7 +78,7 @@ func (cfg *Config) WriteConfig(fileName string) error {
 	cfg.mu.Lock()
 	defer cfg.mu.Unlock()
 
-	return cfg.viper.WriteConfigAs(cfg.baseDirectory + fileName + PATH_CONFIG_DIRECTORY + CONFIG_FILE)
+	return cfg.viper.WriteConfigAs(filepath.Join(cfg.baseDirectory, fileName, PATH_CONFIG_DIRECTORY, CONFIG_FILE))
 }
 
 // AppendToKey sets the value for a key for viper config.

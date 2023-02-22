@@ -1,5 +1,9 @@
 package shoset
 
+import (
+	"path/filepath"
+)
+
 // Supported message type
 var MESSAGE_TYPES = []string{"cfgjoin", "cfglink", "cfgbye", "pkievt_TLSdoubleWay", "routingEvent", "evt", "cmd", "simpleMessage", "forwardAck"} //added "routingEvent", "evt", "cmd", "simpleMessage", "forwardAck"
 
@@ -60,14 +64,14 @@ const (
 	RSA_PRIVATE_KEY string = "RSA PRIVATE KEY"
 )
 
-// path
-const (
-	PATH_CA_CERT          string = "/cert/CAcertificate.crt"
-	PATH_CERT             string = "/cert/cert.crt"
-	PATH_CA_PRIVATE_KEY   string = "/cert/privateCAKey.key"
-	PATH_PRIVATE_KEY      string = "/cert/privateKey.key"
-	PATH_CONFIG_DIRECTORY string = "/config/"
-	PATH_CERT_DIRECTORY   string = "/cert/"
+// path : it depends of the os
+var (
+	PATH_CA_CERT          string = filepath.Join("cert", "CAcertificate.crt")
+	PATH_CERT             string = filepath.Join("cert", "cert.crt")
+	PATH_CA_PRIVATE_KEY   string = filepath.Join("cert", "privateCAKey.key")
+	PATH_PRIVATE_KEY      string = filepath.Join("cert", "privateKey.key")
+	PATH_CONFIG_DIRECTORY string = filepath.Join("config")
+	PATH_CERT_DIRECTORY   string = filepath.Join("cert")
 )
 
 // TLS
