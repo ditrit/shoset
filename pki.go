@@ -247,6 +247,7 @@ func (s *Shoset) SetUpDoubleWay() error {
 
 	s.tlsConfigDoubleWay = &tls.Config{
 		Certificates:       []tls.Certificate{loadedCAkeys},
+		RootCAs:            caCertPool, // it is important for windows or it will raise a unknown authority error
 		ClientCAs:          caCertPool,
 		ClientAuth:         tls.RequireAndVerifyClientCert,
 		InsecureSkipVerify: false,
