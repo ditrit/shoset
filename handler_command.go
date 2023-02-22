@@ -1,7 +1,6 @@
 package shoset
 
 import (
-	"errors"
 	"time"
 
 	"github.com/ditrit/shoset/msg"
@@ -20,18 +19,30 @@ func (ch *CommandHandler) Get(c *ShosetConn) (msg.Message, error) {
 // HandleDoubleWay handles message for a ShosetConn accordingly.
 func (ch *CommandHandler) HandleDoubleWay(c *ShosetConn, message msg.Message) error {
 	m := message.(msg.Command)
-	if notInQueue := c.GetShoset().Queue["cmd"].Push(m, c.GetRemoteShosetType(), c.GetLocalAddress()); !notInQueue {
-		return errors.New("failed to handle command")
+	// log the fact that we received a command
+	c.Logger.Info().Msg("received command : " + m.GetPayload())
+	if notInQueue := c.GetShoset().Queue["cmd"].Push(m, c.GetRemoteShosetType(), c.GetLocalAddress()); notInQueue {
+		ch.Send(c.GetShoset(), m)
+		c.GetShoset().MessageEventBus.Publish("cmd", true) // Notifies of the reception of a new message
 	}
+
+	c.GetShoset().MessageEventBus.Publish("cmd", true) // Notifies of the reception of a new message
+
 	return nil
 }
 
-// Send sends the message through the given Shoset network.
+// Send sends the message through the given Shoset network. (through all the connections)
 func (ch *CommandHandler) Send(s *Shoset, m msg.Message) {
+	_ = s.Queue["cmd"].Push(m, VOID, VOID)
+	// get the target of the message m
+	var target = m.(msg.Command).GetTarget()
 	s.ConnsByLname.Iterate(
 		func(lname string, ipAddress string, conn interface{}) {
-			if err := conn.(*ShosetConn).GetWriter().SendMessage(m); err != nil {
-				conn.(*ShosetConn).Logger.Warn().Msg("couldn't send command msg : " + err.Error())
+			if lname == target {
+				s.Logger.Debug().Msg("sending command to " + ipAddress)
+				if err := conn.(*ShosetConn).GetWriter().SendMessage(m); err != nil {
+					conn.(*ShosetConn).Logger.Warn().Msg("couldn't send command msg : " + err.Error())
+				}
 			}
 		},
 	)
@@ -47,7 +58,12 @@ func (ch *CommandHandler) Wait(s *Shoset, replies *msg.Iterator, args map[string
 	cont := true
 	go func() {
 		for cont {
-			message := replies.Get().GetMessage()
+			response := replies.Get()
+			if response == nil {
+				time.Sleep(time.Duration(10) * time.Millisecond)
+				continue
+			}
+			message := response.GetMessage()
 			if message == nil {
 				time.Sleep(time.Duration(10) * time.Millisecond)
 				continue
@@ -55,6 +71,7 @@ func (ch *CommandHandler) Wait(s *Shoset, replies *msg.Iterator, args map[string
 			command := message.(msg.Command)
 			if command.GetCommand() == commandName {
 				term <- &message
+				return
 			}
 		}
 	}()
