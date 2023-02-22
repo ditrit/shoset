@@ -216,7 +216,7 @@ func (peh *PkiEventHandler) HandleDoubleWay(c *ShosetConn, message msg.Message) 
 // Send sends the message through the given Shoset network.
 func (peh *PkiEventHandler) Send(s *Shoset, evt msg.Message) {
 	s.ConnsByLname.Iterate(
-		func(key string, conn interface{}) {
+		func(lname string, ipAddress string, conn interface{}) {
 			if err := conn.(*ShosetConn).GetWriter().SendMessage(evt); err != nil {
 				conn.(*ShosetConn).Logger.Warn().Msg("couldn't send pkievt_TLSsingleWay : " + err.Error())
 			}

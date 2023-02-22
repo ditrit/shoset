@@ -308,7 +308,7 @@ func (s *Shoset) String() string {
 	description += ", \n\t- ConnsByLname : "
 	connsByName := []*ShosetConn{}
 	s.ConnsByLname.Iterate(
-		func(key string, val interface{}) {
+		func(lname string, ipAddress string, val interface{}) {
 			connsByName = append(connsByName, val.(*ShosetConn))
 		})
 	sort.Slice(connsByName, func(i, j int) bool {

@@ -32,7 +32,7 @@ func (eh *EventHandler) HandleDoubleWay(c *ShosetConn, message msg.Message) erro
 // Send sends the message through the given Shoset network.
 func (eh *EventHandler) Send(s *Shoset, evt msg.Message) {
 	s.ConnsByLname.Iterate(
-		func(key string, conn interface{}) {
+		func(lname string, ipAddress string, conn interface{}) {
 			err := conn.(*ShosetConn).GetWriter().SendMessage(evt)
 			if err != nil {
 				log.Warn().Msg("couldn't send evt : " + err.Error())

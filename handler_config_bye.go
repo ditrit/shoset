@@ -27,8 +27,8 @@ func (cbh *ConfigByeHandler) HandleDoubleWay(c *ShosetConn, message msg.Message)
 		// send delete signal to all connected shosets from our list of known shosets.
 		cfgNewDelete := msg.NewConfigProtocol(cfg.GetAddress(), c.GetShoset().GetLogicalName(), c.GetShoset().GetShosetType(), DELETE)
 		c.GetShoset().ConnsByLname.Iterate(
-			func(address string, bro interface{}) { // Enovoyé à tous, pas seulement les brothers ?
-				if address != cfg.GetAddress() {
+			func(lname string, ipAddress string, bro interface{}) { // Envoyé à tous, pas seulement les brothers ?
+				if ipAddress != cfg.GetAddress() {
 					err := bro.(*ShosetConn).GetWriter().SendMessage(*cfgNewDelete)
 					if err != nil {
 						bro.(*ShosetConn).Logger.Warn().Msg("couldn't send cfgNewDelete : " + err.Error())

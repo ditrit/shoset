@@ -60,12 +60,12 @@ func (m *MapSyncMap) StoreConfig(lName, address, protocol string, conn interface
 }
 
 // Iterate calls *MapSync.Range(iter) sequentially for each key and *MapSync present in the map.
-func (m *MapSyncMap) Iterate(iter func(string, interface{})) {
+func (m *MapSyncMap) Iterate(iter func(string, string, interface{})) {
 	if m != nil {
 		m.Range(func(key, syncMap interface{}) bool {
 			if syncMap != nil {
 				syncMap.(*sync.Map).Range(func(key2, val2 interface{}) bool {
-					iter(key2.(string), val2)
+					iter(key.(string), key2.(string), val2)
 					return true
 				})
 			}

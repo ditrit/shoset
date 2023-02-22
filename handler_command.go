@@ -29,7 +29,7 @@ func (ch *CommandHandler) HandleDoubleWay(c *ShosetConn, message msg.Message) er
 // Send sends the message through the given Shoset network.
 func (ch *CommandHandler) Send(s *Shoset, m msg.Message) {
 	s.ConnsByLname.Iterate(
-		func(key string, conn interface{}) {
+		func(lname string, ipAddress string, conn interface{}) {
 			if err := conn.(*ShosetConn).GetWriter().SendMessage(m); err != nil {
 				conn.(*ShosetConn).Logger.Warn().Msg("couldn't send command msg : " + err.Error())
 			}

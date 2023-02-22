@@ -35,10 +35,10 @@ func (reh *RoutingEventHandler) HandleDoubleWay(c *ShosetConn, message msg.Messa
 	if !ok {
 		c.GetShoset().SaveRoute(c, &routingEvt)
 		return nil
-	} else if (value.(Route).GetUUID() != routingEvt.GetUUID()) && (routingEvt.GetRerouteTimestamp() > value.(Route).GetTimestamp()) {
+	} else if (value.(Route).GetUUID() != routingEvt.GetUUID()) && (routingEvt.GetRerouteTimestamp() > value.(Route).GetTimestamp()) { // if this route is shorter
 		c.GetShoset().SaveRoute(c, &routingEvt)
 		return nil
-	} else if routingEvt.GetNbSteps() < value.(Route).GetNbSteps() {
+	} else if routingEvt.GetNbSteps() < value.(Route).GetNbSteps() { // if the number of steps is less (accurate ? -> I don't think so because can be closer)
 		c.GetShoset().SaveRoute(c, &routingEvt)
 		return nil
 	}
@@ -47,14 +47,16 @@ func (reh *RoutingEventHandler) HandleDoubleWay(c *ShosetConn, message msg.Messa
 
 // Send sends the message through the given Shoset network.
 func (reh *RoutingEventHandler) Send(s *Shoset, evt msg.Message) {
-	s.ConnsByLname.Iterate(
-		func(key string, conn interface{}) {
-			err := conn.(*ShosetConn).GetWriter().SendMessage(evt)
-			if err != nil {
-				log.Warn().Msg("couldn't send routingEvent : " + err.Error())
-			}
-		},
-	)
+	if s.GetIsValid() {
+		s.ConnsByLname.Iterate(
+			func(lname string, ipAddress string, conn interface{}) {
+				err := conn.(*ShosetConn).GetWriter().SendMessage(evt)
+				if err != nil {
+					s.Logger.Warn().Msg("couldn't send routingEvent : " + err.Error())
+				}
+			},
+		)
+	}
 }
 
 // Wait returns the message received for a given Shoset.
