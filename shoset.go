@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"time"
 
 	uuid "github.com/kjk/betterguid"
 	"github.com/rs/zerolog"
@@ -277,6 +278,9 @@ func NewShoset(logicalName, shosetType string) *Shoset {
 	// s.Queue["routingEvent"] = msg.NewQueue() // Not neeeded
 	s.Handlers["routingEvent"] = new(RoutingEventHandler)
 
+	s.Queue["forwardAck"] = msg.NewQueue()
+	s.Handlers["forwardAck"] = new(ForwardAcknownledgeHandler)
+
 	s.Queue["cmd"] = msg.NewQueue()
 	s.Handlers["cmd"] = new(CommandHandler)
 
@@ -479,6 +483,71 @@ func (s *Shoset) EndProtocol(Lname, remoteAddress string) {
 }
 
 // ######## Route and forwarding : ########
+
+// Forward messages destined to another Lname to the next step on the Route
+func (s *Shoset) forwardMessage(m msg.Message) {
+	masterTimeout := time.NewTimer(time.Duration(MASTER_SEND_TIMEOUT) * time.Second)
+	tryNumber := 0
+
+	for {
+		if route, ok := s.RouteTable.Load(m.GetDestinationLname()); ok { // There is a known Route to the destination Lname
+			s.Logger.Debug().Msg(s.GetLogicalName() + " is sending a message to " + m.GetDestinationLname() + " through " + route.(Route).GetNeighbour() + " IP : " + route.(Route).GetNeighborConn().GetRemoteAddress() + " .")
+
+			// Forward message
+			err := route.(Route).GetNeighborConn().GetWriter().SendMessage(m)
+			if err != nil {
+				s.Logger.Error().Msg("Couldn't send forwarded message : " + err.Error())
+			}
+
+			// Wait for Acknowledge
+			forwardAck := s.Wait("forwardAck", map[string]string{"UUID": m.GetUUID()}, TIMEOUT_ACK, nil)
+			if forwardAck == nil {
+				s.Logger.Warn().Msg("Forward message : Failed to forward message destined to " + m.GetDestinationLname() + " Forward Acknowledge not received. (retrying)")
+
+				// Invalidate route
+				s.RouteTable.Delete(m.GetDestinationLname())
+
+				// Reroute network
+				routing := msg.NewRoutingEvent(s.GetLogicalName(), true, 0, "")
+				s.Send(routing)
+
+				tryNumber++
+				if tryNumber > MAX_FORWARD_TRY {
+					s.Logger.Warn().Msg("Forward message : Failed to forward message destined to " + m.GetDestinationLname() + ". Max number of attemp exceeded. (Giving up)")
+					return
+				} else {
+					continue
+				}
+			}
+			return
+
+		} else { // There is no known Route to the destination Lname -> Wait for one to be available
+			s.Logger.Warn().Msg("Forward message : Failed to forward message destined to " + m.GetDestinationLname() + ". (no route) (waiting for correct route)")
+
+			// Reroute network
+			routing := msg.NewRoutingEvent(s.GetLogicalName(), true, 0, "")
+			s.Send(routing)
+
+			// Creation channel
+			chRoute := make(chan interface{})
+			s.RoutingEventBus.Subscribe(m.GetDestinationLname(), chRoute)
+
+			// Check if the route did not become available while you were preparing the channel
+			_, ok := s.RouteTable.Load(m.GetDestinationLname())
+			if ok {
+				continue
+			}
+			select {
+			case <-chRoute:
+				s.RoutingEventBus.UnSubscribe(m.GetDestinationLname(), chRoute)
+				break
+			case <-masterTimeout.C:
+				s.Logger.Error().Msg("Couldn't send forwarded message : " + "Timed out before correct route discovery. (Waited to long for the route)")
+				return
+			}
+		}
+	}
+}
 
 func (s *Shoset) SaveRoute(c *ShosetConn, routingEvt *msg.RoutingEvent) {
 	s.Logger.Debug().Msg(s.GetLogicalName() + " is saving a route to " + routingEvt.GetOrigin() + " through " + c.GetRemoteLogicalName() + " IP : " + c.GetRemoteAddress())

@@ -344,6 +344,23 @@ func (c *ShosetConn) handleMessageType(messageType string) error {
 		return errors.New("ReceiveMessage : can not read value of " + messageType + " : " + err.Error())
 	}
 
+	// If the message is of a forwardable type, an Acknowledge is expected by the sender
+	if contains(FORWARDABLE_TYPES, messageType) {
+		// Send back FowarkAck
+		forwardAck := msg.NewForwardAck(messageValue.GetUUID(), messageValue.GetTimestamp())
+		err := c.GetWriter().SendMessage(forwardAck)
+
+		if err != nil {
+			c.Logger.Error().Msg("Couldn't send FowarkAck message : " + err.Error())
+		}
+	}
+
+	// Check if the destinationLname is the current Lname
+	if (messageValue.GetDestinationLname() != c.GetLocalLogicalName()) && messageValue.GetDestinationLname() != "" {
+		c.GetShoset().forwardMessage(messageValue)
+		return nil
+	}
+
 	switch {
 	case messageType == TLS_SINGLE_WAY_PKI_EVT:
 		err := c.HandleSingleWay(messageValue)
