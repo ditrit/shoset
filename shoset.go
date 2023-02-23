@@ -281,6 +281,9 @@ func NewShoset(logicalName, shosetType string) *Shoset {
 	s.Queue["forwardAck"] = msg.NewQueue()
 	s.Handlers["forwardAck"] = new(ForwardAcknownledgeHandler)
 
+	s.Queue["simpleMessage"] = msg.NewQueue()
+	s.Handlers["simpleMessage"] = new(SimpleMessageHandler)
+
 	s.Queue["cmd"] = msg.NewQueue()
 	s.Handlers["cmd"] = new(CommandHandler)
 
