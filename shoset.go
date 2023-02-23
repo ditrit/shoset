@@ -199,6 +199,15 @@ func (s *Shoset) DeleteConn(Lname, remoteAddress string) {
 
 	// Deletes from the config file
 	s.ConnsByLname.cfg.DeleteFromKey(c.GetProtocol(), []string{c.GetRemoteAddress()})
+
+	// Finds and deletes Routes using the deleted ShosetConn
+	s.RouteTable.Range(
+		func(key, val interface{}) bool {
+			if val.(Route).GetNeighborConn() == c {
+				c.GetShoset().RouteTable.Delete(key)
+			}
+			return true
+		})
 }
 
 // Waits for every Conn initialised to be ready for use
@@ -265,6 +274,9 @@ func NewShoset(logicalName, shosetType string) *Shoset {
 	s.Queue["pkievt_TLSsingleWay"] = msg.NewQueue()
 	s.Handlers["pkievt_TLSsingleWay"] = new(PkiEventHandler)
 
+	// s.Queue["routingEvent"] = msg.NewQueue() // Not neeeded
+	s.Handlers["routingEvent"] = new(RoutingEventHandler)
+
 	s.Queue["cmd"] = msg.NewQueue()
 	s.Handlers["cmd"] = new(CommandHandler)
 
@@ -301,6 +313,20 @@ func (s *Shoset) String() string {
 	description += s.LnamesByProtocol.String()
 	description += "\n\t- LnamesByType:\n\t"
 	description += s.LnamesByType.String()
+
+	description += "\n\t- RouteTable (destination : {neighbor, Conn to Neighbor, distance, uuid, timestamp}):\n\t\t"
+	routeTable := map[string]Route{}
+	routeTableKey := []string{}
+	s.RouteTable.Range(
+		func(key, val interface{}) bool {
+			routeTable[key.(string)] = val.(Route)
+			routeTableKey = append(routeTableKey, key.(string))
+			return true
+		})
+	sort.Strings(routeTableKey)
+	for _, routeKey := range routeTableKey {
+		description += fmt.Sprintf("\n\t\t%v : %v", routeKey, routeTable[routeKey])
+	}
 
 	description += "\n}\n"
 	return description
@@ -450,6 +476,25 @@ func (s *Shoset) EndProtocol(Lname, remoteAddress string) {
 
 	s.LnamesByProtocol.AppendToKeys(PROTOCOL_EXIT, Lname, true) //Bye ou delete ?
 	s.DeleteConn(Lname, remoteAddress)
+}
+
+// ######## Route and forwarding : ########
+
+func (s *Shoset) SaveRoute(c *ShosetConn, routingEvt *msg.RoutingEvent) {
+	s.Logger.Debug().Msg(s.GetLogicalName() + " is saving a route to " + routingEvt.GetOrigin() + " through " + c.GetRemoteLogicalName() + " IP : " + c.GetRemoteAddress())
+
+	s.RouteTable.Store(routingEvt.GetOrigin(), NewRoute(c.GetRemoteLogicalName(), c, routingEvt.GetNbSteps(), routingEvt.GetUUID(), routingEvt.GetRerouteTimestamp()))
+
+	// Send NewRouteEvent
+	s.RoutingEventBus.Publish(routingEvt.GetOrigin(), true)
+
+	// Reroutes self to try to take advantage of the change in the network that triggered the Save but with the same timestamp and ID to avoid triggering it over and over.
+	reRouting := msg.NewRoutingEvent(c.GetLocalLogicalName(), false, routingEvt.GetRerouteTimestamp(), routingEvt.GetUUID())
+	s.Send(reRouting)
+
+	// Rebroadcast Routing event
+	routingEvt.SetNbSteps(routingEvt.GetNbSteps() + 1)
+	s.Send(routingEvt)
 }
 
 // ######## Send and Receice Messages : ########

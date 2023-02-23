@@ -197,6 +197,11 @@ func (c *ShosetConn) Store(protocol, lName, address, shosetType string) {
 	c.GetShoset().LnamesByType.AppendToKeys(shosetType, lName, true)
 	c.GetShoset().ConnsByLname.StoreConfig(lName, address, protocol, c)
 
+	// Reroute the network
+	c.Logger.Debug().Msg("rerouting the network by sending new routing event")
+	routing := msg.NewRoutingEvent(c.GetLocalLogicalName(), true, 0, "")
+	c.GetShoset().Send(routing)
+
 	c.SetIsValid(true)
 }
 
