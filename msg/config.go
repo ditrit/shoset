@@ -5,7 +5,7 @@ package msg
 type Config struct {
 	MessageBase
 	Target  string
-	Command string
+	Command string // type of config
 	Context map[string]interface{}
 }
 
@@ -22,8 +22,8 @@ func NewConfig(target string, command string, payload string) *Config {
 	return c
 }
 
-// GetMsgType accessor
-func (c Config) GetMsgType() string { return "config" }
+// GetMessageType accessor
+func (c Config) GetMessageType() string { return "config" }
 
 // GetTarget :
 func (c Config) GetTarget() string { return c.Target }
