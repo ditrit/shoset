@@ -1,0 +1,84 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "MultiProcesses_prep",
+            "type": "shell",
+            "command": "./test/multiProcesses_prep.sh",
+            "problemMatcher": []
+        },
+        {
+            "label": "DeleteFolder",
+            "type": "shell",
+            "command": "rm -rf ~/.shoset",
+            "problemMatcher": []
+        },
+        {
+            "label": "RunMultiProcesses",
+            "runOptions": {},
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "MultiProcesses_prep",
+                "RunMultiProcesses_run"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "RunMultiProcesses_run",
+            "runOptions": {},
+            "dependsOrder": "parallel",
+            "dependsOn": [
+                "RunMultiProcesses_E",
+                "RunMultiProcesses_D",
+                "RunMultiProcesses_C",
+                "RunMultiProcesses_B",
+                "RunMultiProcesses_A"
+            ],
+            "problemMatcher": [
+                "$go"
+            ]
+        },
+        {
+            "label": "RunMultiProcesses_A",
+            "type": "shell",
+            "command": "./test/multiProcesses_A.sh",
+            "presentation": {
+                "group": "test"
+            }
+        },
+        {
+            "label": "RunMultiProcesses_B",
+            "type": "shell",
+            "command": "./test/multiProcesses_B.sh",
+            "presentation": {
+                "group": "test"
+            }
+        },
+        {
+            "label": "RunMultiProcesses_C",
+            "type": "shell",
+            "command": "./test/multiProcesses_C.sh",
+            "presentation": {
+                "group": "test"
+            }
+        },
+        {
+            "label": "RunMultiProcesses_D",
+            "type": "shell",
+            "command": "./test/multiProcesses_D.sh",
+            "presentation": {
+                "group": "test"
+            }
+        },
+        {
+            "label": "RunMultiProcesses_E",
+            "type": "shell",
+            "command": "./test/multiProcesses_E.sh",
+            "presentation": {
+                "group": "test"
+            }
+        }
+    ]
+}
