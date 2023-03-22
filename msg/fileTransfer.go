@@ -35,6 +35,11 @@ type FileMessage struct {
 
 	// for library message
 	Library []FileStateMessage
+
+	// for chunk message
+	Begin     int64
+	Length    int
+	ChunkData []byte
 }
 
 func (fileMessage FileMessage) GetMessageType() string { return "file" }
