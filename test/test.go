@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -284,7 +285,7 @@ func testEndConnection(ctx context.Context, done context.CancelFunc) {
 		}
 	}()
 
-	time.Sleep(5 * time.Second)
+	time.Sleep(0 * time.Second)
 
 	fmt.Println("####", s[2].GetLogicalName(), " is ending connection to B")
 	s[2].EndProtocol("B", "127.0.0.1:8002")
@@ -294,6 +295,123 @@ func testEndConnection(ctx context.Context, done context.CancelFunc) {
 	utilsForTest.PrintManyShosets(s)
 
 	time.Sleep(10 * time.Second)
+}
+
+func TestFileTransferBetweenJoinNodes() {
+
+	baseDir, err := os.UserHomeDir()
+	if err != nil {
+		fmt.Println(err)
+	}
+	baseDir1 := filepath.Join(baseDir, ".shoset", "A", "127-0-0-1_8001a")
+	cl1 := shoset.NewShoset("A", "TypeOfA")
+	cl1.InitLibrary(baseDir1)
+	cl1.InitPKI("localhost:8001") // Is the CA of the network
+
+	baseDir2 := filepath.Join(baseDir, ".shoset", "A", "127-0-0-1_8002a")
+	cl2 := shoset.NewShoset("A", "TypeOfA")
+	cl2.InitLibrary(baseDir2)
+	cl2.Protocol("localhost:8002", "localhost:8001", "join") // we link it to our first socket
+
+	cl1.WaitForProtocols(5) // Wait for cl1 to be ready
+	cl2.WaitForProtocols(5)
+
+	//time.Sleep(5 * time.Second)
+	//fmt.Println(cl1)
+	//fmt.Println(cl2)
+	//fmt.Println(cl3)
+	//time.Sleep(2 * time.Second)
+	// setup the library for cl1
+	pathTest, err := os.Getwd()
+	if err != nil {
+		fmt.Println(err)
+	}
+	if filepath.Base(pathTest) != "test" {
+		pathTest = filepath.Join(pathTest, "test", "testRep")
+	} else {
+		pathTest = filepath.Join(pathTest, "testRep")
+	}
+	fichier := "test10Mo.txt"
+	err = utilsForTest.GenerateFile(pathTest, "test10Mo.txt", 10*1024)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	/*
+		file, err := os.Open(filepath.Join(myPath, fichier))
+		if err != nil {
+			fmt.Println(err)
+		}
+		err = os.MkdirAll(baseDir1, 0755)
+		if err != nil {
+			fmt.Println(err)
+		}
+
+		file2, err := os.Create(filepath.Join(baseDir1, fichier))
+		if err != nil {
+			fmt.Println(err)
+		}
+		_, err = io.Copy(file2, file)
+		if err != nil {
+			fmt.Println(err)
+		}
+		file.Close()
+		file2.Close()
+	*/
+	fmt.Println("file copied")
+	path := filepath.Join(pathTest, fichier)
+	pathLibrary := filepath.Join(baseDir1, fichier)
+	err = cl1.FileCommands.Add(path, pathLibrary)
+	if err != nil {
+		fmt.Println("Error while adding file to library : ", err)
+	}
+	fmt.Println("file uploaded")
+
+	time.Sleep(0 * time.Second)
+	baseDir3 := filepath.Join(baseDir, ".shoset", "A", "127-0-0-1_8003a")
+	cl3 := shoset.NewShoset("A", "TypeOfA")
+	cl3.InitLibrary(baseDir3)
+	cl3.Protocol("localhost:8003", "localhost:8002", "join") // we link it to our first socket
+	cl3.WaitForProtocols(5)
+
+	time.Sleep(50 * time.Second)
+}
+
+func TestTCPInfo() {
+
+	baseDir, err := os.UserHomeDir()
+	if err != nil {
+		fmt.Println(err)
+	}
+	baseDir1 := filepath.Join(baseDir, ".shoset", "A", "127-0-0-1_8001a")
+	cl1 := shoset.NewShoset("A", "TypeOfA")
+	cl1.InitLibrary(baseDir1)
+	cl1.InitPKI("localhost:8001") // Is the CA of the network
+
+	baseDir2 := filepath.Join(baseDir, ".shoset", "A", "127-0-0-1_8002a")
+	cl2 := shoset.NewShoset("A", "TypeOfA")
+	cl2.InitLibrary(baseDir2)
+	cl2.Protocol("localhost:8002", "localhost:8001", "join") // we link it to our first socket
+
+	cl1.WaitForProtocols(5) // Wait for cl1 to be ready
+	cl2.WaitForProtocols(5)
+
+	cl1.ConnsByLname.Iterate(func(key string, key2 string, value interface{}) {
+		conn := value.(*shoset.ShosetConn)
+		fmt.Println("conn", conn.GetRemoteAddress())
+		tcp, err := conn.GetTCPInfo()
+		if err != nil {
+			fmt.Println(err)
+		}
+		fmt.Println("tcpinfo :")
+		fmt.Println("fenetre de congestion", tcp.Snd_cwnd)
+		fmt.Println("RTT", tcp.Rtt)
+		fmt.Println("receive RTT", tcp.Rcv_rtt)
+		fmt.Println("fenetre de reception estimée", tcp.Rcv_space)
+
+	})
+
+	time.Sleep(50 * time.Second)
 }
 
 func main() {
@@ -377,6 +495,9 @@ func main() {
 		//example.Test2ShosetsCommand()
 	} else if arg == "7" {
 		example.Test3ShosetsCommand()
+	} else if arg == "8" {
+		TestFileTransferBetweenJoinNodes()
+		//TestTCPInfo()
 	}
 	// Memory profiler
 	// var memprofile = flag.String("memprofile", "./profiler/mem.prof", "write memory profile to `file`")

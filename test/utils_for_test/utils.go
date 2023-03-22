@@ -3,6 +3,8 @@ package utilsForTest
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/ditrit/shoset"
@@ -99,4 +101,18 @@ func RouteManyShosets(s []*shoset.Shoset, wait bool) {
 	if wait {
 		time.Sleep(1 * time.Second)
 	}
+}
+
+// generate a file IF IT DOESNT EXIST in the path with the name and the size in KB
+func GenerateFile(path string, name string, size int) error {
+	_, err := os.Stat(filepath.Join(path, name))
+	if err == nil {
+		return nil
+	}
+	buffer := make([]byte, size*1024)
+	for i := 0; i < size*1024; i++ {
+		buffer[i] = 'a'
+	}
+	err = os.WriteFile(filepath.Join(path, name), buffer, 0644)
+	return err
 }

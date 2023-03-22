@@ -277,11 +277,13 @@ func Test3ShosetsCommand() {
 		}
 	}()
 	iterator2 := msg.NewIterator(s[2].Queue["cmd"])
+	rcvd := 0
 	go func() {
 		for {
 			event_rc2 := s[2].Wait("cmd", map[string]string{"name": "test_command"}, 5, iterator2)
 			if event_rc2 != nil {
 				shoset.Log("B2 message received (Payload) : " + event_rc2.GetPayload())
+				rcvd += 1
 			}
 		}
 	}()
@@ -290,7 +292,8 @@ func Test3ShosetsCommand() {
 
 	time.Sleep(3 * time.Second) // Wait for the routing to be established
 
-	time.Sleep(5 * time.Second)      // Wait for the end of the test
+	time.Sleep(5 * time.Second) // Wait for the end of the test
+	fmt.Println(rcvd)
 	utilsForTest.PrintManyShosets(s) // Display the info of every shosets in the list
 
 	//select {} //Never return
