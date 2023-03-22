@@ -64,16 +64,16 @@ Update diagrams with script : `./uml/generate_diagrams_svg.sh` (Installation ins
 - Message type ([Creating a custom message type :](guide%2030e418b93d85452d83f0dc7c627318c7.md)) :
     - **Table of message types :** (config ≠configProtocol)
     
-    | Message type : | Usage : | Internal : | Send type : | Forwarding : | Queue : |
-    | --- | --- | --- | --- | --- | --- |
-    | command | Command for Gandalf | No | Send to every connection | No | Yes |
-    | config | Command for Gandalf | No | Send to every connection | No | Yes |
-    | configProtocol (link, join, bye) | Used for establishing and breaking connections (join, link, bye, …) | Yes | None (Handled outside the handler) | No | No |
-    | event | Send payload to the entire network | No | Send to every connection | No | Yes |
-    | pkiEvent | PKI initialization for establishing secure connexion | Yes | Send to every connection | No | Yes |
-    | routingEvent | Announce a shoset to the network to establish route to it. | Yes | Send to every connection | No | No |
-    | simpleMessage | Simplest  forwardable message type | No | Use route system to send only to the destination | Yes | Yes |
-    | ForwardAck | Acknowledge the reception of a forwarded message. | Yes | None (Handled outside the handler) | No | Yes |
+    | Message type :                   | Usage :                                                             | Internal : | Send type :                                      | Forwarding : | Queue : |
+    | -------------------------------- | ------------------------------------------------------------------- | ---------- | ------------------------------------------------ | ------------ | ------- |
+    | command                          | Command for Gandalf                                                 | No         | Send to every connection                         | No           | Yes     |
+    | config                           | Command for Gandalf                                                 | No         | Send to every connection                         | No           | Yes     |
+    | configProtocol (link, join, bye) | Used for establishing and breaking connections (join, link, bye, …) | Yes        | None (Handled outside the handler)               | No           | No      |
+    | event                            | Send payload to the entire network                                  | No         | Send to every connection                         | No           | Yes     |
+    | pkiEvent                         | PKI initialization for establishing secure connexion                | Yes        | Send to every connection                         | No           | Yes     |
+    | routingEvent                     | Announce a shoset to the network to establish route to it.          | Yes        | Send to every connection                         | No           | No      |
+    | simpleMessage                    | Simplest  forwardable message type                                  | No         | Use route system to send only to the destination | Yes          | Yes     |
+    | ForwardAck                       | Acknowledge the reception of a forwarded message.                   | Yes        | None (Handled outside the handler)               | No           | Yes     |
     - Every messageType has :
         - Common basic attributes (**MessageBase**) and some type specific attributes (Payload, UUID, TimeStamp, …).
         - An **identifying string** used to access the handler specific to this massage type.
@@ -127,7 +127,7 @@ Update diagrams with script : `./uml/generate_diagrams_svg.sh` (Installation ins
     - **Single way :** Used only for the certification process.
     - **Double way :** Used for normal communication.
 - **Certification process :**
-    - Use a temporary connection (**single way**) to obtain certificates from **CA** (certificate authority) **shoset** of the network.
+    - Use a Temporary connection (**single way**) to obtain certificates from **CA** (certificate authority) **shoset** of the network.
     - The certificate request is forwarded to the CA shoset (not using the **route** system).
 
 ### Files and folders of interest :
@@ -171,13 +171,13 @@ A **routing event** will be broadcasted through the **network** by every node th
 
 Every routing event also has a unique ID and a timestamp to always choose the most up-to-date **route**.
 
-| Routing event case : | Action : |
-| --- | --- |
-| ≠ID and more recent timestamp | Save route (no mater the length) <br /> Reroute self (new routing event with new ID) <br /> Rebroadcast Routing event to every connection |
-| ≠ID and older timestamp | do nothing |
+| Routing event case :                              | Action :                                                                                                                                  |
+| ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| ≠ID and more recent timestamp                     | Save route (no mater the length) <br /> Reroute self (new routing event with new ID) <br /> Rebroadcast Routing event to every connection |
+| ≠ID and older timestamp                           | do nothing                                                                                                                                |
 | Better route (fewer steps than the current route) | Save route (no mater the length) <br /> Reroute self (new routing event with new ID) <br /> Rebroadcast Routing event to every connection |
-| Route to unknown Lname (No route to this Lname) | Save route (no mater the length) <br /> Reroute self (new routing event with new ID) <br /> Rebroadcast Routing event to every connection |
-| Worse route with same ID as the current route | do nothing |
+| Route to unknown Lname (No route to this Lname)   | Save route (no mater the length) <br /> Reroute self (new routing event with new ID) <br /> Rebroadcast Routing event to every connection |
+| Worse route with same ID as the current route     | do nothing                                                                                                                                |
 
 Only one **route** per **Lname** is saved at any give moment by a **shoset**.
 
@@ -190,6 +190,14 @@ Only one **route** per **Lname** is saved at any give moment by a **shoset**.
 Trying to send a message to a **Lname** with no **route** will trigger a reroute, and wait for a **route** to the destination to be available. (The new ID will trigger the destination to reroute itself).
 
 When a message is **forwarded** to the next step of the **route**, an **acknowledgment** (`forwardAck`) is expected, if it is not received before the timeout, the **route** is deleted and a reroute is launched.
+
+## File Synchronisation :
+
+This feature is still in developpement.
+Each node have a Library (folder on the machine) that will be synchronised with the other nodes belonging to the same Lname.
+Basic operations (add a file, delete, move, modify) are supported.
+To have a better understanding of the feature, you can read the [File Synchronisation](./fileSynchronisation.md) documentation.
+
 
 ## Using the project :
 
@@ -269,9 +277,9 @@ shoset.SetLogLevel(shoset.TRACE)
 
 ## Creating a custom message type :
 
-Create a new **handler**. (You can use `handler_event.go` or `handler_simple_message.go` as a template.)
+Create a new **handler**. (You can use `handler_event.go` or `handler_simple_message.go` as a Template.)
 
-Create a new message type in a dedicated .go file in `./msg` **(Only public fields will be sent, make every field public in the message struct.)** (You can use `SimpleMessage.go` or `event.go` as a template.)
+Create a new message type in a dedicated .go file in `./msg` **(Only public fields will be sent, make every field public in the message struct.)** (You can use `SimpleMessage.go` or `event.go` as a Template.)
 
 Add the **handler** and a new **queue** to `shoset.go` (in `NewShoset()`).
 
