@@ -207,6 +207,13 @@ func (c *ShosetConn) Store(protocol, lName, address, shosetType string) {
 
 	c.SetIsValid(true)
 	c.GetShoset().SyncLibrary(c)
+	count := 0
+	c.GetShoset().ConnsByLname.Iterate(func(lname string, address string, value interface{}) {
+		if lname == c.GetLocalLogicalName() {
+			count++
+		}
+	})
+	c.GetShoset().Handlers["file"].(*FileHandler).SetNbConn(count)
 }
 
 // NewShosetConn creates a new ShosetConn object for a specific address.

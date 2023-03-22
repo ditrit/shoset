@@ -214,6 +214,13 @@ func (s *Shoset) DeleteConn(Lname, remoteAddress string) {
 			}
 			return true
 		})
+	count := 0
+	s.ConnsByLname.Iterate(func(lname string, address string, value interface{}) {
+		if lname == c.GetLocalLogicalName() {
+			count++
+		}
+	})
+	s.Handlers["file"].(*FileHandler).SetNbConn(count)
 }
 
 // Waits for every Conn initialised to be ready for use
