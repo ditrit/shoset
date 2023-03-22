@@ -32,6 +32,9 @@ type FileMessage struct {
 	FilePath      string
 	FileOperation OperationMessage
 	FileHashMap   map[int]string
+
+	// for library message
+	Library []FileStateMessage
 }
 
 func (fileMessage FileMessage) GetMessageType() string { return "file" }
