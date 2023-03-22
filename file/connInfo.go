@@ -47,12 +47,14 @@ type ConnInfo interface {
 	GetPiecesRequested() []int
 	HadARecentDecrease() bool
 	GetNbRequests() int
+	GetLeecher() *FileLeecher
 	GetConn() ShosetConn
 }
 
 // information about a connection
 type ConnectionInformation struct {
 	Conn               ShosetConn   // connection
+	Leecher            *FileLeecher // leecher
 	piecesRequested    map[int]bool // list of pieces we have requested to him
 	bitfield           []bool       // bitfield of the pieces he has
 	nbBlocks           int          // number of blocks in a piece
@@ -75,9 +77,10 @@ type ConnectionInformation struct {
 	m sync.RWMutex
 }
 
-func NewConnInfo(conn ShosetConn, blocks int) *ConnectionInformation {
+func NewConnInfo(conn ShosetConn, leecher *FileLeecher, blocks int) *ConnectionInformation {
 	return &ConnectionInformation{
 		Conn:            conn,
+		Leecher:         leecher,
 		nbMaxRequests:   4,
 		nbBlocks:        blocks,
 		piecesRequested: make(map[int]bool),
@@ -153,7 +156,7 @@ func (connInfo *ConnectionInformation) ReAskAfterDecrease() {
 	connInfo.m.Lock()
 	connInfo.GetConn().GetLogger().Info().Msgf(conn.GetLocalAddress()+": sleeping finished, downloading again from : download piece by piece : %t with max %d requests.", connInfo.askingEntirePieces, connInfo.nbMaxRequests)
 	connInfo.m.Unlock()
-	// TODO : continue downloading
+	connInfo.Leecher.DownloadNextPieces(conn)
 }
 
 // when we had a decrease, it wait a certain time before retrying to increase the level of the connection
@@ -365,6 +368,10 @@ func (connInfo *ConnectionInformation) GetNbRequests() int {
 	connInfo.m.RLock()
 	defer connInfo.m.RUnlock()
 	return connInfo.nbRequests
+}
+
+func (connInfo *ConnectionInformation) GetLeecher() *FileLeecher {
+	return connInfo.Leecher
 }
 
 func (connInfo *ConnectionInformation) GetConn() ShosetConn {
