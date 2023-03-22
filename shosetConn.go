@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
+	"unsafe"
 
 	"strings"
 	"sync"
@@ -12,6 +14,7 @@ import (
 	"time"
 
 	"github.com/ditrit/shoset/msg"
+
 	uuid "github.com/kjk/betterguid"
 	"github.com/rs/zerolog"
 )
@@ -203,6 +206,7 @@ func (c *ShosetConn) Store(protocol, lName, address, shosetType string) {
 	c.GetShoset().Send(routing)
 
 	c.SetIsValid(true)
+	c.GetShoset().SyncLibrary(c)
 }
 
 // NewShosetConn creates a new ShosetConn object for a specific address.
@@ -292,6 +296,7 @@ func (c *ShosetConn) RunInConnDouble() {
 			c.Logger.Error().Msg("err in ReceiveMessage RunInConnDouble: " + err.Error())
 			return
 		}
+
 	}
 }
 
@@ -327,7 +332,9 @@ func (c *ShosetConn) ReceiveMessage() error {
 
 // handleMessageType deduce handler from messageType and use it adequately.
 func (c *ShosetConn) handleMessageType(messageType string) error {
-	c.Logger.Debug().Msg("received : " + messageType)
+	if messageType != "file" { // because file is too verbose
+		c.Logger.Debug().Msg("received : " + messageType)
+	}
 	handler, ok := c.GetShoset().Handlers[messageType]
 	if !ok {
 		if c.GetDirection() == IN {
@@ -377,4 +384,58 @@ func (c *ShosetConn) handleMessageType(messageType string) error {
 		return errors.New("wrong messageType : " + messageType)
 	}
 	return nil
+}
+
+// to send a message withour having to access the writer externally
+func (shosetConn *ShosetConn) SendMessage(msg msg.Message) error {
+	writer := shosetConn.GetWriter()
+	if writer == nil {
+		return errors.New("SendMessage: writer is nil")
+	}
+	return writer.SendMessage(msg)
+}
+
+// to get TCPInfo : info about the connection (RTT, congestion window, lost packets,...)
+func (shosetConn *ShosetConn) GetTCPInfo() (*syscall.TCPInfo, error) {
+	shosetConn.mu.Lock()
+	defer shosetConn.mu.Unlock()
+	return shosetConn.getTCPInfo(shosetConn.conn)
+}
+
+// to get TCPInfo using syscall on linux
+func (shosetConn *ShosetConn) getTCPInfo(conn net.Conn) (*syscall.TCPInfo, error) {
+	type tc struct {
+		underConn net.Conn
+	}
+	var rawConn syscall.RawConn
+	var err error
+	tconn := (*tc)(unsafe.Pointer(conn.(*tls.Conn)))
+	if tcpConn, ok := tconn.underConn.(*net.TCPConn); ok {
+		rawConn, err = tcpConn.SyscallConn()
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		return nil, errors.New("tls under conn is not *net.TCPConn")
+	}
+
+	tcpInfo := syscall.TCPInfo{}
+	size := unsafe.Sizeof(tcpInfo)
+	var errno syscall.Errno
+	err = rawConn.Control(func(fd uintptr) {
+		_, _, errno = syscall.Syscall6(syscall.SYS_GETSOCKOPT, fd, syscall.SOL_TCP, syscall.TCP_INFO,
+			uintptr(unsafe.Pointer(&tcpInfo)), uintptr(unsafe.Pointer(&size)), 0)
+	})
+	if err != nil {
+		return nil, fmt.Errorf("rawconn control failed. err=%v", err)
+	}
+
+	if errno != 0 {
+		return nil, fmt.Errorf("syscall failed. errno=%d", errno)
+	}
+	return &tcpInfo, nil
+}
+
+func (shosetConn *ShosetConn) GetLogger() *zerolog.Logger {
+	return &shosetConn.Logger
 }

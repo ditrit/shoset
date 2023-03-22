@@ -14,6 +14,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
+	fileMod "github.com/ditrit/shoset/file"
 	"github.com/ditrit/shoset/msg"
 
 	concurentData "github.com/ditrit/shoset/concurent_data"
@@ -35,22 +36,26 @@ type Shoset struct {
 
 	Context map[string]interface{} // used for gandalf
 
-	ConnsByLname     *MapSyncMap // map[lName]map[remoteAddress]*ShosetConn   connections by logical name
-	LnamesByType     *MapSyncMap // map[shosetType]map[lName]bool used for gandalf
-	LnamesByProtocol *MapSyncMap // map[protocolType]map[lName]bool logical names by protocol type
-	ConnsSingleBool  *sync.Map   // map[ipAddress]bool ipAddresses waiting in singleWay to be handled for TLS double way
-	ConnsSingleConn  *sync.Map   // map[ipAddress]*ShosetConn ShosetConns waiting in singleWay to be handled for TLS double way
-	RouteTable       *sync.Map   // map[lName]*Route Route to another logical name
+	ConnsByLname     *MapSyncMap               // map[lName]map[remoteAddress]*ShosetConn   connections by logical name
+	LnamesByType     *MapSyncMap               // map[shosetType]map[lName]bool used for gandalf
+	LnamesByProtocol *MapSyncMap               // map[protocolType]map[lName]bool logical names by protocol type
+	ConnsSingleBool  *sync.Map                 // map[ipAddress]bool ipAddresses waiting in singleWay to be handled for TLS double way
+	ConnsSingleConn  *sync.Map                 // map[ipAddress]*ShosetConn ShosetConns waiting in singleWay to be handled for TLS double way
+	RouteTable       *sync.Map                 // map[lName]*Route Route to another logical name
+	Library          fileMod.FileLibrary       // Library of files
+	FileCommands     *fileMod.ExternalCommands // File commands
+	UUID             string                    // unique identifier of the Shoset
 
 	RoutingEventBus eventBus.EventBus // When a route to a Lname is discovered, sends an event to everyone waiting for a route to this Lname
 	// topic : discovered Lname
 
-	bindAddress string       // address on which the Shoset is bound
-	logicalName string       // logical name of the Shoset
-	shosetType  string       // logical type of the shoset
-	isValid     bool         // state of the Shoset - must be done differently in future review
-	isPki       bool         // is the Shoset admin of network or not
-	listener    net.Listener // generic network listener for stream-oriented protocols
+	baseDirectory string       // base directory of the Shoset
+	bindAddress   string       // address on which the Shoset is bound
+	logicalName   string       // logical name of the Shoset
+	shosetType    string       // logical type of the shoset
+	isValid       bool         // state of the Shoset - must be done differently in future review
+	isPki         bool         // is the Shoset admin of network or not
+	listener      net.Listener // generic network listener for stream-oriented protocols
 
 	tlsConfigSingleWay *tls.Config // mutual authentication between client and server
 	tlsConfigDoubleWay *tls.Config // client authenticate server
@@ -224,9 +229,12 @@ func (s *Shoset) WaitForProtocols(timeout int) {
 
 // NewShoset creates a new Shoset object.
 // Initializes each fields, queues and handlers.
+// logicalName : each node with the same logicalName have the same document and the same configuration (same link with other nodes)
+// shosetType : the type of the node (not used for now)
 func NewShoset(logicalName, shosetType string) *Shoset {
+	UUID := uuid.New()
 	s := Shoset{
-		Logger: log.With().Str("uuid", uuid.New()).Logger(),
+		Logger: log.With().Str("uuid", UUID).Logger(),
 
 		Context: make(map[string]interface{}),
 
@@ -236,6 +244,7 @@ func NewShoset(logicalName, shosetType string) *Shoset {
 		ConnsSingleBool:  new(sync.Map),
 		ConnsSingleConn:  new(sync.Map),
 		RouteTable:       new(sync.Map),
+		UUID:             UUID,
 
 		RoutingEventBus: eventBus.NewEventBus(),
 
@@ -287,9 +296,16 @@ func NewShoset(logicalName, shosetType string) *Shoset {
 	s.Queue["cmd"] = msg.NewQueue()
 	s.Handlers["cmd"] = new(CommandHandler)
 
+	s.Queue["file"] = msg.NewQueue()
+	fileHandler := new(FileHandler)
+	s.Handlers["file"] = fileHandler
+
 	//TODO MOVE TO GANDALF
 	s.Queue["config"] = msg.NewQueue()
 	s.Handlers["config"] = new(ConfigHandler)
+
+	s.FileCommands = fileMod.NewExternalCommands(&fileHandler.FileTransferImpl)
+	fileHandler.SetExternalCommands(s.FileCommands)
 
 	s.Logger.Debug().Str("lname", logicalName).Msg("shoset created")
 	return &s
@@ -381,7 +397,7 @@ func (s *Shoset) handleBind() {
 			return
 		}
 
-		if exists, _ := s.ConnsSingleBool.Load(strings.Split(acceptedConn.RemoteAddr().String(), ":")[0]); exists != nil {
+		if exists, _ := s.ConnsSingleBool.Load(strings.Split(acceptedConn.RemoteAddr().String(), ":")[0]); exists != nil { // if the connection is single way
 			tlsConnSingleWay := tls.Server(acceptedConn, s.tlsConfigSingleWay)
 			singleWayConn, _ := NewShosetConn(s, acceptedConn.RemoteAddr().String(), IN)
 			singleWayConn.UpdateConn(tlsConnSingleWay)
@@ -516,7 +532,7 @@ func (s *Shoset) forwardMessage(m msg.Message) {
 
 				tryNumber++
 				if tryNumber > MAX_FORWARD_TRY {
-					s.Logger.Warn().Msg("Forward message : Failed to forward message destined to " + m.GetDestinationLname() + ". Max number of attemp exceeded. (Giving up)")
+					s.Logger.Warn().Msg("Forward message : Failed to forward message destined to " + m.GetDestinationLname() + ". Max number of attempts exceeded. (Giving up)")
 					return
 				} else {
 					continue
@@ -600,5 +616,4 @@ func (s *Shoset) Wait(msgType string, args map[string]string, timeout int, itera
 	} else {
 		return *(event)
 	}
-
 }
