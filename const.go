@@ -5,13 +5,13 @@ import (
 )
 
 // Supported message type
-var MESSAGE_TYPES = []string{"cfgjoin", "cfglink", "cfgbye", "pkievt_TLSdoubleWay", "routingEvent", "evt", "cmd", "simpleMessage", "forwardAck"} //added "routingEvent", "evt", "cmd", "simpleMessage", "forwardAck"
+var MESSAGE_TYPES = []string{"cfgjoin", "cfglink", "cfgbye", "pkievt_TLSdoubleWay", "routingEvent", "evt", "cmd", "simpleMessage", "forwardAck", "file"} //added "routingEvent", "evt", "cmd", "simpleMessage", "forwardAck"
 
 // Has a Send function in the handler
-var SENDABLE_TYPES = []string{"routingEvent", "evt", "cmd", "simpleMessage", "forwardAck"} // "config"
+var SENDABLE_TYPES = []string{"routingEvent", "evt", "cmd", "simpleMessage", "forwardAck", "file"} // "config"
 
 // Has a Wait function in the handler
-var RECEIVABLE_TYPES = []string{"evt", "cmd", "simpleMessage", "forwardAck"} // "config"
+var RECEIVABLE_TYPES = []string{"evt", "cmd", "simpleMessage", "forwardAck", "file"} // "config"
 
 var FORWARDABLE_TYPES = []string{"simpleMessage"}
 
@@ -72,6 +72,7 @@ var (
 	PATH_PRIVATE_KEY      string = filepath.Join("cert", "privateKey.key")
 	PATH_CONFIG_DIRECTORY string = filepath.Join("config")
 	PATH_CERT_DIRECTORY   string = filepath.Join("cert")
+	PATH_COPY_FILES       string = filepath.Join(".copy")
 )
 
 // TLS
