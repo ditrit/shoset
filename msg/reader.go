@@ -3,16 +3,17 @@ package msg
 import (
 	"bufio"
 	"encoding/gob"
-	"github.com/rs/zerolog/log"
 	"io"
 	"sync"
+
+	"github.com/rs/zerolog/log"
 )
 
 // Reader : simple bufio.Reader safe for goroutines.
 type Reader struct {
-	b *bufio.Reader // implements buffering for an io.Reader object
-	dec *gob.Decoder // manages the receipt of type and data information read from the remote side of a connection. It is safe for concurrent use by multiple goroutines
-	m sync.Mutex // mutex for goroutines synchronization
+	b   *bufio.Reader // implements buffering for an io.Reader object
+	dec *gob.Decoder  // manages the receipt of type and data information read from the remote side of a connection. It is safe for concurrent use by multiple goroutines
+	m   sync.Mutex    // mutex for goroutines synchronization
 }
 
 // UpdateReader updates reader object with new connection information.

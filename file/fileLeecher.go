@@ -3,6 +3,7 @@ package fileSync
 import (
 	"fmt"
 	"math/rand"
+	"strconv"
 	"time"
 
 	"github.com/ditrit/shoset/msg"
@@ -37,9 +38,10 @@ type FileLeecher struct {
 	startTimestamp int64     // timestamp of the start of the leecher
 }
 
-func NewFileLeecher(syncFile SyncFile) *FileLeecher {
+func NewFileLeecher(syncFile SyncFile, fileTransfer FileTransfer) *FileLeecher {
 	var fileLeecher FileLeecher
 	fileLeecher.SyncFile = syncFile
+	fileLeecher.InitSeeder(syncFile, fileTransfer)
 	fileLeecher.hash = syncFile.GetCopyFile().GetHash()
 	fileLeecher.hashMap = syncFile.GetCopyFile().GetHashMap()
 	fileLeecher.pieceSize = fileLeecher.File.GetPieceSize()
@@ -111,8 +113,7 @@ func (fileLeecher *FileLeecher) SendHaveMessage(pieceId int) {
 	fileLeecher.InterestedConn.Range(func(key, value interface{}) bool {
 		conn := key.(ShosetConn)
 		if value.(bool) {
-			// TODO : send have message
-			fmt.Println(conn)
+			fileLeecher.FileTransfer.SendMessage(haveMessage, conn)
 		}
 		return true
 	})
@@ -213,6 +214,8 @@ func (fileLeecher *FileLeecher) ReceiveChunk(conn ShosetConn, begin int64, lengt
 	}
 
 	connInfo.AddBytesSeries(len(block))
+
+	fileLeecher.FileTransfer.DecreaseMissingLength(len(block))
 
 	if length == fileLeecher.pieceSize {
 		// if the piece is not separated into blocks and is sent in one time
@@ -344,6 +347,7 @@ func (fileLeecher *FileLeecher) launchDownload(conn ShosetConn) {
 		conn.GetLogger().Info().Msg(conn.GetLocalAddress() + " launchDownload for " + conn.GetRemoteAddress() + " as a new conn")
 		connInfo = NewConnInfo(conn, fileLeecher, fileLeecher.nbBlocks)
 		fileLeecher.ConnInfoMap[conn] = connInfo
+		fileLeecher.FileTransfer.AddFileLeecherToConn(fileLeecher, conn)
 		go fileLeecher.AskBitfieldFile(conn)
 		fileLeecher.SendInterested(conn, true)
 	}
@@ -362,7 +366,7 @@ func (fileLeecher *FileLeecher) SendInterested(conn ShosetConn, interested bool)
 	} else {
 		message.MessageName = "notInterested"
 	}
-	// TODO: send the message
+	fileLeecher.FileTransfer.SendMessage(message, conn)
 }
 
 // initialize the download of the file with a conn
@@ -489,7 +493,8 @@ func (fileLeecher *FileLeecher) DownloadNextPieces(conn ShosetConn) error {
 // when the download is complete, we can stop the leecher
 func (fileLeecher *FileLeecher) EndDownload() error {
 	delta := time.Now().UnixMilli() - fileLeecher.startTimestamp
-	fmt.Println("file completed in", delta, "ms")
+	fileLeecher.FileTransfer.GetLogger().Info().Msg("-------------------------file " + fileLeecher.File.GetName() + " is complete ! in " + strconv.FormatInt(delta, 10) + " ms-------------------------")
+
 	if fileLeecher.stopped {
 		fileLeecher.m.Unlock()
 		return fmt.Errorf("file leecher already stopped")
@@ -520,6 +525,8 @@ func (fileLeecher *FileLeecher) EndDownload() error {
 		}
 		return err
 	}
+	//fileLeecher.FileTransfer.FileSeeders.Store(fileLeecher.SyncFile.GetUUID(), &fileLeecher.FileSeeder)
+	fileLeecher.FileTransfer.RemoveFileLeecher(fileLeecher)
 
 	message := msg.FileMessage{
 		MessageName: "downloadFinished",
@@ -528,8 +535,9 @@ func (fileLeecher *FileLeecher) EndDownload() error {
 		FileHash:    fileLeecher.File.GetHash(),
 		FileVersion: fileLeecher.File.GetVersion(),
 	}
-	// TODO : send message to the user
-	fmt.Println(message)
+	fileLeecher.FileTransfer.UserPush(&message)
+
+	fileLeecher.FileTransfer.WriteRecords()
 	return err
 }
 
@@ -569,6 +577,7 @@ func (fileLeecher *FileLeecher) GetConnInfo() map[ShosetConn]ConnInfo {
 }
 
 // fill the map with the sum of the rate of each conn and the number of rate we add
+// it will be used in FileTransfer to monitor the rate of each conn
 func (fileLeecher *FileLeecher) UpdateGlobalRate(connMapSum map[ShosetConn]int, connMapCount map[ShosetConn]int) {
 	fileLeecher.m.Lock()
 	defer fileLeecher.m.Unlock()
@@ -612,7 +621,7 @@ func (fileLeecher *FileLeecher) AskBitfieldFile(conn ShosetConn) {
 					PieceSize:   fileLeecher.File.GetPieceSize(),
 				}
 				askBitfield.InitMessageBase()
-				// TODO : send message
+				fileLeecher.FileTransfer.SendMessage(askBitfield, conn)
 				time.Sleep(10 * time.Second)
 			}
 		}

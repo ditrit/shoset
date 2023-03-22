@@ -17,15 +17,17 @@ This small structure load the data from the wanted file and send it to the reque
 type FileSeeder struct {
 	SyncFile         SyncFile
 	File             File
+	FileTransfer     FileTransfer
 	DataAskedPerConn sync.Map //map[ShosetConn][int64]int // list of conn and the data they asked : to not send them twice the same data
 	InterestedConn   sync.Map //map[ShosetConn]bool       // list of interested conn
 	m                sync.Mutex
 	lastSent         int64 // timestamp of last sent block : used to delete the seeder if no block is sent for a long time
 }
 
-func (fileSeeder *FileSeeder) InitSeeder(syncFile SyncFile) {
+func (fileSeeder *FileSeeder) InitSeeder(syncFile SyncFile, fileTransfer FileTransfer) {
 	fileSeeder.SyncFile = syncFile
 	fileSeeder.File = syncFile.GetCopyFile()
+	fileSeeder.FileTransfer = fileTransfer
 	fileSeeder.InterestedConn = sync.Map{}
 	fileSeeder.lastSent = time.Now().UnixMilli()
 }
@@ -68,7 +70,7 @@ func (fileSeeder *FileSeeder) sendBlock(conn ShosetConn, begin int64, length int
 		ChunkData:   data,
 	}
 	responseMsg.InitMessageBase()
-	// TODO : send the message
+	fileSeeder.FileTransfer.SendMessage(responseMsg, conn)
 	return err
 }
 

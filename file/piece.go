@@ -141,7 +141,7 @@ func (piece *Piece) downloadNextBlocks() bool {
 			Length:      piece.blockSize,
 		}
 		message.InitMessageBase()
-		//TODO : sned the message
+		piece.ConnInformation.GetLeecher().FileTransfer.AskChunk(piece.ConnInformation.GetConn(), &message, !piece.ConnInformation.HadARecentDecrease())
 		piece.ConnInformation.AddRequestBlock()
 		//fmt.Println(conn.GetLocalAddress(), "asking piece", piece.pieceId, "to", conn.GetRemoteAddress())
 		count++
@@ -165,7 +165,7 @@ func (piece *Piece) downloadPiece() {
 			Length:      piece.pieceSize,
 		}
 		message.InitMessageBase()
-		//TODO : send the message
+		piece.ConnInformation.GetLeecher().FileTransfer.AskChunk(piece.ConnInformation.GetConn(), &message, !piece.ConnInformation.HadARecentDecrease())
 	}
 }
 
@@ -195,6 +195,15 @@ func (piece *Piece) CheckRequestTimeout() bool {
 						// we remove this request 3s after, if we didn't received it
 						time.Sleep(3 * time.Second)
 						piece.m.Lock()
+						messageQueue := piece.ConnInformation.GetLeecher().FileTransfer.GetReceiveQueue(&conn)
+						if messageQueue != nil {
+							if messageQueue.HasChunk(int64(piece.pieceId)*int64(piece.pieceSize) + int64(i*piece.blockSize)) {
+								// if we received the message but didn't treated it
+								piece.m.Unlock()
+								piece.ConnInformation.DecreaseLevel()
+								return
+							}
+						}
 						if !piece.blockPossessed[i] && piece.blockRequested[i] {
 							conn.GetLogger().Trace().Msgf("reasking %d and block %d / %d ---------------- asked to %v", piece.pieceId, i, int64(piece.pieceId)*int64(piece.pieceSize)+int64(i*piece.blockSize), conn.GetRemoteAddress())
 							piece.blockRequested[i] = false

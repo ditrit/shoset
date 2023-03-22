@@ -33,6 +33,7 @@ type FileLibrary interface {
 	GetMessageLibrary() (*msg.FileMessage, error)
 	// Add all the files that are sync to the library
 	LoadLibrary() error
+	SetFileTransfer(fileTransfer FileTransfer)
 	// not used yet
 	// we want to keep a trace of a file that has been deleted
 	DeleteFile(uuid string)
@@ -49,11 +50,12 @@ type FileLibrary interface {
 }
 
 type FileLibraryImpl struct {
-	FilesMap    map[string]SyncFile // Links a uuid to a pointer to a File object -> []*File
-	PathUUIDMap map[string]string   // Links a path (realPath) to a uuid
-	libraryDir  string              //path to the library directory : directory where all the files are stored
-	hash        string
-	m           sync.Mutex
+	FilesMap     map[string]SyncFile // Links a uuid to a pointer to a File object -> []*File
+	PathUUIDMap  map[string]string   // Links a path (realPath) to a uuid
+	libraryDir   string              //path to the library directory : directory where all the files are stored
+	hash         string
+	FileTransfer FileTransfer
+	m            sync.Mutex
 }
 
 // Create new empty FileLibrary
@@ -86,6 +88,7 @@ func (fileLibrary *FileLibraryImpl) UploadFile(file File) (SyncFile, error) {
 // a real file is added by the user. We create the copy file and add the syncFile to the library
 func (fileLibrary *FileLibraryImpl) uploadFile(file File) (SyncFile, error) {
 	syncFile := NewSyncFile(fileLibrary.libraryDir)
+	syncFile.SetFileTransfer(fileLibrary.FileTransfer)
 	syncFile.RealFile = file
 	var err error
 	syncFile.CopyFile, err = LoadFile(fileLibrary.libraryDir, RealToCopyPath(file.GetRelativePath()), file.GetName())
@@ -106,6 +109,7 @@ func (fileLibrary *FileLibraryImpl) CreateFile(file File, uuid string) (SyncFile
 	fileLibrary.m.Lock()
 	defer fileLibrary.m.Unlock()
 	syncFile := NewSyncFile(fileLibrary.libraryDir)
+	syncFile.SetFileTransfer(fileLibrary.FileTransfer)
 	syncFile.SetUUID(uuid)
 	syncFile.CopyFile = file
 	var err error
@@ -139,7 +143,7 @@ func (fileLibrary *FileLibraryImpl) UpdateLibrary(listFiles []FileState, conn Sh
 	for _, fileState := range listFiles {
 		syncFile, err := fileLibrary.GetFile(fileState.UUID)
 		if err != nil {
-			// TODO : ask for the file
+			go fileLibrary.FileTransfer.AskInfoFile(conn, fileState)
 		} else {
 			err := syncFile.UpdateFile(fileState, conn)
 			if err != nil { // conflict
@@ -212,9 +216,14 @@ func (fileLibrary *FileLibraryImpl) LoadLibrary() error {
 		if err != nil {
 			return err
 		}
+		syncFile.SetFileTransfer(fileLibrary.FileTransfer)
 		fileLibrary.addNewSyncFile(syncFile)
 	}
 	return nil
+}
+
+func (fileLibrary *FileLibraryImpl) SetFileTransfer(fileTransfer FileTransfer) {
+	fileLibrary.FileTransfer = fileTransfer
 }
 
 // not used yet

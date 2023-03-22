@@ -70,6 +70,7 @@ type SyncFile interface {
 	GetCopyFile() File
 	GetUUID() string
 	SetUUID(uuid string)
+	SetFileTransfer(ft FileTransfer)
 	GetLastOperation() Operation
 	GetShortInfoMsg() msg.FileMessage
 	// like shortInfo but we add the hashmap
@@ -84,8 +85,9 @@ type SyncFileImpl struct {
 	CopyFile     File   // copy of the file in the library (it is in the .copy folder)
 	baseFilesDir string // path to the library
 
-	uuid          string    // unique identifier of the file
-	lastOperation Operation // last Operation done on the file (usefull to resolve conflicts if it occurs)
+	uuid          string       // unique identifier of the file
+	lastOperation Operation    // last Operation done on the file (usefull to resolve conflicts if it occurs)
+	FileTransfer  FileTransfer // FileTransfer object to send the file to other nodes
 
 	/*
 		Different status :
@@ -208,10 +210,11 @@ func (syncFile *SyncFileImpl) ApplyOperationFromMe(op Operation) error {
 	if op.Name == "create" {
 		syncFile.lastOperation = op
 		create := syncFile.getShortInfoMsg()
-		// TODO send a message to every node
-		fmt.Println(create)
+		syncFile.FileTransfer.Broadcast(&create)
 	} else if op.Name == "remove" {
-		// TODO Delete the file
+		// we remove the leechers for the file (if some were added meanwhile) and the file from the library : it no longer exists
+		//syncFile.FileTransfer.Library.DeleteFile(syncFile.CopyFile.GetName())
+		syncFile.FileTransfer.DeleteLeecher(syncFile.GetUUID())
 	} else if op.Name == "modify" { // the file has beeen renamed or moved
 		err := syncFile.RealFile.UpdateMetadata()
 		if err != nil {
@@ -246,7 +249,7 @@ func (syncFile *SyncFileImpl) applyOperationFromOther(fileState FileState, conn 
 	if op.Version < syncFile.CopyFile.GetVersion() {
 		// we ignore the operation because it is older than the one we already have
 		// we send him the info of our file (shorter version)
-		// TODO : send short info message
+		syncFile.FileTransfer.SendMessage(syncFile.getShortInfoMsg(), conn)
 		//fmt.Println(fileState.UUID, ": upate file :", "nothing to do")
 		return nil
 	}
@@ -254,7 +257,7 @@ func (syncFile *SyncFileImpl) applyOperationFromOther(fileState FileState, conn 
 		if opMapScore[op.Name] < opMapScore[syncFile.lastOperation.Name] {
 			// we ignore the operation because it is older than the one we already have
 			// we send him the info of our file (short version)
-			// TODO : send short info message
+			syncFile.FileTransfer.SendMessage(syncFile.getShortInfoMsg(), conn)
 			//fmt.Println(fileState.UUID, ": upate file :", "nothing to do")
 			return nil
 		} else if opMapScore[op.Name] == opMapScore[syncFile.lastOperation.Name] {
@@ -262,7 +265,7 @@ func (syncFile *SyncFileImpl) applyOperationFromOther(fileState FileState, conn 
 			if op.Hash+op.NewFile > syncFile.lastOperation.Hash+syncFile.lastOperation.NewFile {
 				// we ignore the operation because our hash of the last operation is smaller
 				// we send him the info of our file (short version)
-				// TODO : send short info message
+				syncFile.FileTransfer.SendMessage(syncFile.getShortInfoMsg(), conn)
 				//fmt.Println(fileState.UUID, ": upate file :", "nothing to do")
 				return nil
 			} else if op.Hash+op.NewFile == syncFile.lastOperation.Hash+syncFile.lastOperation.NewFile {
@@ -274,7 +277,8 @@ func (syncFile *SyncFileImpl) applyOperationFromOther(fileState FileState, conn 
 	}
 	// if we arrive here, it means that we must apply the incoming operation
 	if op.Name == "remove" {
-		// TODO : remove file
+		//syncFile.FileTransfer.Library.DeleteFile(syncFile.CopyFile.GetName())
+		syncFile.FileTransfer.DeleteLeecher(syncFile.GetUUID())
 		log.Println(fileState.UUID, ": upate file :", "remove file")
 	} else if op.Name == "modify" { // the file has beeen renamed or moved
 
@@ -296,12 +300,12 @@ func (syncFile *SyncFileImpl) applyOperationFromOther(fileState FileState, conn 
 				syncFile.CopyFile.SetHash(fileState.Hash)
 				syncFile.CopyFile.SetHashMap(fileState.HashMap)
 				syncFile.m.Unlock()
-				// TODO : start the download
+				syncFile.FileTransfer.InitLeecher(syncFile, conn)
 				syncFile.m.Lock()
 				log.Println(fileState.UUID, ": upate file :", "init leecher")
 			} else {
 				log.Println(fileState.UUID, ": upate file :", "asking info")
-				// TODO : ask for more info
+				go syncFile.FileTransfer.AskInfoFile(conn, fileState)
 			}
 		}
 		syncFile.CopyFile.SetVersion(fileState.Version)
@@ -319,7 +323,15 @@ func (syncFile *SyncFileImpl) UpdateFile(fileState FileState, conn ShosetConn) e
 		return err
 	} else {
 		if syncFile.status == "downloading" {
-			// TODO : download the file from the connection
+			leecher := syncFile.FileTransfer.GetLeecher(syncFile.uuid)
+			if leecher != nil {
+				syncFile.m.Unlock()
+				leecher.InitDownload(conn)
+				syncFile.m.Lock()
+			} else {
+				return fmt.Errorf("leecher not found when we are downloading")
+			}
+
 		}
 		return nil
 	}
@@ -402,6 +414,12 @@ func (syncFile *SyncFileImpl) SetUUID(uuid string) {
 	syncFile.m.Lock()
 	defer syncFile.m.Unlock()
 	syncFile.uuid = uuid
+}
+
+func (syncFile *SyncFileImpl) SetFileTransfer(ft FileTransfer) {
+	syncFile.m.Lock()
+	defer syncFile.m.Unlock()
+	syncFile.FileTransfer = ft
 }
 
 func (syncFile *SyncFileImpl) GetLastOperation() Operation {

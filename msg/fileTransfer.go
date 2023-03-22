@@ -40,6 +40,20 @@ type FileMessage struct {
 	Begin     int64
 	Length    int
 	ChunkData []byte
+
+	// for have message
+	PieceNumber int
+
+	// for bitfield message
+	PieceSize int
+	Bitfield  []bool
+
+	// to have information about the state of a connection
+	Rate          int
+	MissingLength int64
+
+	// for externalCommands
+	AnswerLocked bool
 }
 
 func (fileMessage FileMessage) GetMessageType() string { return "file" }
