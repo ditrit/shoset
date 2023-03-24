@@ -3,12 +3,19 @@
 !**/*.pem
 !**/*.dot
 !**/*.svg
+!**/*.sh
+!**/*.yaml
 !**/
+!./test/*
+!**/.vscode/*
+!**/doc/*.md
+!**/doc/img/*.png
 
 !/.gitignore
 !/go.mod
 !/go.sum
 !/LICENSE
 !/README.md
+!/Dockerfile
 
 vendor

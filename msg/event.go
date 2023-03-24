@@ -33,8 +33,8 @@ func NewEventClassic(topic, event, payload string) *Event {
 	return NewEvent(tab)
 }
 
-// GetMsgType accessor
-func (e Event) GetMsgType() string { return "evt" }
+// GetMessageType accessor
+func (e Event) GetMessageType() string { return "evt" }
 
 // GetTopic :
 func (e Event) GetTopic() string { return e.Topic }

@@ -57,13 +57,9 @@ func (q *Queue) GetByReferencesUUID(uuid string) *Event {
 
 // Push : insert a new value in the queue except if the UUID is already present and remove after timeout expiration
 func (q *Queue) Push(m Message, RemoteShosetType, RemoteAddress string) bool {
-	fmt.Printf("Push a message!\n")
-
 	// Let's first initialize the Cell with all our data
 	var c Cell
 	c.key = m.GetUUID()
-	fmt.Println("key")
-	fmt.Println(c.key)
 	c.timeout = m.GetTimeout()
 	c.RemoteShosetType = RemoteShosetType
 	c.RemoteAddress = RemoteAddress
@@ -150,6 +146,10 @@ func (q *Queue) remove(key string) {
 
 // IsEmpty : the event queue is empty
 func (q *Queue) IsEmpty() bool {
+
+	q.m.Lock()
+	defer q.m.Unlock() 
+
 	return q.qlist.Len() == 0
 }
 
@@ -162,4 +162,12 @@ func (q *Queue) Print() {
 		cell = cell.Prev()
 	}
 	fmt.Printf("nb cell : %d\n", q.qlist.Len())
+}
+
+func (q *Queue) LockQueue() {
+	q.m.Lock()
+}
+
+func (q *Queue) UnlockQueue() {
+	q.m.Unlock()
 }

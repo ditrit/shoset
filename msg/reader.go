@@ -3,39 +3,41 @@ package msg
 import (
 	"bufio"
 	"encoding/gob"
-	"fmt"
 	"io"
 	"sync"
+
+	"github.com/rs/zerolog/log"
 )
 
-// Reader : simple bufio.Reader safe for goroutines...
+// Reader : simple bufio.Reader safe for goroutines.
 type Reader struct {
-	b *bufio.Reader
-	m sync.Mutex
+	b   *bufio.Reader // implements buffering for an io.Reader object
+	dec *gob.Decoder  // manages the receipt of type and data information read from the remote side of a connection. It is safe for concurrent use by multiple goroutines
+	m   sync.Mutex    // mutex for goroutines synchronization
 }
 
-// NewReader : constructor
-func NewReader(rd io.Reader) *Reader {
-	s := new(Reader)
-	s.b = bufio.NewReader(rd)
-	return s
+// UpdateReader updates reader object with new connection information.
+func (r *Reader) UpdateReader(rd io.Reader) {
+	r.m.Lock()
+	defer r.m.Unlock()
+	r.b = bufio.NewReader(rd)
+	r.dec = gob.NewDecoder(r.b)
 }
 
-// ReadString : safe version for goroutines
+// ReadString reads until the first message in the input in a safe way for goroutines, returning a string containing the data.
 func (r *Reader) ReadString() (string, error) {
 	r.m.Lock()
 	defer r.m.Unlock()
 	return r.b.ReadString('\n')
 }
 
-// ReadMessage : decode a message in a safe way for goroutines
+// ReadMessage decodes a message in a safe way for goroutines.
 func (r *Reader) ReadMessage(data interface{}) error {
 	r.m.Lock()
 	defer r.m.Unlock()
-	enc := gob.NewDecoder(r.b)
-	err := enc.Decode(data)
+	err := r.dec.Decode(data)
 	if err != nil {
-		fmt.Printf("error in ReadMessage : %s\n", err)
+		log.Error().Msg("error in ReadMessage : " + err.Error())
 	}
 	return err
 }
